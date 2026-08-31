@@ -1,50 +1,116 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+<!--
+Sync Impact Report
+- Version change: (unratified template) → 1.0.0
+- Modified principles: N/A (initial ratification)
+- Added sections:
+  - Core Principles: I. Test-First (NON-NEGOTIABLE), II. Simplicity & YAGNI,
+    III. API/Contract-First Design, IV. Security & Observability by Default
+  - Technology & Domain Constraints
+  - Development Workflow & Quality Gates
+  - Governance
+- Removed sections: N/A (initial ratification; template placeholders resolved)
+- Templates requiring updates:
+  - .specify/templates/plan-template.md ⚠ pending manual review (not modified by this command;
+    verify its Constitution Check gates reference these 4 principles by name)
+  - .specify/templates/spec-template.md ✅ no principle-specific placeholders found
+  - .specify/templates/tasks-template.md ✅ no principle-specific placeholders found
+  - .specify/templates/checklist-template.md ✅ no principle-specific placeholders found
+- Follow-up TODOs:
+  - TODO(TECH_STACK): Concrete technology stack (language, framework, datastore) not yet chosen;
+    Technology & Domain Constraints section captures behavioral constraints only until a stack is
+    selected via /speckit-plan.
+-->
+
+# Service Management Constitution
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### I. Test-First (NON-NEGOTIABLE)
+Every change to ticket lifecycle behavior (creation, state transitions, assignment, SLA timers,
+closure) MUST have automated tests written and reviewed before implementation begins. Tests MUST
+fail first (red), then implementation MUST make them pass (green), followed by refactoring with
+tests kept green throughout. No pull request that implements or changes lifecycle behavior may
+merge without accompanying tests demonstrating the change.
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+Rationale: A ticket/service-lifecycle system is a system of record — silent regressions in state
+transitions or SLA calculations corrupt data that downstream teams and customers rely on. Writing
+tests first forces the expected behavior to be specified unambiguously before code exists.
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+### II. Simplicity & YAGNI
+Start with the simplest design that satisfies the current specification. Do not introduce
+abstractions (plugin systems, generic workflow engines, configurable state machines) until at
+least two concrete features require the same variability. Every added layer of indirection MUST
+be justified in the plan's Complexity Tracking section against a specific, current requirement —
+not a hypothetical future one.
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+Rationale: Ticket/workflow systems are natural magnets for premature "make everything
+configurable" design. Unjustified flexibility slows delivery and multiplies the surface area that
+tests and security review must cover.
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+### III. API/Contract-First Design
+Every capability exposed across a boundary (service-to-service, backend-to-frontend, or public
+API) MUST have its contract (request/response shape, status codes, error format) defined and
+reviewed before implementation. Contract changes MUST be accompanied by contract tests that fail
+against the old contract and pass against the new one. Breaking a published contract without a
+version bump is prohibited.
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+Rationale: Service-management workflows (tickets, assignments, SLA events) are consumed by
+multiple surfaces — UI, integrations, automation rules. Defining the contract first catches
+mismatches before they become runtime failures for a downstream consumer.
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+### IV. Security & Observability by Default
+All input crossing a trust boundary (API requests, webhook payloads, imported tickets) MUST be
+validated and authorized before processing; authentication and authorization are never optional
+for lifecycle-mutating operations. Every service MUST emit structured logs and metrics for ticket
+state transitions and SLA breaches sufficient to reconstruct "who changed what, when, and why"
+without attaching a debugger. Secrets MUST NOT be committed to the repository (see `.gitignore`
+for locally-scoped agent/credential files).
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+Rationale: A service-management system is a compliance-sensitive audit trail as much as it is a
+workflow tool; security gaps and blind spots in observability both directly undermine that trust
+function.
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+## Technology & Domain Constraints
+
+The concrete technology stack (language, framework, datastore) is not yet chosen; it MUST be
+selected and recorded during `/speckit-plan` for the first feature and treated as binding
+thereafter unless amended here. Regardless of stack, the following domain constraints apply:
+
+- Ticket state transitions MUST be modeled as an explicit, enumerable state machine — no
+  free-form status strings.
+- Every mutation to a ticket MUST be attributable to an actor (user, system, or integration) and
+  timestamped; the history MUST be append-only (no destructive edits to past state).
+- SLA and timer calculations MUST be covered by tests for boundary conditions (paused/resumed
+  timers, timezone handling, business-hours calendars) given their direct compliance impact.
+
+## Development Workflow & Quality Gates
+
+- Every feature proceeds through the Spec Kit flow: `/speckit-specify` → (optional
+  `/speckit-clarify`) → `/speckit-plan` → `/speckit-tasks` → (optional `/speckit-analyze`,
+  `/speckit-checklist`) → `/speckit-implement`.
+- Every plan produced by `/speckit-plan` MUST include a Constitution Check section that verifies
+  the design against these four principles before implementation starts; unresolved violations
+  MUST be justified in Complexity Tracking or the plan MUST be revised.
+- Pull requests MUST NOT merge with failing tests, unresolved contract-test mismatches, or
+  unaddressed security findings.
+- Code review MUST verify: tests exist and were written before the implementation they cover,
+  no unjustified new abstractions, contracts are documented for any new/changed boundary, and
+  authz/logging are present on lifecycle-mutating endpoints.
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+This constitution supersedes any conflicting team convention or informal practice. Amendments are
+made by editing this file via `/speckit-constitution`, and MUST include an updated Sync Impact
+Report describing what changed and why.
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+Versioning policy (semantic versioning applied to governance):
+- MAJOR: Backward-incompatible principle removal or redefinition (e.g., dropping Test-First).
+- MINOR: A new principle or materially expanded section is added.
+- PATCH: Wording clarifications, typo fixes, or non-semantic refinements.
+
+Compliance review: every `/speckit-plan` Constitution Check and every pull request review MUST
+verify compliance with the principles above. Any exception MUST be documented with a concrete
+justification at the point of use (plan's Complexity Tracking section or the PR description) —
+"it's simpler this way" without a specific reason is not sufficient.
+
+**Version**: 1.0.0 | **Ratified**: 2026-08-31 | **Last Amended**: 2026-08-31
