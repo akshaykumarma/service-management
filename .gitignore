@@ -1,0 +1,2 @@
+# Claude Code agent folder (may contain local credentials/settings)
+.claude/settings.local.json
