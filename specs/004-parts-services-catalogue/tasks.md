@@ -54,17 +54,17 @@ a service and confirm the bill reflects them correctly, per spec.md's Acceptance
 
 ### Tests for User Story 1 ⚠️ Write first; confirm they fail before implementing
 
-- [ ] T006 [P] [US1] Contract tests for the line-item add/edit/remove endpoints (all documented status codes) in `tests/contract/catalogue-billing-api.test.ts`
-- [ ] T007 [P] [US1] Integration test for bill calculation including tax, the "Open" status gate, and zero/negative quantity rejection in `tests/integration/bill-calculation.test.ts`
-- [ ] T008 [P] [US1] E2E test for applying parts/services to a ticket in `tests/e2e/apply-parts-to-ticket.spec.ts`
+- [X] T006 [P] [US1] Contract tests for the line-item add/edit/remove endpoints (all documented status codes) in `tests/contract/catalogue-billing-api.test.ts`
+- [X] T007 [P] [US1] Integration test for bill calculation including tax, the "Open" status gate, and zero/negative quantity rejection in `tests/integration/bill-calculation.test.ts`
+- [X] T008 [P] [US1] E2E test for applying parts/services to a ticket in `tests/e2e/apply-parts-to-ticket.spec.ts`
 
 ### Implementation for User Story 1
 
-- [ ] T009 [US1] Implement line-item add/update/remove logic — status gate (`in_progress`/`on_hold` only), Completed-lock gate, quantity validation, unit-cost snapshot at insert time never re-read afterward — in `lib/billing/line-items.ts` (depends on T004, T005)
-- [ ] T010 [US1] Implement `POST /api/tickets/:id/line-items` in `app/api/tickets/[id]/line-items/route.ts` (depends on T009)
-- [ ] T011 [US1] Implement `PATCH`/`DELETE /api/tickets/:id/line-items/:lineItemId` (quantity change / removal, same status/lock gates) in `app/api/tickets/[id]/line-items/[lineItemId]/route.ts` (depends on T009)
-- [ ] T012 [US1] Add parts/services selection UI with a live bill display to `003-ticket-lifecycle`'s ticket detail page in `app/(dashboard)/tickets/[id]/page.tsx` (depends on T010, T011)
-- [ ] T013 [US1] Confirm T006-T008 pass; run `quickstart.md` Scenario 2 (depends on T009-T012)
+- [X] T009 [US1] Implement line-item add/update/remove logic — status gate (`in_progress`/`on_hold` only), Completed-lock gate, quantity validation, unit-cost snapshot at insert time never re-read afterward — in `lib/billing/line-items.ts` (depends on T004, T005)
+- [X] T010 [US1] Implement `POST /api/tickets/:id/line-items` in `app/api/tickets/[id]/line-items/route.ts` (depends on T009)
+- [X] T011 [US1] Implement `PATCH`/`DELETE /api/tickets/:id/line-items/:lineItemId` (quantity change / removal, same status/lock gates) in `app/api/tickets/[id]/line-items/[lineItemId]/route.ts` (depends on T009)
+- [X] T012 [US1] Add parts/services selection UI with a live bill display to `003-ticket-lifecycle`'s ticket detail page in `app/(dashboard)/tickets/[id]/page.tsx` (depends on T010, T011). Also extended `GET /api/tickets/:id` (003's own contract) to additively include `lineItems`/`bill` — `data-model.md` explicitly specifies the bill is "included in ticket-detail... responses," so this isn't scope creep, it's literally this feature's own documented design.
+- [X] T013 [US1] Confirm T006-T008 pass; run `quickstart.md` Scenario 2 (depends on T009-T012) — 16 new Vitest tests plus 1 e2e test pass; full suite 79/79; verified against a real `next build && next start`, not just the test runner
 
 **Checkpoint**: User Story 1 fully functional and independently testable/deployable (MVP).
 

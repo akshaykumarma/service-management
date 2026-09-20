@@ -23,17 +23,54 @@ interface HistoryEntryRow {
   createdAt: string;
 }
 
+interface LineItem {
+  id: string;
+  itemType: "part" | "service";
+  nameSnapshot: string;
+  quantity: number;
+  unitCostSnapshot: number;
+  lineTotal: number;
+}
+
+interface Bill {
+  subtotal: number;
+  taxAmount: number;
+  total: number;
+}
+
+interface CatalogueItem {
+  id: string;
+  name: string;
+  unitCost: number;
+}
+
 const ALL_STATUSES = ["open", "in_progress", "on_hold", "completed", "delivered", "cancelled"];
+
+const LINE_ITEM_ERROR_MESSAGES: Record<string, string> = {
+  invalid_quantity: "Quantity must be a positive whole number.",
+  item_inactive: "That catalogue item is no longer active.",
+  ticket_status_invalid: "Parts/services can only be added while the ticket is In Progress or On Hold.",
+  bill_locked: "This ticket's bill is locked — it has already reached Completed.",
+};
 
 export default function TicketDetailPage() {
   const params = useParams<{ id: string }>();
   const [ticket, setTicket] = useState<TicketDetail | null>(null);
   const [statusHistory, setStatusHistory] = useState<HistoryEntryRow[]>([]);
+  const [lineItems, setLineItems] = useState<LineItem[]>([]);
+  const [bill, setBill] = useState<Bill | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [toStatus, setToStatus] = useState("");
   const [comment, setComment] = useState("");
   const [statusError, setStatusError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  const [parts, setParts] = useState<CatalogueItem[]>([]);
+  const [services, setServices] = useState<CatalogueItem[]>([]);
+  const [itemType, setItemType] = useState<"part" | "service">("part");
+  const [itemId, setItemId] = useState("");
+  const [quantity, setQuantity] = useState("1");
+  const [lineItemError, setLineItemError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/tickets/${params.id}`);
@@ -44,11 +81,47 @@ export default function TicketDetailPage() {
     const body = await res.json();
     setTicket(body.ticket);
     setStatusHistory(body.statusHistory);
+    setLineItems(body.lineItems);
+    setBill(body.bill);
   }, [params.id]);
 
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    fetch("/api/catalogue/parts")
+      .then((res) => res.json())
+      .then((body) => setParts(body.parts));
+    fetch("/api/catalogue/services")
+      .then((res) => res.json())
+      .then((body) => setServices(body.services));
+  }, []);
+
+  async function handleAddLineItem(e: React.FormEvent) {
+    e.preventDefault();
+    setLineItemError(null);
+    const res = await fetch(`/api/tickets/${params.id}/line-items`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ itemType, itemId, quantity: Number(quantity) }),
+    });
+    if (res.ok) {
+      setItemId("");
+      setQuantity("1");
+      await load();
+      return;
+    }
+    const body = await res.json();
+    setLineItemError(LINE_ITEM_ERROR_MESSAGES[body.error.code] ?? "Could not add item.");
+  }
+
+  async function handleRemoveLineItem(lineItemId: string) {
+    await fetch(`/api/tickets/${params.id}/line-items/${lineItemId}`, { method: "DELETE" });
+    await load();
+  }
+
+  const catalogueOptions = itemType === "part" ? parts : services;
 
   async function handleStatusChange(e: React.FormEvent) {
     e.preventDefault();
@@ -140,6 +213,96 @@ export default function TicketDetailPage() {
             Update status
           </button>
         </form>
+      </section>
+
+      <section aria-labelledby="line-items-heading">
+        <h2 id="line-items-heading">Parts &amp; services</h2>
+        <form onSubmit={handleAddLineItem} noValidate>
+          <div>
+            <label htmlFor="itemType">Item type</label>
+            <select
+              id="itemType"
+              value={itemType}
+              onChange={(e) => {
+                setItemType(e.target.value as "part" | "service");
+                setItemId("");
+              }}
+            >
+              <option value="part">Part</option>
+              <option value="service">Service</option>
+            </select>
+          </div>
+          <div>
+            <label htmlFor="itemId">Catalogue item</label>
+            <select id="itemId" required value={itemId} onChange={(e) => setItemId(e.target.value)}>
+              <option value="">Select an item</option>
+              {catalogueOptions.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label htmlFor="quantity">Quantity</label>
+            <input
+              id="quantity"
+              type="number"
+              min="1"
+              step="1"
+              required
+              value={quantity}
+              onChange={(e) => setQuantity(e.target.value)}
+            />
+          </div>
+          {lineItemError && (
+            <p role="alert" aria-live="assertive">
+              {lineItemError}
+            </p>
+          )}
+          <button type="submit" disabled={!itemId}>
+            Add to ticket
+          </button>
+        </form>
+
+        <table>
+          <caption>Applied parts &amp; services</caption>
+          <thead>
+            <tr>
+              <th scope="col">Item</th>
+              <th scope="col">Quantity</th>
+              <th scope="col">Unit cost</th>
+              <th scope="col">Line total</th>
+              <th scope="col">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {lineItems.map((li) => (
+              <tr key={li.id}>
+                <td>{li.nameSnapshot}</td>
+                <td>{li.quantity}</td>
+                <td>{li.unitCostSnapshot.toFixed(2)}</td>
+                <td>{li.lineTotal.toFixed(2)}</td>
+                <td>
+                  <button type="button" onClick={() => handleRemoveLineItem(li.id)}>
+                    Remove
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        {bill && (
+          <dl aria-label="Bill summary">
+            <dt>Subtotal</dt>
+            <dd>{bill.subtotal.toFixed(2)}</dd>
+            <dt>Tax</dt>
+            <dd>{bill.taxAmount.toFixed(2)}</dd>
+            <dt>Total</dt>
+            <dd>{bill.total.toFixed(2)}</dd>
+          </dl>
+        )}
       </section>
 
       <section aria-labelledby="status-history-heading">

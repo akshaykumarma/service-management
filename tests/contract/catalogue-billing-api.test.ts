@@ -142,3 +142,142 @@ describe("POST /api/catalogue/services and GET/PATCH", () => {
     expect(patchRes.status).toBe(200);
   });
 });
+
+import { createStore, createTicket } from "../helpers/factories";
+import { POST as lineItemsPOST } from "@/app/api/tickets/[id]/line-items/route";
+import { PATCH as lineItemPATCH, DELETE as lineItemDELETE } from "@/app/api/tickets/[id]/line-items/[lineItemId]/route";
+
+describe("POST /api/tickets/:ticketId/line-items", () => {
+  beforeEach(resetDb);
+
+  it("201s and returns the line item plus recalculated bill", async () => {
+    const store = await createStore();
+    const superAdmin = await createUser({ role: "super_admin", password: "Correct123!" });
+    const superAdminCookie = await loginAs(superAdmin.email, "Correct123!");
+    const partRes = await partsPOST(
+      jsonRequest("/api/catalogue/parts", { method: "POST", cookie: superAdminCookie, body: { name: "Belt", unitCost: 100 } }),
+    );
+    const part = (await partRes.json()).part;
+
+    const sm = await createUser({ role: "service_manager", storeIds: [store.id], password: "Correct123!" });
+    const ticket = await createTicket({ storeId: store.id, createdBy: sm.id, status: "in_progress" });
+    const cookie = await loginAs(sm.email, "Correct123!");
+
+    const res = await lineItemsPOST(
+      jsonRequest(`/api/tickets/${ticket.id}/line-items`, {
+        method: "POST",
+        cookie,
+        body: { itemType: "part", itemId: part.id, quantity: 2 },
+      }),
+      { params: { id: ticket.id } },
+    );
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.lineItem.quantity).toBe(2);
+    expect(body.lineItem.lineTotal).toBe(200);
+    expect(body.bill.subtotal).toBe(200);
+  });
+
+  it("409s with bill_locked once the ticket has ever reached Completed", async () => {
+    const store = await createStore();
+    const superAdmin = await createUser({ role: "super_admin", password: "Correct123!" });
+    const superAdminCookie = await loginAs(superAdmin.email, "Correct123!");
+    const partRes = await partsPOST(
+      jsonRequest("/api/catalogue/parts", { method: "POST", cookie: superAdminCookie, body: { name: "Belt", unitCost: 100 } }),
+    );
+    const part = (await partRes.json()).part;
+
+    const sm = await createUser({ role: "service_manager", storeIds: [store.id], password: "Correct123!" });
+    const ticket = await createTicket({ storeId: store.id, createdBy: sm.id, status: "completed" });
+    const { db } = await import("@/lib/db/client");
+    const { statusHistory } = await import("@/lib/db/schema");
+    await db.insert(statusHistory).values({ ticketId: ticket.id, fromStatus: "in_progress", toStatus: "completed", actorId: sm.id });
+
+    const cookie = await loginAs(sm.email, "Correct123!");
+    const res = await lineItemsPOST(
+      jsonRequest(`/api/tickets/${ticket.id}/line-items`, {
+        method: "POST",
+        cookie,
+        body: { itemType: "part", itemId: part.id, quantity: 1 },
+      }),
+      { params: { id: ticket.id } },
+    );
+    expect(res.status).toBe(409);
+    expect((await res.json()).error.code).toBe("bill_locked");
+  });
+});
+
+describe("PATCH/DELETE /api/tickets/:ticketId/line-items/:lineItemId", () => {
+  beforeEach(resetDb);
+
+  it("recomputes lineTotal from the existing unitCostSnapshot on a quantity change", async () => {
+    const store = await createStore();
+    const superAdmin = await createUser({ role: "super_admin", password: "Correct123!" });
+    const superAdminCookie = await loginAs(superAdmin.email, "Correct123!");
+    const partRes = await partsPOST(
+      jsonRequest("/api/catalogue/parts", { method: "POST", cookie: superAdminCookie, body: { name: "Belt", unitCost: 100 } }),
+    );
+    const part = (await partRes.json()).part;
+
+    const sm = await createUser({ role: "service_manager", storeIds: [store.id], password: "Correct123!" });
+    const ticket = await createTicket({ storeId: store.id, createdBy: sm.id, status: "in_progress" });
+    const cookie = await loginAs(sm.email, "Correct123!");
+
+    const addRes = await lineItemsPOST(
+      jsonRequest(`/api/tickets/${ticket.id}/line-items`, {
+        method: "POST",
+        cookie,
+        body: { itemType: "part", itemId: part.id, quantity: 1 },
+      }),
+      { params: { id: ticket.id } },
+    );
+    const lineItem = (await addRes.json()).lineItem;
+
+    // Change the catalogue price after the line item exists — the PATCH must still use
+    // the ORIGINAL snapshot, not the new catalogue price.
+    const { PATCH: partPATCH } = await import("@/app/api/catalogue/parts/[id]/route");
+    await partPATCH(
+      jsonRequest(`/api/catalogue/parts/${part.id}`, { method: "PATCH", cookie: superAdminCookie, body: { unitCost: 999 } }),
+      { params: { id: part.id } },
+    );
+
+    const patchRes = await lineItemPATCH(
+      jsonRequest(`/api/tickets/${ticket.id}/line-items/${lineItem.id}`, { method: "PATCH", cookie, body: { quantity: 3 } }),
+      { params: { id: ticket.id, lineItemId: lineItem.id } },
+    );
+    expect(patchRes.status).toBe(200);
+    const body = await patchRes.json();
+    expect(body.lineItem.lineTotal).toBe(300); // 3 * 100 (original snapshot), not 3 * 999
+  });
+
+  it("removes a line item and returns the recalculated bill", async () => {
+    const store = await createStore();
+    const superAdmin = await createUser({ role: "super_admin", password: "Correct123!" });
+    const superAdminCookie = await loginAs(superAdmin.email, "Correct123!");
+    const partRes = await partsPOST(
+      jsonRequest("/api/catalogue/parts", { method: "POST", cookie: superAdminCookie, body: { name: "Belt", unitCost: 100 } }),
+    );
+    const part = (await partRes.json()).part;
+
+    const sm = await createUser({ role: "service_manager", storeIds: [store.id], password: "Correct123!" });
+    const ticket = await createTicket({ storeId: store.id, createdBy: sm.id, status: "in_progress" });
+    const cookie = await loginAs(sm.email, "Correct123!");
+
+    const addRes = await lineItemsPOST(
+      jsonRequest(`/api/tickets/${ticket.id}/line-items`, {
+        method: "POST",
+        cookie,
+        body: { itemType: "part", itemId: part.id, quantity: 1 },
+      }),
+      { params: { id: ticket.id } },
+    );
+    const lineItem = (await addRes.json()).lineItem;
+
+    const res = await lineItemDELETE(
+      jsonRequest(`/api/tickets/${ticket.id}/line-items/${lineItem.id}`, { method: "DELETE", cookie }),
+      { params: { id: ticket.id, lineItemId: lineItem.id } },
+    );
+    expect(res.status).toBe(200);
+    expect((await res.json()).bill.subtotal).toBe(0);
+  });
+});

@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { asc, eq } from "drizzle-orm";
 import { db } from "@/lib/db/client";
-import { statusHistory, tickets, ticketPhotos, users } from "@/lib/db/schema";
+import { statusHistory, tickets, ticketPhotos, ticketLineItems, users } from "@/lib/db/schema";
 import { requireAuthenticatedSession } from "@/lib/auth/require-session";
 import { assertAccess, AccessDeniedError } from "@/lib/auth/rbac";
+import { calculateBill } from "@/lib/billing/bill-calculation";
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   const sessionOrResponse = await requireAuthenticatedSession(request);
@@ -43,9 +44,23 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 
   const photoRows = await db.select().from(ticketPhotos).where(eq(ticketPhotos.ticketId, ticket.id));
 
+  // data-model.md (004-parts-services-catalogue): the bill is "included in ticket-detail
+  // ... responses" — an additive extension to this contract, not a breaking change.
+  const lineItemRows = await db.select().from(ticketLineItems).where(eq(ticketLineItems.ticketId, ticket.id));
+  const bill = await calculateBill(ticket.id);
+
   return NextResponse.json({
     ticket,
     statusHistory: historyRows,
     photos: photoRows.map((p) => ({ objectKey: p.objectKey })),
+    lineItems: lineItemRows.map((li) => ({
+      id: li.id,
+      itemType: li.itemType,
+      nameSnapshot: li.nameSnapshot,
+      quantity: li.quantity,
+      unitCostSnapshot: Number(li.unitCostSnapshot),
+      lineTotal: Number(li.lineTotal),
+    })),
+    bill,
   });
 }
