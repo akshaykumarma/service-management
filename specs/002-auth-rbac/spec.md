@@ -13,6 +13,7 @@
 ### Session 2026-09-20
 
 - Q: When a user is deactivated (or their role/store assignment changes) while holding an active session, does the change apply on their very next request, or only once their session naturally expires or they log in again? → A: Live re-check on every request — deactivation/role/store changes take effect on the account's very next request; no explicit session termination is needed since access is never cached at login.
+- Q: Can the last remaining active Super Admin account be deactivated? → A: No — system MUST prevent deactivating the last active Super Admin account, rejecting the action with an explanation.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -81,6 +82,7 @@ The Super Admin creates staff accounts, assigns Admins to one or more stores and
 3. **Given** an active user with a history of actions on tickets, **When** the Super Admin deactivates them, **Then** they can no longer log in, but their name still appears correctly on the historical tickets/actions they performed.
 4. **Given** a Store Service Manager account, **When** the Super Admin attempts to assign it to a second store, **Then** the system enforces the one-store-only rule for that role.
 5. **Given** a user with an active, unexpired session, **When** the Super Admin deactivates them or changes their role/store assignment, **Then** their very next request is evaluated against the new state — an active session does not keep operating under the old permissions for the rest of its normal duration.
+6. **Given** exactly one active Super Admin account exists, **When** anyone attempts to deactivate it, **Then** the system rejects the action and explains that at least one active Super Admin must remain.
 
 ---
 
@@ -92,6 +94,7 @@ The Super Admin creates staff accounts, assigns Admins to one or more stores and
 - What happens if a Store Service Manager tries to be assigned to zero stores, or an Admin to zero stores? The system MUST require at least one store assignment for these roles at creation time.
 - What happens after an account lockout expires? The account MUST become usable again automatically after 15 minutes, without requiring Super Admin intervention.
 - What happens to a user's already-active session when they are deactivated or their role/stores change mid-session? The change MUST take effect on their very next request — access and scope are re-evaluated live each time, never cached from login (see FR-019).
+- What happens if someone tries to deactivate the last remaining active Super Admin account? The system MUST reject it and explain why — at least one active Super Admin must always exist (see FR-020).
 
 ## Requirements *(mandatory)*
 
@@ -116,6 +119,7 @@ The Super Admin creates staff accounts, assigns Admins to one or more stores and
 - **FR-017**: System MUST require at least one store assignment when creating an Admin or Store Service Manager account.
 - **FR-018**: System MUST record which staff member performed every access-controlled action, for use in the audit trail (see `003-ticket-lifecycle`).
 - **FR-019**: System MUST re-evaluate a staff member's active/deactivated state, role, and store assignment(s) on every request, not only at login, so that a deactivation or role/store change takes effect on that account's very next request without requiring session termination or re-login.
+- **FR-020**: System MUST prevent deactivating the last remaining active Super Admin account, rejecting the attempt with an explanation rather than allowing the platform to be left with zero active Super Admins.
 
 ### Key Entities *(include if feature involves data)*
 
@@ -134,6 +138,7 @@ The Super Admin creates staff accounts, assigns Admins to one or more stores and
 - **SC-004**: 100% of deactivated accounts are immediately unable to log in while 100% of their historical actions remain correctly attributed.
 - **SC-005**: The Super Admin can onboard a new store's staff (create accounts, assign roles and stores) without any code change or developer involvement.
 - **SC-006**: 100% of deactivation and role/store-assignment changes take effect on the affected account's very next request; 0% of active sessions continue operating under superseded permissions.
+- **SC-007**: 0% of attempts to deactivate the last active Super Admin succeed; the platform never ends up with zero active Super Admins.
 
 ## Assumptions
 
