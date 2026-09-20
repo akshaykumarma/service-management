@@ -5,6 +5,7 @@ import { statusHistory, tickets, ticketPhotos, ticketLineItems, users } from "@/
 import { requireAuthenticatedSession } from "@/lib/auth/require-session";
 import { assertAccess, AccessDeniedError } from "@/lib/auth/rbac";
 import { calculateBill } from "@/lib/billing/bill-calculation";
+import { hasUnconfirmedFailedNotification } from "@/lib/notifications/alerts";
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   const sessionOrResponse = await requireAuthenticatedSession(request);
@@ -49,6 +50,9 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   const lineItemRows = await db.select().from(ticketLineItems).where(eq(ticketLineItems.ticketId, ticket.id));
   const bill = await calculateBill(ticket.id);
 
+  // 005-customer-notifications: additive extension to this contract, same as bill above.
+  const failedNotificationAlert = await hasUnconfirmedFailedNotification(ticket.id);
+
   return NextResponse.json({
     ticket,
     statusHistory: historyRows,
@@ -62,5 +66,6 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       lineTotal: Number(li.lineTotal),
     })),
     bill,
+    notificationAlert: { failed: failedNotificationAlert },
   });
 }

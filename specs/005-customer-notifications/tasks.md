@@ -88,13 +88,13 @@ an in-app alert that isn't dismissible until they confirm manual follow-up.
 
 ### Tests for User Story 2 ⚠️ Write first; confirm it fails before implementing
 
-- [ ] T017 [P] [US2] Integration test for failed-notification alert surfacing and the confirm-clears-alert flow, including the already-cleared `409` case, in `tests/integration/notification-failure-alert.test.ts`
+- [X] T017 [P] [US2] Integration test for failed-notification alert surfacing and the confirm-clears-alert flow, including the already-cleared `409` case, in `tests/integration/notification-failure-alert.test.ts`
 
 ### Implementation for User Story 2
 
-- [ ] T018 [US2] Implement `POST /api/tickets/:id/notification-confirm` (creates a `manual_notification_confirmations` row only against a `status = 'failed'` notification; `409 no_failed_notification` otherwise) in `app/api/tickets/[id]/notification-confirm/route.ts` (depends on T010)
-- [ ] T019 [US2] Surface T010's failed-notification alert on the ticket detail view, refreshed via the existing dashboard poll cycle (`research.md` §7 — no new push infrastructure) in `app/(dashboard)/tickets/[id]/page.tsx` (depends on T010)
-- [ ] T020 [US2] Confirm T017 passes; run `quickstart.md` Scenario 2 (depends on T018-T019)
+- [X] T018 [US2] Implement `POST /api/tickets/:id/notification-confirm` (creates a `manual_notification_confirmations` row only against a `status = 'failed'` notification; `409 no_failed_notification` otherwise) in `app/api/tickets/[id]/notification-confirm/route.ts` (depends on T010). Confirms every currently-unconfirmed failed notification on the ticket (not just one), matching `hasUnconfirmedFailedNotification`'s "any" semantics so the alert actually clears.
+- [X] T019 [US2] Surface T010's failed-notification alert on the ticket detail view, refreshed via the existing dashboard poll cycle (`research.md` §7 — no new push infrastructure) in `app/(dashboard)/tickets/[id]/page.tsx` (depends on T010). **Deviation**: `research.md` §7 assumes `006-dashboard-reporting`'s 30-second poll already exists, but `006` hasn't been implemented yet (005 precedes it in build order) — added a self-contained 30-second `setInterval` poll to this page instead of a nonexistent one, meeting SC-002 without new push infra. `006` can consolidate onto this later. Also extended `GET /api/tickets/:id`'s response with `notificationAlert: { failed }`, additive per the same pattern `004` used for `bill`.
+- [X] T020 [US2] Confirm T017 passes; run `quickstart.md` Scenario 2 (depends on T018-T019). Passes; full suite (85 tests) green; `npx tsc --noEmit` clean.
 
 **Checkpoint**: User Stories 1 and 2 both independently functional.
 

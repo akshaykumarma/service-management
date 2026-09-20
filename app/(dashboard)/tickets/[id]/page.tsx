@@ -38,6 +38,10 @@ interface Bill {
   total: number;
 }
 
+interface NotificationAlert {
+  failed: boolean;
+}
+
 interface CatalogueItem {
   id: string;
   name: string;
@@ -59,6 +63,8 @@ export default function TicketDetailPage() {
   const [statusHistory, setStatusHistory] = useState<HistoryEntryRow[]>([]);
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
   const [bill, setBill] = useState<Bill | null>(null);
+  const [notificationAlert, setNotificationAlert] = useState<NotificationAlert | null>(null);
+  const [confirmingNotification, setConfirmingNotification] = useState(false);
   const [notFound, setNotFound] = useState(false);
   const [toStatus, setToStatus] = useState("");
   const [comment, setComment] = useState("");
@@ -83,11 +89,31 @@ export default function TicketDetailPage() {
     setStatusHistory(body.statusHistory);
     setLineItems(body.lineItems);
     setBill(body.bill);
+    setNotificationAlert(body.notificationAlert);
   }, [params.id]);
 
   useEffect(() => {
     load();
   }, [load]);
+
+  // 005-customer-notifications (research.md §7): a 30-second poll is what
+  // 006-dashboard-reporting's board is expected to already have, but that feature
+  // hasn't been built yet — this establishes it here so the failed-notification alert
+  // meets SC-002's 30-second surfacing target without new push infrastructure.
+  useEffect(() => {
+    const interval = setInterval(load, 30_000);
+    return () => clearInterval(interval);
+  }, [load]);
+
+  async function handleConfirmNotification() {
+    setConfirmingNotification(true);
+    try {
+      await fetch(`/api/tickets/${params.id}/notification-confirm`, { method: "POST" });
+      await load();
+    } finally {
+      setConfirmingNotification(false);
+    }
+  }
 
   useEffect(() => {
     fetch("/api/catalogue/parts")
@@ -185,6 +211,16 @@ export default function TicketDetailPage() {
           <dd>{ticket.status}</dd>
         </dl>
       </section>
+
+      {notificationAlert?.failed && (
+        <section aria-labelledby="notification-alert-heading" role="alert" aria-live="assertive">
+          <h2 id="notification-alert-heading">Notification delivery failed</h2>
+          <p>The WhatsApp notification to this customer failed to send. Follow up manually, then confirm below.</p>
+          <button type="button" onClick={handleConfirmNotification} disabled={confirmingNotification}>
+            Confirm manual follow-up
+          </button>
+        </section>
+      )}
 
       <section aria-labelledby="status-change-heading">
         <h2 id="status-change-heading">Change status</h2>
