@@ -8,7 +8,7 @@ import { assertAccess, getScopedStoreIds, AccessDeniedError } from "@/lib/auth/r
 import { resolveCustomer } from "@/lib/tickets/customer";
 import { nextTicketNumber } from "@/lib/tickets/ticket-number";
 import { lookupHistory } from "@/lib/tickets/history";
-import { MAX_PHOTOS_PER_TICKET } from "@/lib/tickets/photos";
+import { MAX_PHOTOS_PER_TICKET, verifyUploadedObject } from "@/lib/tickets/photos";
 
 const REQUIRED_FIELDS = ["storeId", "customerName", "customerPhone", "machineModel", "issueDescription"] as const;
 
@@ -45,6 +45,19 @@ export async function POST(request: NextRequest) {
     throw err;
   }
 
+  // A presigned PUT URL constrains the signed Content-Type but not the actual body size
+  // (research.md §5) — re-verify what was really uploaded before trusting it into the
+  // ticket record; a mismatch deletes the object rather than persisting client-declared
+  // metadata for it.
+  const verifiedPhotos: { objectKey: string; contentType: string; sizeBytes: number }[] = [];
+  for (const objectKey of photoObjectKeys) {
+    const result = await verifyUploadedObject(objectKey);
+    if (!result.ok) {
+      return NextResponse.json({ error: { code: result.error, objectKey } }, { status: 400 });
+    }
+    verifiedPhotos.push({ objectKey, ...result.meta });
+  }
+
   const created = await db.transaction(async (tx) => {
     const customer = await resolveCustomer(tx, { name: payload.customerName, phone: payload.customerPhone });
     const ticketNumber = await nextTicketNumber(tx, payload.storeId);
@@ -74,12 +87,12 @@ export async function POST(request: NextRequest) {
       comment: null,
     });
 
-    for (const objectKey of photoObjectKeys) {
+    for (const photo of verifiedPhotos) {
       await tx.insert(ticketPhotos).values({
         ticketId: ticket.id,
-        objectKey,
-        contentType: "image/jpeg",
-        sizeBytes: 0,
+        objectKey: photo.objectKey,
+        contentType: photo.contentType,
+        sizeBytes: photo.sizeBytes,
       });
     }
 
