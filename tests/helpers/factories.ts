@@ -5,11 +5,27 @@ import { hashPassword } from "@/lib/auth/auth.config";
 
 let counter = 0;
 
-export async function createStore(name?: string): Promise<{ id: string; name: string }> {
+export async function createStore(
+  nameOrOpts?:
+    | string
+    | { name?: string; active?: boolean; whatsappNumber?: string; address?: string; primaryContact?: string; taxRate?: string },
+): Promise<typeof stores.$inferSelect> {
   counter += 1;
+  const opts = typeof nameOrOpts === "string" ? { name: nameOrOpts } : (nameOrOpts ?? {});
   const [store] = await db
     .insert(stores)
-    .values({ name: name ?? `Test Store ${counter}` })
+    .values({
+      name: opts.name ?? `Test Store ${counter}`,
+      // Defaults to a usable, active store with a valid contact number: 007-admin-console
+      // introduced active/whatsappNumber as real gates on store usability, but almost
+      // every existing test across 002-006 just needs "a store that works" and predates
+      // those gates existing at all — this keeps every one of them passing unchanged.
+      active: opts.active ?? true,
+      whatsappNumber: opts.whatsappNumber ?? "+910000000000",
+      address: opts.address ?? "123 Test Street",
+      primaryContact: opts.primaryContact ?? "Test Contact",
+      ...(opts.taxRate !== undefined ? { taxRate: opts.taxRate } : {}),
+    })
     .returning();
   return store;
 }

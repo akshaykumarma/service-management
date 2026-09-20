@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { and, desc, eq, inArray, ne } from "drizzle-orm";
 import { db } from "@/lib/db/client";
-import { statusHistory, tickets, ticketPhotos } from "@/lib/db/schema";
+import { statusHistory, stores, tickets, ticketPhotos } from "@/lib/db/schema";
 import { requireAuthenticatedSession } from "@/lib/auth/require-session";
 import { requireSameOrigin } from "@/lib/auth/csrf";
 import { assertAccess, getScopedStoreIds, AccessDeniedError } from "@/lib/auth/rbac";
@@ -43,6 +43,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: { code: "forbidden", message: err.message } }, { status: 403 });
     }
     throw err;
+  }
+
+  // 007-admin-console FR-009: a deactivated store must be excluded from new-ticket
+  // creation, not just hidden from GET /api/stores' picker — enforced here too as
+  // defense-in-depth against a client that bypasses the picker.
+  const storeRows = await db.select({ active: stores.active }).from(stores).where(eq(stores.id, payload.storeId)).limit(1);
+  if (!storeRows[0]?.active) {
+    return NextResponse.json({ error: { code: "store_inactive" } }, { status: 409 });
   }
 
   // A presigned PUT URL constrains the signed Content-Type but not the actual body size

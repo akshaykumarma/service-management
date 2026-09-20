@@ -7,6 +7,11 @@ interface Store {
   name: string;
 }
 
+interface MachineModelOption {
+  id: string;
+  name: string;
+}
+
 interface HistoryEntry {
   id: string;
   ticketNumber: string;
@@ -20,6 +25,7 @@ interface CreatedTicket {
 
 export default function NewTicketPage() {
   const [stores, setStores] = useState<Store[]>([]);
+  const [machineModelOptions, setMachineModelOptions] = useState<MachineModelOption[]>([]);
   const [created, setCreated] = useState<CreatedTicket | null>(null);
   const [history, setHistory] = useState<{ found: boolean; entries: HistoryEntry[] } | null>(null);
   const [storeId, setStoreId] = useState("");
@@ -39,6 +45,9 @@ export default function NewTicketPage() {
         setStores(body.stores);
         if (body.stores.length === 1) setStoreId(body.stores[0].id);
       });
+    fetch("/api/machine-models")
+      .then((res) => res.json())
+      .then((body) => setMachineModelOptions(body.machineModels));
   }, []);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -145,7 +154,21 @@ export default function NewTicketPage() {
         </div>
         <div>
           <label htmlFor="machineModel">Machine model</label>
-          <input id="machineModel" required value={machineModel} onChange={(e) => setMachineModel(e.target.value)} />
+          <input
+            id="machineModel"
+            required
+            list="machineModelOptions"
+            value={machineModel}
+            onChange={(e) => setMachineModel(e.target.value)}
+          />
+          {/* 007-admin-console FR-002/FR-003: a searchable dropdown of active models with
+              a free-type fallback — tickets.machine_model stays unconstrained free text
+              (003's own design), so a model absent from this list still saves fine. */}
+          <datalist id="machineModelOptions">
+            {machineModelOptions.map((m) => (
+              <option key={m.id} value={m.name} />
+            ))}
+          </datalist>
         </div>
         <div>
           <label htmlFor="issueDescription">Issue description</label>

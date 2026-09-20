@@ -13,7 +13,7 @@ describe("Automatic completion notification (User Story 1)", () => {
 
   it("sends a WhatsApp completion message with bill/store details on the first Completed transition, and not again on a later re-Completed transition", async () => {
     const store = await createStore();
-    await db.update(stores).set({ phone: "+911234567890" }).where(eq(stores.id, store.id));
+    await db.update(stores).set({ whatsappNumber: "+911234567890" }).where(eq(stores.id, store.id));
     const admin = await createUser({ role: "admin", storeIds: [store.id], password: "Correct123!" });
     const ticket = await createTicket({
       storeId: store.id,

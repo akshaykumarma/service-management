@@ -26,21 +26,46 @@ export const ticketStatusEnum = pgEnum("ticket_status", [
 ]);
 
 /**
- * Minimal stub, extended incrementally by whichever feature needs the next column before
- * 007-admin-console's own fuller definition lands (its plan explicitly ALTERs, never
- * recreates, this table). Created in 002-auth-rbac (user_stores' FK target); `taxRate`
- * added here by 004-parts-services-catalogue since bill calculation needs a live rate to
- * read and 007 doesn't exist yet — matches 004's own quickstart.md's fallback note
- * ("a manually-seeded row if that feature isn't built yet").
+ * Reconciled to its full shape by 007-admin-console (data-model.md), which is this
+ * table's canonical owner — an ALTER of the minimal stub 002/004/005 incrementally
+ * extended, never a recreate, so every existing FK into `stores.id` survives.
+ * `address`/`primaryContact`/`whatsappNumber` stay nullable rather than NOT NULL despite
+ * spec.md calling them "required": enforced at the application layer
+ * (lib/admin/stores.ts's createStore), consistent with this table's whole
+ * incremental-extension history — a NOT NULL column here would break every existing row
+ * and every test factory across four already-shipped features for a constraint this
+ * feature's own code already guarantees on the only path that creates a row.
+ * `whatsappNumber` (renamed from 005's `phone` — same column, spec.md's own naming) is
+ * display/contact content only, never a Meta-registered sending identity (research.md §4).
  */
 export const stores = pgTable("stores", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
   taxRate: numeric("tax_rate", { precision: 5, scale: 2 }).notNull().default("0"),
-  // Added by 005-customer-notifications: the completion message needs a store contact
-  // number (FR-002) and 007-admin-console hasn't built store management yet — same
-  // incremental-extension pattern as taxRate above.
-  phone: text("phone"),
+  whatsappNumber: text("whatsapp_number"),
+  address: text("address"),
+  primaryContact: text("primary_contact"),
+  // Contract/quickstart.md's demonstrated behavior (POST always creates active:false,
+  // requiring an explicit PATCH to activate once whatsappNumber validates) — data-model.md
+  // says "default true" for this column, which contradicts both; resolved in favor of the
+  // contract + quickstart, which agree with each other and are backed by an executable
+  // scenario, flagged here rather than silently picked.
+  active: boolean("active").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const machineModels = pgTable("machine_models", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  // The sole identifying value (this spec's clarification: same as 003's "machine model
+  // number") — no FK from tickets.machine_model, which stays free text per 003's own
+  // free-text-fallback design (research.md §2); this table is a selection list only.
+  name: text("name").notNull(),
+  manufacturer: text("manufacturer").notNull(),
+  category: text("category"),
+  active: boolean("active").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 export const users = pgTable("users", {

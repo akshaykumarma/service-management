@@ -14,6 +14,10 @@ test.describe("Complete and deliver (005-customer-notifications, US1+US3)", () =
     await expect(page).toHaveURL(/\/dashboard/);
 
     await page.goto("/tickets/new");
+    // 007-admin-console can add more active stores over time (the intake form no longer
+    // auto-selects once more than one exists) — select explicitly rather than relying on
+    // there being exactly one.
+    await page.getByLabel("Store").selectOption({ index: 1 });
     await page.getByLabel("Customer name").fill("E2E Delivery Customer");
     await page.getByLabel("Customer phone").fill(customerPhone);
     await page.getByLabel("Machine model").fill(`E2E-Deliver-Model-${Date.now()}`);

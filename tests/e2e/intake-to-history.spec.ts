@@ -11,6 +11,10 @@ test.describe("Intake to history", () => {
     await expect(page).toHaveURL(/\/dashboard/);
 
     await page.goto("/tickets/new");
+    // 007-admin-console can add more active stores over time (the intake form no longer
+    // auto-selects once more than one exists) — select explicitly rather than relying on
+    // there being exactly one.
+    await page.getByLabel("Store").selectOption({ index: 1 });
     await page.getByLabel("Customer name").fill("E2E Customer");
     await page.getByLabel("Customer phone").fill("+919999900001");
     await page.getByLabel("Machine model").fill(`E2E-Model-${Date.now()}`);

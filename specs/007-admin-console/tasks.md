@@ -23,7 +23,7 @@ endpoints write to `002`'s existing `user_stores` table (`research.md` §3).
 
 ## Phase 1: Setup
 
-- [ ] T001 [P] Verify `csv-parse` (already installed for `004-parts-services-catalogue`'s bulk import) is available for this feature's own machine-model CSV import — no new dependency needed
+- [X] T001 [P] Verify `csv-parse` (already installed for `004-parts-services-catalogue`'s bulk import) is available for this feature's own machine-model CSV import — no new dependency needed. Confirmed present in `package.json`.
 
 **Checkpoint**: No new infrastructure required; proceed to schema work.
 
@@ -35,10 +35,10 @@ endpoints write to `002`'s existing `user_stores` table (`research.md` §3).
 
 **⚠️ CRITICAL**: No user story task may begin until this phase is complete
 
-- [ ] T002 `ALTER TABLE stores` to add `address`, `primary_contact`, `whatsapp_number`, `tax_rate`, `active` columns in `lib/db/schema.ts` — this **extends** the minimal `stores` stub `003-ticket-lifecycle`'s Foundational phase created; it MUST NOT be a `CREATE TABLE` (`research.md` §1), or every existing FK from `002`'s `user_stores`, `003`'s `tickets`, `004`'s tax-rate reads, and `005`'s WhatsApp-number reads into `stores.id` breaks
-- [ ] T003 Define Drizzle schema for the new `machine_models` table (no FK from `tickets.machine_model` — that stays free text per `003`'s own design, `research.md` §2) in `lib/db/schema.ts` (depends on T002, same file)
-- [ ] T004 Generate and run the migration (depends on T002, T003)
-- [ ] T005 [P] Implement WhatsApp-number format validation (E.164-style; a display/contact-info check, not a Meta API check — `research.md` §4) in `lib/admin/stores.ts` (depends on T004)
+- [X] T002 `ALTER TABLE stores` to add `address`, `primary_contact`, `whatsapp_number`, `tax_rate`, `active` columns in `lib/db/schema.ts` — this **extends** the minimal `stores` stub `003-ticket-lifecycle`'s Foundational phase created; it MUST NOT be a `CREATE TABLE` (`research.md` §1), or every existing FK from `002`'s `user_stores`, `003`'s `tickets`, `004`'s tax-rate reads, and `005`'s WhatsApp-number reads into `stores.id` breaks. `tax_rate` already existed (added by `004`); renamed `005`'s existing `phone` column to `whatsapp_number` (same field, spec.md's own naming) rather than adding a redundant second column. `address`/`primary_contact`/`whatsapp_number` are nullable at the DB level despite spec.md calling them "required" — enforced instead at the application layer (`lib/admin/stores.ts`), since a NOT NULL constraint here would break every existing row and test factory across four already-shipped features. **`active` default resolved as `false`, not data-model.md's stated "default true"**: `contracts/admin-console-api.md` and `quickstart.md`'s own Scenario 2 both explicitly demonstrate `POST` creating with `active: false`, requiring an explicit `PATCH {"active": true}` to activate — the two executable references agree with each other and contradict data-model.md's single line, so resolved in their favor rather than silently picked either way.
+- [X] T003 Define Drizzle schema for the new `machine_models` table (no FK from `tickets.machine_model` — that stays free text per `003`'s own design, `research.md` §2) in `lib/db/schema.ts` (depends on T002, same file)
+- [X] T004 Generate and run the migration (depends on T002, T003). Confirmed via `\d stores` that the migration is a pure rename+ALTER — every existing FK (`user_stores`, `tickets`, `ticket_number_counters`) into `stores.id` survived. Updated `tests/helpers/factories.ts`'s `createStore()` to default `active: true` plus valid `whatsappNumber`/`address`/`primaryContact`, so every pre-existing test across `002`-`005` that just needs "a store that works" keeps passing unchanged now that these are real, enforced gates. Full suite (106 tests) still green; `npx tsc --noEmit` clean.
+- [X] T005 [P] Implement WhatsApp-number format validation (E.164-style; a display/contact-info check, not a Meta API check — `research.md` §4) in `lib/admin/stores.ts` (depends on T004). `isValidWhatsAppNumber`: `/^\+[1-9]\d{7,14}$/`.
 
 **Checkpoint**: Schema reconciled; user story work can begin.
 
@@ -56,17 +56,17 @@ reported correctly.
 
 ### Tests for User Story 1 ⚠️ Write first; confirm they fail before implementing
 
-- [ ] T006 [P] [US1] Contract tests for machine-model CRUD and import endpoints in `tests/contract/admin-console-api.test.ts`
-- [ ] T007 [P] [US1] Integration test for machine model CRUD, deactivation exclusion, and CSV import per-row failure reporting in `tests/integration/machine-model-maintenance.test.ts`
+- [X] T006 [P] [US1] Contract tests for machine-model CRUD and import endpoints in `tests/contract/admin-console-api.test.ts`
+- [X] T007 [P] [US1] Integration test for machine model CRUD, deactivation exclusion, and CSV import per-row failure reporting in `tests/integration/machine-model-maintenance.test.ts`. **Beyond the literal task**: this test also exercises the new `GET /api/machine-models` (see T012's note) to prove a model is actually reachable at intake, not just present in the admin list.
 
 ### Implementation for User Story 1
 
-- [ ] T008 [US1] Implement machine model CRUD (create/edit/deactivate, duplicate-name check per this spec's Model-Name clarification) in `lib/admin/machine-models.ts` (depends on T003)
-- [ ] T009 [US1] Implement CSV bulk import reusing `004-parts-services-catalogue`'s `csv-import.ts` pattern (columns `name,manufacturer,category`) in `lib/admin/machine-models.ts` (depends on T008)
-- [ ] T010 [US1] Implement `GET`/`POST /api/admin/machine-models` and `PATCH /api/admin/machine-models/:id` in `app/api/admin/machine-models/route.ts` and `app/api/admin/machine-models/[id]/route.ts` (depends on T008)
-- [ ] T011 [US1] Implement `POST /api/admin/machine-models/import` in `app/api/admin/machine-models/import/route.ts` (depends on T009)
-- [ ] T012 [US1] Build the machine model maintenance UI in `app/(dashboard)/admin/machine-models/page.tsx` (depends on T010, T011)
-- [ ] T013 [US1] Confirm T006-T007 pass; run `quickstart.md` Scenario 1 (depends on T008-T012)
+- [X] T008 [US1] Implement machine model CRUD (create/edit/deactivate, duplicate-name check per this spec's Model-Name clarification) in `lib/admin/machine-models.ts` (depends on T003)
+- [X] T009 [US1] Implement CSV bulk import reusing `004-parts-services-catalogue`'s `csv-import.ts` pattern (columns `name,manufacturer,category`) in `lib/admin/machine-models.ts` (depends on T008). Landed as its own file, `lib/admin/machine-models-csv-import.ts`, mirroring `004`'s file split rather than growing `machine-models.ts`.
+- [X] T010 [US1] Implement `GET`/`POST /api/admin/machine-models` and `PATCH /api/admin/machine-models/:id` in `app/api/admin/machine-models/route.ts` and `app/api/admin/machine-models/[id]/route.ts` (depends on T008)
+- [X] T011 [US1] Implement `POST /api/admin/machine-models/import` in `app/api/admin/machine-models/import/route.ts` (depends on T009)
+- [X] T012 [US1] Build the machine model maintenance UI in `app/(dashboard)/admin/machine-models/page.tsx` (depends on T010, T011). **Cross-feature wiring beyond the literal task list**: spec.md's own Acceptance Scenario 1 requires a newly-added model to become "immediately available in the intake model dropdown" — `003-ticket-lifecycle`'s intake form (`app/(dashboard)/tickets/new/page.tsx`) had only ever been a free-text `<input>` (the "searchable dropdown" from the source PRD was never built, since this catalogue didn't exist yet). Added `GET /api/machine-models` (any authenticated role, active-only — the admin console's own `GET /api/admin/machine-models` is Super-Admin-only, same reasoning as `GET /api/stores` existing alongside the now-Super-Admin-only `GET /api/admin/stores`) and wired the intake field to an `<input list=...>` + `<datalist>` (dropdown-with-free-type-fallback, keeping `tickets.machine_model` unconstrained free text per `003`'s own design).
+- [X] T013 [US1] Confirm T006-T007 pass; run `quickstart.md` Scenario 1 (depends on T008-T012). Passes.
 
 **Checkpoint**: User Story 1 fully functional and independently testable/deployable (MVP).
 
@@ -84,16 +84,16 @@ new tickets.
 
 ### Tests for User Story 2 ⚠️ Write first; confirm they fail before implementing
 
-- [ ] T014 [P] [US2] Contract tests for store CRUD, including the WhatsApp-number and tax-rate validation responses, in `tests/contract/admin-console-api.test.ts`
-- [ ] T015 [P] [US2] Integration test for store creation/activation, tax-rate propagation into `004-parts-services-catalogue`'s bill calculation, and deactivation excluding new-ticket selection in `tests/integration/store-setup.test.ts`
-- [ ] T016 [P] [US2] E2E test for configuring a new store end-to-end in `tests/e2e/configure-new-store.spec.ts`
+- [X] T014 [P] [US2] Contract tests for store CRUD, including the WhatsApp-number and tax-rate validation responses, in `tests/contract/admin-console-api.test.ts`
+- [X] T015 [P] [US2] Integration test for store creation/activation, tax-rate propagation into `004-parts-services-catalogue`'s bill calculation, and deactivation excluding new-ticket selection in `tests/integration/store-setup.test.ts`
+- [X] T016 [P] [US2] E2E test for configuring a new store end-to-end in `tests/e2e/configure-new-store.spec.ts`. **Fallout fixed**: three pre-existing e2e specs (`apply-parts-to-ticket`, `intake-to-history`, `complete-and-deliver`) relied on the intake form auto-selecting a store because exactly one active store happened to exist in the dev DB — once this store's own creation added more, that assumption broke. Fixed by having each explicitly `selectOption` a store rather than relying on auto-select; also reactivated the dev DB's one pre-existing store, which the `active` column's migration-time backfill had defaulted to `false`.
 
 ### Implementation for User Story 2
 
-- [ ] T017 [US2] Implement store CRUD — create/edit/deactivate, tax-rate range validation (`0`-`100`), activation gated on a valid WhatsApp number (FR-007) — in `lib/admin/stores.ts` (depends on T005)
-- [ ] T018 [US2] Implement `GET`/`POST /api/admin/stores` and `PATCH /api/admin/stores/:id` in `app/api/admin/stores/route.ts` and `app/api/admin/stores/[id]/route.ts` (depends on T017)
-- [ ] T019 [US2] Build the store setup/configuration UI in `app/(dashboard)/admin/stores/page.tsx` (depends on T018)
-- [ ] T020 [US2] Confirm T014-T016 pass; run `quickstart.md` Scenario 2 (depends on T017-T019)
+- [X] T017 [US2] Implement store CRUD — create/edit/deactivate, tax-rate range validation (`0`-`100`), activation gated on a valid WhatsApp number (FR-007) — in `lib/admin/stores.ts` (depends on T005)
+- [X] T018 [US2] Implement `GET`/`POST /api/admin/stores` and `PATCH /api/admin/stores/:id` in `app/api/admin/stores/route.ts` and `app/api/admin/stores/[id]/route.ts` (depends on T017)
+- [X] T019 [US2] Build the store setup/configuration UI in `app/(dashboard)/admin/stores/page.tsx` (depends on T018)
+- [X] T020 [US2] Confirm T014-T016 pass; run `quickstart.md` Scenario 2 (depends on T017-T019). Passes. **Wiring beyond the literal task list**: `GET /api/stores` (the any-role intake list `005` originally added as a stub) now filters to `active = true` (FR-009), and `POST /api/tickets` gates on `stores.active` server-side (`409 store_inactive`) as defense-in-depth beyond just hiding inactive stores from the picker.
 
 **Checkpoint**: User Stories 1 and 2 both independently functional.
 
@@ -110,13 +110,13 @@ immediately; deactivate and reactivate the store; confirm the assignment was nev
 
 ### Tests for User Story 3 ⚠️ Write first; confirm it fails before implementing
 
-- [ ] T021 [P] [US3] Integration test for Admin assignment/removal and its persistence across a store deactivate/reactivate cycle (FR-012) in `tests/integration/admin-assignment-persistence.test.ts`
+- [X] T021 [P] [US3] Integration test for Admin assignment/removal and its persistence across a store deactivate/reactivate cycle (FR-012) in `tests/integration/admin-assignment-persistence.test.ts`
 
 ### Implementation for User Story 3
 
-- [ ] T022 [US3] Implement `POST /api/admin/stores/:id/admins` and `DELETE /api/admin/stores/:id/admins/:userId`, writing directly to `002-auth-rbac`'s existing `user_stores` table — **no new assignment table** (`research.md` §3) — in `app/api/admin/stores/[id]/admins/route.ts` and `app/api/admin/stores/[id]/admins/[userId]/route.ts` (depends on T018)
-- [ ] T023 [US3] Add the Admin-assignment UI to the store configuration screen in `app/(dashboard)/admin/stores/page.tsx` (depends on T022, T019)
-- [ ] T024 [US3] Confirm T021 passes; run `quickstart.md` Scenario 3 (depends on T022-T023)
+- [X] T022 [US3] Implement `POST /api/admin/stores/:id/admins` and `DELETE /api/admin/stores/:id/admins/:userId`, writing directly to `002-auth-rbac`'s existing `user_stores` table — **no new assignment table** (`research.md` §3) — in `app/api/admin/stores/[id]/admins/route.ts` and `app/api/admin/stores/[id]/admins/[userId]/route.ts` (depends on T018)
+- [X] T023 [US3] Add the Admin-assignment UI to the store configuration screen in `app/(dashboard)/admin/stores/page.tsx` (depends on T022, T019)
+- [X] T024 [US3] Confirm T021 passes; run `quickstart.md` Scenario 3 (depends on T022-T023). Passes.
 
 **Checkpoint**: All three user stories independently functional — spec.md fully implemented.
 
@@ -124,11 +124,13 @@ immediately; deactivate and reactivate the store; confirm the assignment was nev
 
 ## Phase 6: Polish & Cross-Cutting Concerns
 
-- [ ] T025 [P] Run the full `quickstart.md` validation (all 3 scenarios, all 6 success-criteria checklist items) end-to-end
-- [ ] T026 [P] Accessibility audit (WCAG 2.1 AA) of the machine-model and store admin UI
-- [ ] T027 [P] Security review: Super-Admin-only enforcement on every route in this feature
-- [ ] T028 Performance check: catalogue/store CRUD meets the constitution's <500ms p95 (low-volume traffic — should be trivial to satisfy)
-- [ ] T029 [P] Regression check: confirm T002's `ALTER TABLE stores` preserved every existing foreign key from `002`, `003`, `004`, and `005` into `stores.id` — a targeted check given this is a shared-table schema change, not a routine one
+- [X] T025 [P] Run the full `quickstart.md` validation (all 3 scenarios, all 6 success-criteria checklist items) end-to-end. All 3 scenarios covered by passing tests; full suite (122 vitest tests) and 7 Playwright e2e specs green; `npx tsc --noEmit` clean.
+- [X] T026 [P] Accessibility audit (WCAG 2.1 AA) of the machine-model and store admin UI. Every input/select has an associated `<label>`; tables use `<th scope="col">`/`<caption>`; each store is its own `<article aria-labelledby>`; errors use `role="alert" aria-live="assertive"`, import feedback uses `role="status"`. Same gap as every prior feature's own audit: no visual design/CSS exists yet, so color-contrast/focus-indicator criteria remain untested against real styling.
+- [X] T027 [P] Security review: Super-Admin-only enforcement on every route in this feature. Every route (`machine-models`, `machine-models/[id]`, `machine-models/import`, `stores`, `stores/[id]`, `stores/[id]/admins`, `stores/[id]/admins/[userId]`) calls `requireSuperAdmin` before any mutation or admin-scoped read; `403` asserted for machine-models and stores in the contract tests. `GET /api/machine-models` and `GET /api/stores` are the two deliberate any-role exceptions (intake lists, active-only, minimal fields) — not a gap, the documented design.
+- [X] T028 Performance check: catalogue/store CRUD meets the constitution's <500ms p95 (low-volume traffic — should be trivial to satisfy). `scripts/bench-admin-console-routes.ts` (30 iterations, real route handlers, real Postgres): `GET /api/admin/stores` (20 rows) p95 ≈ 3ms; `POST /api/admin/machine-models` p95 ≈ 4ms. Comfortably under target.
+- [X] T029 [P] Regression check: confirm T002's `ALTER TABLE stores` preserved every existing foreign key from `002`, `003`, `004`, and `005` into `stores.id` — a targeted check given this is a shared-table schema change, not a routine one. Confirmed via `\d stores` against the test database post-migration: `user_stores_store_id_stores_id_fk`, `tickets_store_id_stores_id_fk`, and `ticket_number_counters_store_id_stores_id_fk` all present and unchanged; full suite green both before and after the migration.
+
+**Phase 6 note beyond the original task list**: `data-model.md`'s `active` column default ("true") contradicted `contracts/admin-console-api.md` and `quickstart.md` (both "false", explicit activation required) — resolved in favor of the two executable references (see T002's note). Also flagged for a future `/speckit-clarify` pass, not fixed here: this feature's `stores.active` gate (FR-009, wired into `POST /api/tickets` as `409 store_inactive`) is enforced the same way `005-customer-notifications`' T052 flagged for `otp_verifications`/`delivery_overrides` — i.e., real, tested, and consistent — but nothing in this feature or `003` prevents a Store Service Manager whose *own* store is later deactivated from continuing to move that store's already-open tickets forward (per spec.md's own Assumptions, this is intentional: "deactivation only prevents new ticket creation").
 
 ---
 

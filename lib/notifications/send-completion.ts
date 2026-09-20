@@ -41,7 +41,7 @@ export async function triggerCompletionNotification(ticketId: string): Promise<v
     machine_model: ticket.machineModel,
     bill_total: bill.total.toFixed(2),
     store_name: store?.name ?? "",
-    store_phone: store?.phone ?? "",
+    store_phone: store?.whatsappNumber ?? "",
   };
   // Nothing sensitive in a completion message — the stored copy is the same text sent.
   // The rendered/stored copy reflects the currently-*approved* wording (research.md §5 —

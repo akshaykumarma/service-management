@@ -18,6 +18,10 @@ test.describe("Apply parts to ticket", () => {
 
     // Create a ticket, then move it to In Progress via the API-backed status control.
     await page.goto("/tickets/new");
+    // 007-admin-console can add more active stores over time (the intake form no longer
+    // auto-selects once more than one exists) — select explicitly rather than relying on
+    // there being exactly one.
+    await page.getByLabel("Store").selectOption({ index: 1 });
     await page.getByLabel("Customer name").fill("E2E Billing Customer");
     await page.getByLabel("Customer phone").fill("+919999900002");
     await page.getByLabel("Machine model").fill(`E2E-Bill-Model-${Date.now()}`);
