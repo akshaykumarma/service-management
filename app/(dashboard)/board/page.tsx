@@ -24,6 +24,11 @@ interface TicketCard {
   daysOpen: number;
 }
 
+interface StoreOption {
+  id: string;
+  name: string;
+}
+
 const COLUMNS: { status: string; label: string }[] = [
   { status: "open", label: "Open" },
   { status: "in_progress", label: "In Progress" },
@@ -33,6 +38,12 @@ const COLUMNS: { status: string; label: string }[] = [
 ];
 
 const CANCELLED_COLUMN = { status: "cancelled", label: "Cancelled" };
+
+const ALL_STATUSES = ["open", "in_progress", "on_hold", "completed", "delivered", "cancelled"];
+
+function selectedOptions(e: React.ChangeEvent<HTMLSelectElement>): string[] {
+  return Array.from(e.target.selectedOptions).map((o) => o.value);
+}
 
 const TRANSITION_ERROR_MESSAGES: Record<string, string> = {
   invalid_transition: "That status change isn't allowed from the current status.",
@@ -94,6 +105,21 @@ export default function BoardPage() {
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [storeOptions, setStoreOptions] = useState<StoreOption[]>([]);
+  const [selectedStoreIds, setSelectedStoreIds] = useState<string[]>([]);
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [ticketIdFilter, setTicketIdFilter] = useState("");
+  const [customerNameFilter, setCustomerNameFilter] = useState("");
+  const [machineModelFilter, setMachineModelFilter] = useState("");
+
+  useEffect(() => {
+    fetch("/api/stores")
+      .then((res) => res.json())
+      .then((body) => setStoreOptions(body.stores));
+  }, []);
+
   const columns = includeCancelled ? [...COLUMNS, CANCELLED_COLUMN] : COLUMNS;
   const columnOrder = columns.map((c) => c.status);
 
@@ -111,11 +137,28 @@ export default function BoardPage() {
   const load = useCallback(async () => {
     const params = new URLSearchParams();
     if (includeCancelled) params.set("includeCancelled", "true");
+    for (const storeId of selectedStoreIds) params.append("storeId", storeId);
+    for (const status of selectedStatuses) params.append("status", status);
+    if (dateFrom) params.set("dateFrom", dateFrom);
+    if (dateTo) params.set("dateTo", dateTo);
+    if (ticketIdFilter) params.set("ticketId", ticketIdFilter);
+    if (customerNameFilter) params.set("customerName", customerNameFilter);
+    if (machineModelFilter) params.set("machineModel", machineModelFilter);
+
     const res = await fetch(`/api/tickets?${params.toString()}`);
     const body = await res.json();
     setTickets(body.tickets);
     setLoaded(true);
-  }, [includeCancelled]);
+  }, [
+    includeCancelled,
+    selectedStoreIds,
+    selectedStatuses,
+    dateFrom,
+    dateTo,
+    ticketIdFilter,
+    customerNameFilter,
+    machineModelFilter,
+  ]);
 
   useEffect(() => {
     load();
@@ -167,6 +210,69 @@ export default function BoardPage() {
   return (
     <main>
       <h1>Board</h1>
+
+      <section aria-labelledby="filters-heading">
+        <h2 id="filters-heading">Filters</h2>
+        <div>
+          <label htmlFor="storeFilter">Store(s)</label>
+          <select
+            id="storeFilter"
+            multiple
+            value={selectedStoreIds}
+            onChange={(e) => setSelectedStoreIds(selectedOptions(e))}
+          >
+            {storeOptions.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label htmlFor="statusFilter">Status</label>
+          <select
+            id="statusFilter"
+            multiple
+            value={selectedStatuses}
+            onChange={(e) => setSelectedStatuses(selectedOptions(e))}
+          >
+            {ALL_STATUSES.map((s) => (
+              <option key={s} value={s}>
+                {s.replace("_", " ")}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label htmlFor="dateFrom">Created from</label>
+          <input id="dateFrom" type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+        </div>
+        <div>
+          <label htmlFor="dateTo">Created to</label>
+          <input id="dateTo" type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+        </div>
+        <div>
+          <label htmlFor="ticketIdFilter">Ticket ID</label>
+          <input id="ticketIdFilter" value={ticketIdFilter} onChange={(e) => setTicketIdFilter(e.target.value)} />
+        </div>
+        <div>
+          <label htmlFor="customerNameFilter">Customer name</label>
+          <input
+            id="customerNameFilter"
+            value={customerNameFilter}
+            onChange={(e) => setCustomerNameFilter(e.target.value)}
+          />
+        </div>
+        <div>
+          <label htmlFor="machineModelFilter">Machine model</label>
+          <input
+            id="machineModelFilter"
+            value={machineModelFilter}
+            onChange={(e) => setMachineModelFilter(e.target.value)}
+          />
+        </div>
+      </section>
+
       <div>
         <label htmlFor="includeCancelled">
           <input

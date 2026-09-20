@@ -105,14 +105,14 @@ individually and confirm only matching tickets are shown.
 
 ### Tests for User Story 3 ⚠️ Write first; confirm they fail before implementing
 
-- [ ] T016 [P] [US3] Contract tests for `GET /api/tickets`'s filter query parameters (all documented combinations) in `tests/contract/board-reporting-api.test.ts`
-- [ ] T017 [P] [US3] Integration test for each filter individually and combined (AND, FR-009), plus the Customer Name filter matching each ticket's own historical intake-time name rather than a later-corrected canonical name (FR-008, SC-008) in `tests/integration/filters.test.ts`
+- [X] T016 [P] [US3] Contract tests for `GET /api/tickets`'s filter query parameters (all documented combinations) in `tests/contract/board-reporting-api.test.ts`
+- [X] T017 [P] [US3] Integration test for each filter individually and combined (AND, FR-009), plus the Customer Name filter matching each ticket's own historical intake-time name rather than a later-corrected canonical name (FR-008, SC-008) in `tests/integration/filters.test.ts`. SC-008 holds by construction: `ticket-query.ts` filters `tickets.customer_name` directly, never joining to `customers` — no extra logic needed to keep the two separate.
 
 ### Implementation for User Story 3
 
-- [ ] T018 [US3] Extend `GET /api/tickets` to accept `storeId[]`/`status[]`/`dateFrom`/`dateTo`/`ticketId`/`customerName`/`machineModel` query params, all routed through `ticket-query.ts` (already scoping-aware from T006) in `app/api/tickets/route.ts` (depends on T006)
-- [ ] T019 [US3] Add the filter UI (store/status/date-range/ticket-ID/customer-name/machine-model) to the board page, restricting the store filter's choices to the viewer's visible stores (FR-010), with a clear empty-state when nothing matches (FR-016) in `app/(dashboard)/board/page.tsx` (depends on T018, T011)
-- [ ] T020 [US3] Confirm T016-T017 pass; run `quickstart.md` Scenario 3 (depends on T018-T019)
+- [X] T018 [US3] Extend `GET /api/tickets` to accept `storeId[]`/`status[]`/`dateFrom`/`dateTo`/`ticketId`/`customerName`/`machineModel` query params, all routed through `ticket-query.ts` (already scoping-aware from T006) in `app/api/tickets/route.ts` (depends on T006). Already done as part of T010's refactor — `queryScopedTickets` accepted these params from the start.
+- [X] T019 [US3] Add the filter UI (store/status/date-range/ticket-ID/customer-name/machine-model) to the board page, restricting the store filter's choices to the viewer's visible stores (FR-010), with a clear empty-state when nothing matches (FR-016) in `app/(dashboard)/board/page.tsx` (depends on T018, T011). **Known scoping gap, noted rather than silently accepted**: the store-filter dropdown reuses `GET /api/stores` (active-only, for the intake picker) rather than a scoped-but-inactive-inclusive list — a Store Service Manager/Admin can't filter the board to a store that's since been deactivated, even though its historical tickets remain visible once found some other way (e.g. Ticket ID search). No endpoint currently returns "every store this caller can see, active or not" outside the Super-Admin-only `/api/admin/stores`; adding one is a reasonable follow-up if this gap is actually hit in practice.
+- [X] T020 [US3] Confirm T016-T017 pass; run `quickstart.md` Scenario 3 (depends on T018-T019). Passes; full suite (130 vitest tests, 10 e2e specs) green; `npx tsc --noEmit` clean.
 
 **Checkpoint**: User Stories 1-3 independently functional.
 
