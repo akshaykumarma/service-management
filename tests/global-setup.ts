@@ -44,11 +44,17 @@ export default async function setup() {
   const { SEND_WHATSAPP_MESSAGE_QUEUE, registerSendWhatsAppMessageWorker } = await import(
     "../jobs/send-whatsapp-message"
   );
+  const { SWEEP_OTP_TIMEOUTS_QUEUE, registerSweepOtpTimeoutsWorker } = await import("../jobs/sweep-otp-timeouts");
   const boss = new PgBoss({ connectionString: process.env.DATABASE_URL! });
   boss.on("error", (err) => console.error("pg-boss error (test worker)", err));
   await boss.start();
   await boss.createQueue(SEND_WHATSAPP_MESSAGE_QUEUE);
+  await boss.createQueue(SWEEP_OTP_TIMEOUTS_QUEUE);
   await registerSendWhatsAppMessageWorker(boss);
+  // Tests exercise sweepTimedOutOtpAttempts() directly for deterministic timing rather
+  // than waiting on this cron (1-minute granularity is too coarse for a test suite) —
+  // registered here anyway so the queue behaves the same as in production.
+  await registerSweepOtpTimeoutsWorker(boss);
 
   return async function teardown() {
     await new Promise<void>((resolve, reject) => {

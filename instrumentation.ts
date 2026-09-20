@@ -7,7 +7,9 @@ export async function register() {
   if (process.env.NEXT_RUNTIME === "nodejs") {
     const { getBoss } = await import("@/lib/jobs/boss");
     const { registerSendWhatsAppMessageWorker } = await import("@/jobs/send-whatsapp-message");
+    const { registerSweepOtpTimeoutsWorker } = await import("@/jobs/sweep-otp-timeouts");
     const boss = await getBoss();
     await registerSendWhatsAppMessageWorker(boss);
+    await registerSweepOtpTimeoutsWorker(boss);
   }
 }

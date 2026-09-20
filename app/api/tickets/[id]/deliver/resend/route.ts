@@ -6,9 +6,7 @@ import { requireAuthenticatedSession } from "@/lib/auth/require-session";
 import { requireSameOrigin } from "@/lib/auth/csrf";
 import { assertAccess, AccessDeniedError } from "@/lib/auth/rbac";
 import { resendOtp } from "@/lib/delivery/otp";
-import { renderTemplate, DEFAULT_TEMPLATE_BODY } from "@/lib/whatsapp/templates";
-import { getBoss } from "@/lib/jobs/boss";
-import { SEND_WHATSAPP_MESSAGE_QUEUE, type SendWhatsAppMessageJobData } from "@/jobs/send-whatsapp-message";
+import { enqueueOtpSend } from "@/lib/delivery/send-otp-message";
 
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
   const csrfResponse = requireSameOrigin(request);
@@ -49,18 +47,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
         { status: 429 },
       );
     case "sent": {
-      const boss = await getBoss();
-      const jobData: SendWhatsAppMessageJobData = {
-        ticketId: ticket.id,
-        type: "otp",
-        recipientPhone: ticket.customerPhone,
-        templateParams: { ticket_id: ticket.ticketNumber, otp_code: result.code },
-        storedContent: renderTemplate(DEFAULT_TEMPLATE_BODY.otp, {
-          ticket_id: ticket.ticketNumber,
-          otp_code: "REDACTED",
-        }),
-      };
-      await boss.send(SEND_WHATSAPP_MESSAGE_QUEUE, jobData);
+      await enqueueOtpSend(ticket, result.code);
       return new NextResponse(null, { status: 202 });
     }
   }

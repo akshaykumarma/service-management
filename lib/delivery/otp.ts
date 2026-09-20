@@ -108,9 +108,16 @@ export type ResendOtpResult =
   | { result: "already_used" }
   | { result: "no_active_attempt" };
 
+/**
+ * "Active attempt" here deliberately does NOT require the current code to be
+ * unexpired: FR-009's own edge case (spec.md) is a customer who was slow to check
+ * WhatsApp and lets the code expire untouched — resend exists precisely to cover that,
+ * so a lapsed code still blocks nothing here. Only `locked` (3-strikes or the timeout
+ * sweep already fired) or `verifiedAt` (already delivered) end the attempt outright.
+ */
 export async function resendOtp(ticketId: string): Promise<ResendOtpResult> {
   const row = await latestRow(ticketId);
-  if (!row || row.locked || row.verifiedAt || row.expiresAt.getTime() <= Date.now()) {
+  if (!row || row.locked || row.verifiedAt) {
     return { result: "no_active_attempt" };
   }
   if (row.resendUsed) return { result: "already_used" };

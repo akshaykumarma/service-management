@@ -44,6 +44,7 @@ interface NotificationAlert {
 
 interface DeliveryState {
   activeAttempt: boolean;
+  locked: boolean;
 }
 
 const DELIVER_ERROR_MESSAGES: Record<string, string> = {
@@ -91,6 +92,8 @@ export default function TicketDetailPage() {
   const [verifying, setVerifying] = useState(false);
   const [resendMessage, setResendMessage] = useState<string | null>(null);
   const [resending, setResending] = useState(false);
+  const [reinitiateError, setReinitiateError] = useState<string | null>(null);
+  const [reinitiating, setReinitiating] = useState(false);
   const [notFound, setNotFound] = useState(false);
   const [toStatus, setToStatus] = useState("");
   const [comment, setComment] = useState("");
@@ -179,6 +182,11 @@ export default function TicketDetailPage() {
       } else {
         setVerifyError(VERIFY_ERROR_MESSAGES[body.error.code] ?? "Could not verify code.");
       }
+      if (body.error.code === "locked") {
+        // The 3rd wrong entry locks server-side within this same request — reload so
+        // delivery.locked reflects it immediately instead of on the next 30s poll.
+        await load();
+      }
     } finally {
       setVerifying(false);
     }
@@ -201,6 +209,26 @@ export default function TicketDetailPage() {
       }
     } finally {
       setResending(false);
+    }
+  }
+
+  async function handleReinitiate() {
+    setReinitiateError(null);
+    setReinitiating(true);
+    try {
+      const res = await fetch(`/api/tickets/${params.id}/deliver/reinitiate`, { method: "POST" });
+      if (res.ok) {
+        await load();
+        return;
+      }
+      const body = await res.json();
+      setReinitiateError(
+        res.status === 403
+          ? "Only an Admin or Super Admin can start a new attempt after a lockout."
+          : (DELIVER_ERROR_MESSAGES[body.error?.code] ?? "Could not start a new attempt."),
+      );
+    } finally {
+      setReinitiating(false);
     }
   }
 
@@ -340,10 +368,25 @@ export default function TicketDetailPage() {
         </form>
       </section>
 
-      {(ticket.status === "completed" || delivery?.activeAttempt) && (
+      {(ticket.status === "completed" || delivery?.activeAttempt || delivery?.locked) && (
         <section aria-labelledby="delivery-heading">
           <h2 id="delivery-heading">Delivery verification</h2>
-          {!delivery?.activeAttempt ? (
+          {delivery?.locked ? (
+            <>
+              <p role="alert" aria-live="assertive">
+                Entry is locked (3 incorrect attempts, or the code and its resend both expired). An Admin or Super
+                Admin must start a new attempt.
+              </p>
+              {reinitiateError && (
+                <p role="alert" aria-live="assertive">
+                  {reinitiateError}
+                </p>
+              )}
+              <button type="button" onClick={handleReinitiate} disabled={reinitiating}>
+                Start new attempt
+              </button>
+            </>
+          ) : !delivery?.activeAttempt ? (
             <>
               <p>Send a one-time WhatsApp code to the customer to confirm delivery.</p>
               {deliverError && (

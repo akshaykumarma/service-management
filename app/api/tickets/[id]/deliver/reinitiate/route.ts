@@ -4,10 +4,15 @@ import { db } from "@/lib/db/client";
 import { tickets } from "@/lib/db/schema";
 import { requireAuthenticatedSession } from "@/lib/auth/require-session";
 import { requireSameOrigin } from "@/lib/auth/csrf";
-import { assertAccess, AccessDeniedError } from "@/lib/auth/rbac";
+import { assertAccess, AccessDeniedError, requireAdminOrAbove } from "@/lib/auth/rbac";
 import { hasActiveOtpAttempt, issueOtp } from "@/lib/delivery/otp";
 import { enqueueOtpSend } from "@/lib/delivery/send-otp-message";
 
+/**
+ * FR-013/FR-023: a Store Service Manager gets 403 here even though they can call the
+ * original POST .../deliver — clearing a lockout (3-strikes or timeout-exhaustion) is
+ * Admin/Super-Admin only.
+ */
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
   const csrfResponse = requireSameOrigin(request);
   if (csrfResponse) return csrfResponse;
@@ -31,14 +36,28 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     throw err;
   }
 
+  try {
+    requireAdminOrAbove(caller);
+  } catch (err) {
+    if (err instanceof AccessDeniedError) {
+      return NextResponse.json({ error: { code: "forbidden", message: err.message } }, { status: 403 });
+    }
+    throw err;
+  }
+
   if (ticket.status !== "completed") {
     return NextResponse.json({ error: { code: "ticket_not_completed" } }, { status: 409 });
   }
 
+  // Reinitiate is for clearing a lockout, not a shortcut past the normal active-attempt
+  // gate — a still-active (unlocked, unexpired, unverified) attempt uses the same
+  // 409 as POST .../deliver.
   if (await hasActiveOtpAttempt(ticket.id)) {
     return NextResponse.json({ error: { code: "attempt_already_active" } }, { status: 409 });
   }
 
+  // data-model.md: creates a new row with its own resend allowance; never clears
+  // `locked` on the prior one (append-only history of attempts).
   const { code } = await issueOtp(ticket.id);
   await enqueueOtpSend(ticket, code);
 
