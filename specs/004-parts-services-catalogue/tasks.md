@@ -22,7 +22,7 @@ contracts/catalogue-billing-api.md, quickstart.md (all present). Assumes
 
 ## Phase 1: Setup
 
-- [ ] T001 [P] Install `csv-parse` dependency for bulk parts import (`research.md` §4)
+- [X] T001 [P] Install `csv-parse` dependency for bulk parts import (`research.md` §4)
 
 **Checkpoint**: Dependency available; no feature code yet.
 
@@ -34,10 +34,10 @@ contracts/catalogue-billing-api.md, quickstart.md (all present). Assumes
 
 **⚠️ CRITICAL**: No user story task may begin until this phase is complete
 
-- [ ] T002 Define Drizzle schema for `parts`, `services`, `ticket_line_items` (all money columns as `numeric(12,2)`, per `research.md` §2 — never floating point) in `lib/db/schema.ts`
-- [ ] T003 Generate and run the migration (depends on T002)
-- [ ] T004 [P] Implement the Completed-lock derived check — `EXISTS ... status_history WHERE to_status = 'completed'`, read-only against `003-ticket-lifecycle`'s existing table, no new column added anywhere (`research.md` §1) — in `lib/billing/completed-lock.ts` (depends on T002)
-- [ ] T005 [P] Implement bill calculation (subtotal/tax/total via `NUMERIC`-safe SQL aggregation, tax read live from the store's current rate per `research.md` §3) in `lib/billing/bill-calculation.ts` (depends on T002)
+- [X] T002 Define Drizzle schema for `parts`, `services`, `ticket_line_items` (all money columns as `numeric(12,2)`, per `research.md` §2 — never floating point) in `lib/db/schema.ts`. Also added `stores.tax_rate` (`numeric(5,2)`, extending the existing table via `ALTER TABLE`, never recreating it) since bill calculation needs a live rate to read and `007-admin-console` hasn't built store management yet — `quickstart.md`'s own Prerequisites anticipated exactly this fallback ("a manually-seeded row if that feature isn't built yet").
+- [X] T003 Generate and run the migration (depends on T002)
+- [X] T004 [P] Implement the Completed-lock derived check — `EXISTS ... status_history WHERE to_status = 'completed'`, read-only against `003-ticket-lifecycle`'s existing table, no new column added anywhere (`research.md` §1) — in `lib/billing/completed-lock.ts` (depends on T002)
+- [X] T005 [P] Implement bill calculation (subtotal/tax/total computed entirely in one `NUMERIC` SQL aggregation query — sum and multiplication both happen in Postgres, never JS floating point — tax read live from the store's current rate per `research.md` §3) in `lib/billing/bill-calculation.ts` (depends on T002)
 
 **Checkpoint**: Schema and billing utilities exist — user story work can begin.
 

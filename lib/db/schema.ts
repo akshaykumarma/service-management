@@ -8,6 +8,7 @@ import {
   integer,
   smallint,
   date,
+  numeric,
   primaryKey,
   pgEnum,
   uniqueIndex,
@@ -25,14 +26,17 @@ export const ticketStatusEnum = pgEnum("ticket_status", [
 ]);
 
 /**
- * Minimal stub — 003-ticket-lifecycle's own Foundational phase (T004) is the feature that
- * actually owns and later extends this table (007-admin-console's T002 ALTERs it further).
- * Created here only because 002's user_stores FK needs a target table to exist; this table
- * must NOT be re-created by either of those features, only extended.
+ * Minimal stub, extended incrementally by whichever feature needs the next column before
+ * 007-admin-console's own fuller definition lands (its plan explicitly ALTERs, never
+ * recreates, this table). Created in 002-auth-rbac (user_stores' FK target); `taxRate`
+ * added here by 004-parts-services-catalogue since bill calculation needs a live rate to
+ * read and 007 doesn't exist yet — matches 004's own quickstart.md's fallback note
+ * ("a manually-seeded row if that feature isn't built yet").
  */
 export const stores = pgTable("stores", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
+  taxRate: numeric("tax_rate", { precision: 5, scale: 2 }).notNull().default("0"),
 });
 
 export const users = pgTable("users", {
@@ -181,3 +185,42 @@ export const ticketNumberCounters = pgTable(
     pk: primaryKey({ columns: [table.storeId, table.year] }),
   }),
 );
+
+export const parts = pgTable("parts", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull(),
+  sku: text("sku"),
+  unitCost: numeric("unit_cost", { precision: 12, scale: 2 }).notNull(),
+  category: text("category"),
+  active: boolean("active").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const services = pgTable("services", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull(),
+  description: text("description"),
+  unitCost: numeric("unit_cost", { precision: 12, scale: 2 }).notNull(),
+  active: boolean("active").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const lineItemTypeEnum = pgEnum("line_item_type", ["part", "service"]);
+
+export const ticketLineItems = pgTable("ticket_line_items", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  ticketId: uuid("ticket_id")
+    .notNull()
+    .references(() => tickets.id, { onDelete: "cascade" }),
+  itemType: lineItemTypeEnum("item_type").notNull(),
+  // References parts.id or services.id depending on itemType — application-enforced,
+  // not a single DB FK, since it targets one of two tables (data-model.md).
+  itemId: uuid("item_id").notNull(),
+  nameSnapshot: text("name_snapshot").notNull(),
+  quantity: integer("quantity").notNull(),
+  unitCostSnapshot: numeric("unit_cost_snapshot", { precision: 12, scale: 2 }).notNull(),
+  lineTotal: numeric("line_total", { precision: 12, scale: 2 }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
