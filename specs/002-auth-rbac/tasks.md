@@ -32,11 +32,11 @@ Single Next.js App Router project per `plan.md`'s Structure Decision — `app/`,
 
 **Purpose**: Project initialization per `plan.md`'s Technical Context
 
-- [ ] T001 Create Next.js 14+ (App Router) + TypeScript 5.x project structure per `plan.md`'s Project Structure at the repository root
-- [ ] T002 [P] Configure ESLint + Prettier for the project
-- [ ] T003 [P] Set up Docker Compose (app service + PostgreSQL 15 service) per `plan.md`'s self-hosted deployment target, in `docker-compose.yml`
-- [ ] T004 [P] Configure Vitest for unit/contract/integration tests in `vitest.config.ts`
-- [ ] T005 [P] Configure Playwright for e2e tests in `playwright.config.ts`
+- [X] T001 Create Next.js 14+ (App Router) + TypeScript 5.x project structure per `plan.md`'s Project Structure at the repository root
+- [X] T002 [P] Configure ESLint + Prettier for the project
+- [X] T003 [P] Set up Docker Compose (app service + PostgreSQL 15 service) per `plan.md`'s self-hosted deployment target, in `docker-compose.yml`
+- [X] T004 [P] Configure Vitest for unit/contract/integration tests in `vitest.config.ts`
+- [X] T005 [P] Configure Playwright for e2e tests in `playwright.config.ts`
 
 **Checkpoint**: Project scaffolding exists; no feature code yet.
 
@@ -48,12 +48,12 @@ Single Next.js App Router project per `plan.md`'s Structure Decision — `app/`,
 
 **⚠️ CRITICAL**: No user story task may begin until this phase is complete
 
-- [ ] T006 Define Drizzle schema for `users`, `user_stores`, `sessions` (extended with `last_active_at`), `password_reset_tokens`, and `audit_log` per `data-model.md` in `lib/db/schema.ts`
-- [ ] T007 Set up the Drizzle client and migration tooling in `lib/db/client.ts` (depends on T006)
-- [ ] T008 Generate and run the initial migration against the Docker Postgres instance (depends on T003, T007)
-- [ ] T009 Configure Auth.js (NextAuth v5) with the Drizzle adapter and **database session strategy** (per `research.md` §1) in `lib/auth/auth.config.ts` (depends on T006)
-- [ ] T010 [P] Define the environment variable schema (`DATABASE_URL`, `SMTP_*`, `SESSION_IDLE_TIMEOUT_HOURS`, `AUTH_SECRET`) in `.env.example` (depends on T001)
-- [ ] T011 Write a one-off seed script that creates the first Super Admin account, since no API endpoint creates the first one (per `contracts/auth-api.md`'s note on `POST /api/auth/users`), in `scripts/seed-super-admin.ts` (depends on T006)
+- [X] T006 Define Drizzle schema for `users`, `user_stores`, `sessions` (extended with `last_active_at`), `password_reset_tokens`, and `audit_log` per `data-model.md` in `lib/db/schema.ts`
+- [X] T007 Set up the Drizzle client and migration tooling in `lib/db/client.ts` (depends on T006)
+- [X] T008 Generate and run the initial migration against the Docker Postgres instance (depends on T003, T007)
+- [X] T009 **Implementation deviation from research.md §2**: Auth.js (NextAuth v5)'s Credentials provider does not support true database-session strategy (its built-in flow has no adapter step for credentials sign-in), and `pg` cannot run in the Next.js Edge middleware runtime `research.md` didn't anticipate needing. Implemented a small custom session module directly against Drizzle instead — opaque random tokens, HttpOnly+Secure cookies, live per-request DB lookup — which satisfies the same FR-019 requirement research.md's decision was made to satisfy, without fighting the library's actual constraints. See `lib/auth/session.ts`. `next-auth`/`@auth/drizzle-adapter` removed from `package.json`.
+- [X] T010 [P] Define the environment variable schema (`DATABASE_URL`, `SMTP_*`, `SESSION_IDLE_TIMEOUT_HOURS`, `AUTH_SECRET`) in `.env.example` (depends on T001)
+- [X] T011 Write a one-off seed script that creates the first Super Admin account, since no API endpoint creates the first one (per `contracts/auth-api.md`'s note on `POST /api/auth/users`), in `scripts/seed-super-admin.ts` (depends on T006)
 
 **Checkpoint**: Database, ORM, and base auth session infrastructure exist — user story work can begin.
 
@@ -71,19 +71,19 @@ Acceptance Scenarios — all without any other user story existing yet.
 
 ### Tests for User Story 1 ⚠️ Write first; confirm they fail before implementing
 
-- [ ] T012 [P] [US1] Contract tests for `POST /api/auth/login`, `GET /api/auth/session`, `POST /api/auth/logout` (every documented status code in `contracts/auth-api.md`) in `tests/contract/auth-api.test.ts`
-- [ ] T013 [P] [US1] Integration test for idle-timeout expiry and 5-attempt lockout with auto-unlock after 15 minutes in `tests/integration/login-lockout.test.ts`
-- [ ] T014 [P] [US1] E2E test for login → role-appropriate landing view in `tests/e2e/login-to-dashboard.spec.ts`
+- [X] T012 [P] [US1] Contract tests for `POST /api/auth/login`, `GET /api/auth/session`, `POST /api/auth/logout` (every documented status code in `contracts/auth-api.md`) in `tests/contract/auth-api.test.ts`
+- [X] T013 [P] [US1] Integration test for idle-timeout expiry and 5-attempt lockout with auto-unlock after 15 minutes in `tests/integration/login-lockout.test.ts`
+- [X] T014 [P] [US1] E2E test for login → role-appropriate landing view in `tests/e2e/login-to-dashboard.spec.ts`
 
 ### Implementation for User Story 1
 
-- [ ] T015 [US1] Implement the Credentials provider with bcrypt (cost 12) password verification in `lib/auth/auth.config.ts` (depends on T009, T012)
-- [ ] T016 [US1] Implement login-attempt lockout tracking (5 fails → 15-min lock, self-clearing) in `lib/auth/lockout.ts` (depends on T015)
-- [ ] T017 [US1] Wire `POST /api/auth/login` (Credentials sign-in + lockout check + response shape from `contracts/auth-api.md`) in `app/api/auth/[...nextauth]/route.ts` (depends on T015, T016)
-- [ ] T018 [US1] Implement the session callback shaping `{id, name, email, role, storeIds}` and enforcing the idle-timeout check against `last_active_at` in `lib/auth/auth.config.ts` (depends on T009)
-- [ ] T019 [US1] Wire `GET /api/auth/session` and `POST /api/auth/logout` via the Auth.js catch-all route in `app/api/auth/[...nextauth]/route.ts` (depends on T018)
-- [ ] T020 [US1] Build an accessible (WCAG 2.1 AA) login page in `app/(auth)/login/page.tsx` (depends on T017)
-- [ ] T021 [US1] Confirm T012-T014 pass; run `quickstart.md` Scenario 1 (depends on T015-T020)
+- [X] T015 [US1] Implement bcrypt (cost 12) password hashing/verification in `lib/auth/auth.config.ts` (depends on T009, T012) — no Credentials provider; see T009's deviation note
+- [X] T016 [US1] Implement login-attempt lockout tracking (5 fails → 15-min lock, self-clearing) in `lib/auth/lockout.ts` (depends on T015)
+- [X] T017 [US1] Wire `POST /api/auth/login` (password verification + lockout check + response shape from `contracts/auth-api.md`) in `app/api/auth/login/route.ts` (path deviation from T009's note — discrete route files per contract path, not an Auth.js catch-all) (depends on T015, T016)
+- [X] T018 [US1] Implement session validity shaping `{id, name, email, role, storeIds}` and the idle-timeout check against `last_active_at`, live per request, in `lib/auth/session.ts` (depends on T009)
+- [X] T019 [US1] Wire `GET /api/auth/session` in `app/api/auth/session/route.ts` and `POST /api/auth/logout` in `app/api/auth/logout/route.ts` (depends on T018)
+- [X] T020 [US1] Build an accessible (WCAG 2.1 AA) login page in `app/(auth)/login/page.tsx` (depends on T017)
+- [X] T021 [US1] Confirm T012-T014 pass; run `quickstart.md` Scenario 1 (depends on T015-T020) — all 9 Vitest tests and both Playwright e2e tests pass
 
 **Checkpoint**: User Story 1 fully functional and independently testable/deployable (MVP).
 
