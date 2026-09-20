@@ -125,11 +125,11 @@ Completed ticket backward and confirm line items are still locked.
 
 ## Phase 6: Polish & Cross-Cutting Concerns
 
-- [ ] T028 [P] Run the full `quickstart.md` validation (all 4 scenarios, all 6 success-criteria checklist items) end-to-end
-- [ ] T029 [P] Accessibility audit (WCAG 2.1 AA) of the catalogue maintenance and line-item selection UI
-- [ ] T030 [P] Security review: Super-Admin-only enforcement on every catalogue route, role/store scoping on every line-item route
-- [ ] T031 Performance check: bill recalculation and catalogue list queries meet the constitution's <500ms p95
-- [ ] T032 [P] Note the shared "first reached Completed" pattern (`research.md` §1) as a candidate for future consolidation with `005-customer-notifications` and `006-dashboard-reporting`, which each implement the same derived fact independently
+- [X] T028 [P] Ran the full `quickstart.md` validation via the automated suite: SC-001-SC-006 each map to a named test (SC-001 → `bill-calculation.test.ts`'s exact-tax assertion; SC-002 → `price-snapshot.test.ts`; SC-003 → `catalogue-maintenance.test.ts`; SC-004 → the CSV per-row-reason test; SC-005 → the deactivation-exclusion test; SC-006 → `completed-lock.test.ts`, both branches). 81/81 tests passing.
+- [X] T029 [P] Accessibility audit (WCAG 2.1 AA) of the catalogue maintenance and line-item selection UI: every input/select has an associated `<label>`, tables use `<th scope="col">` and `<caption>`, errors use `role="alert" aria-live="assertive"`, import feedback uses `role="status"`. Same gap as prior features' own audits: no visual design/CSS exists yet, so color-contrast/focus-indicator criteria are untested against real styling.
+- [X] T030 [P] Security review: confirmed by direct inspection every catalogue mutation route (`parts` POST/PATCH, `parts/import` POST, `services` POST/PATCH) calls `requireSuperAdmin`, every catalogue GET allows any authenticated role (per contract), and every line-item route (`POST`/`PATCH`/`DELETE`) calls `assertAccess(caller, ticket.storeId)` before any write — plus `requireSameOrigin` (CSRF) on every state-changing route. No gaps found this time (contrast with `003`'s photo-validation and `002`'s CSRF/middleware findings) — this feature's routes were built directly against the already-hardened patterns those reviews established.
+- [X] T031 Performance check (`scripts/bench-billing-routes.ts`, 30 iterations against real route handlers and real Postgres): `GET /api/catalogue/parts` (100 active rows) p95 ≈ 3ms; `POST /api/tickets/:id/line-items` (bill recalculation) p95 ≈ 7ms. Both comfortably under the constitution's 500ms p95 target.
+- [X] T032 [P] The shared "first reached Completed" pattern (`research.md` §1) is flagged here as the **first** instance — `005-customer-notifications` and `006-dashboard-reporting` (implemented after this feature) each independently reimplement the same derived fact, and their own tasks.md files explicitly reference this note as the reason to flag rather than silently re-duplicate a third and fourth time. A future consolidation (a shared utility or SQL view in `003-ticket-lifecycle`, which owns `status_history`) remains a candidate, not yet done.
 
 ---
 
