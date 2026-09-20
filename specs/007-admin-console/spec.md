@@ -13,6 +13,7 @@
 ### Session 2026-09-20
 
 - Q: Is a machine model identified by a single "Model Name" field, or does it also need a separate "Model Number"/SKU field distinct from a human-readable name? → A: Same field — "Model Name" here and "Machine Model Number" in `003-ticket-lifecycle`'s intake form refer to the same identifying value; terminology is normalized to "Model Name" throughout this spec.
+- Q: When a store is deactivated, does it keep its assigned Admin user(s), or are they automatically removed? → A: Assignment stays in place — deactivating a store doesn't touch its Admin assignments; reactivating it immediately restores those Admins' visibility with no re-assignment needed.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -46,6 +47,7 @@ The Super Admin creates and configures each store — name, address, primary con
 1. **Given** the store management screen, **When** a Super Admin creates a store with name, address, primary contact, WhatsApp number, and tax rate, **Then** the store becomes available for ticket creation and its tax rate is used in that store's bill calculations.
 2. **Given** an existing store, **When** a Super Admin updates its tax rate, **Then** subsequently calculated bills at that store use the new rate.
 3. **Given** an existing store, **When** a Super Admin marks it inactive, **Then** it is no longer available for new ticket creation, while its historical tickets remain accessible per each role's normal visibility rules.
+4. **Given** a store with one or more assigned Admins, **When** a Super Admin deactivates the store, **Then** those Admin assignments are left in place unchanged; **When** the store is later reactivated, **Then** those same Admins immediately have visibility into it again with no re-assignment needed.
 
 ---
 
@@ -70,6 +72,7 @@ From the store management screen, the Super Admin assigns which Admin user(s) ar
 - What happens when a store is deactivated while it has open (non-terminal) tickets? Those tickets remain accessible and workable by staff already assigned to it; the store simply stops being available for creating new tickets (see Assumptions).
 - What happens if a CSV of machine models contains a duplicate model already in the catalogue? The system MUST report it as a skipped/invalid row rather than silently creating a duplicate.
 - What happens if a store's WhatsApp number is left blank or invalid? Notifications for that store's tickets cannot be sent (per `005-customer-notifications`), so the system MUST validate this field before allowing the store to go active.
+- What happens to a store's assigned Admin(s) when the store is deactivated and later reactivated? The assignments are left untouched throughout — reactivation restores full access immediately with no re-assignment step (see FR-012).
 
 ## Requirements *(mandatory)*
 
@@ -86,6 +89,7 @@ From the store management screen, the Super Admin assigns which Admin user(s) ar
 - **FR-009**: System MUST exclude a deactivated store from selection when creating new tickets, while preserving access to its historical tickets per each role's normal visibility.
 - **FR-010**: System MUST allow the Super Admin to assign or remove an Admin's association with a store from the store management screen, applying the access effect defined in `002-auth-rbac`.
 - **FR-011**: System MUST deny Admin and Store Service Manager roles access to machine model and store management screens.
+- **FR-012**: System MUST NOT alter a store's Admin assignment(s) when the store is deactivated or reactivated; assignments persist unchanged across both transitions.
 
 ### Key Entities *(include if feature involves data)*
 
@@ -101,6 +105,7 @@ From the store management screen, the Super Admin assigns which Admin user(s) ar
 - **SC-003**: Zero deactivated machine models or stores are selectable for new ticket/intake activity.
 - **SC-004**: A bulk CSV import of machine models reports 100% of failed/duplicate rows with a specific reason, with zero silent failures.
 - **SC-005**: An Admin's store assignment change (add or remove) takes effect immediately, with no delay before their ticket visibility updates.
+- **SC-006**: 100% of Admin store assignments survive a store deactivation/reactivation cycle unchanged; 0% require manual re-assignment afterward.
 
 ## Assumptions
 
