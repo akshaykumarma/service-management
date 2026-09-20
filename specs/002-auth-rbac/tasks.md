@@ -101,14 +101,14 @@ attempt outside their scope.
 
 ### Tests for User Story 2 ⚠️ Write first; confirm it fails before implementing
 
-- [ ] T022 [P] [US2] Integration test for cross-store denial, multi-store Admin visibility, maintenance-console denial for Admin, and direct-invocation bypass attempts in `tests/integration/rbac-scope.test.ts`
+- [X] T022 [P] [US2] Integration test for cross-store denial, multi-store Admin visibility, direct-invocation bypass attempts, and `requireSuperAdmin` denial in `tests/integration/rbac-scope.test.ts`. Full end-to-end "denied from maintenance-console/user-management route" coverage lands with those routes themselves (007, and this spec's own US4) since they call this same `assertAccess()`/`requireSuperAdmin()` — there is only one scope-check implementation to test, not a parallel one per route.
 
 ### Implementation for User Story 2
 
-- [ ] T023 [US2] Implement the `assertAccess(user, store)` scope-check function in `lib/auth/rbac.ts` (depends on T009)
-- [ ] T024 [US2] Compute and return `storeIds` in the session callback from the `user_stores` join, empty for `super_admin`, in `lib/auth/auth.config.ts` (depends on T018, T023)
-- [ ] T025 [US2] Apply `assertAccess()` as Next.js middleware guarding every authenticated route, including denying Admin from maintenance-console/user-management routes, in `middleware.ts` (depends on T023)
-- [ ] T026 [US2] Confirm T022 passes; run `quickstart.md` Scenario 2 (depends on T023-T025)
+- [X] T023 [US2] Implement `assertAccess(user, storeId)`, `getScopedStoreIds(user)`, and `requireSuperAdmin`/`requireAdminOrAbove` in `lib/auth/rbac.ts` (depends on T009)
+- [X] T024 [US2] Compute and return `storeIds` in `GET /api/auth/session` from `getScopedStoreIds()`, empty for `super_admin`, in `app/api/auth/session/route.ts` (depends on T018, T023)
+- [X] T025 [US2] Implementation deviation: `pg` cannot run in the Next.js Edge middleware runtime, so `middleware.ts` performs only an Edge-safe cookie-presence redirect for UX (unauthenticated requests bounce to `/login` immediately). The actual live, DB-backed authorization boundary FR-019 requires is `assertAccess()`/`getValidSession()` called inside every protected Route Handler and Server Component (Node.js runtime) — see `app/(dashboard)/dashboard/page.tsx` for the pattern already in place. Documented inline in `middleware.ts` so this isn't mistaken for the real enforcement layer later.
+- [X] T026 [US2] Confirm T022 passes; run `quickstart.md` Scenario 2 (depends on T023-T025) — all 6 rbac-scope tests pass; full test suite (15 tests) green with no regressions
 
 **Checkpoint**: User Stories 1 and 2 both independently functional.
 
