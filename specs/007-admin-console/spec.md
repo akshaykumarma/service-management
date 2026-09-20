@@ -8,6 +8,12 @@
 
 **Input**: User description: "PRD §6.9.3 Machine Models (Super Admin CRUD for Model Name, Manufacturer, Category, with bulk CSV import) and §6.9.4 Stores Management (Super Admin CRUD for Store Name, Address, Primary Contact, WhatsApp Number, Tax Rate %, Active/Inactive, and assigning Admin users to stores from this screen)."
 
+## Clarifications
+
+### Session 2026-09-20
+
+- Q: Is a machine model identified by a single "Model Name" field, or does it also need a separate "Model Number"/SKU field distinct from a human-readable name? → A: Same field — "Model Name" here and "Machine Model Number" in `003-ticket-lifecycle`'s intake form refer to the same identifying value; terminology is normalized to "Model Name" throughout this spec.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Machine Model Catalogue Maintenance (Priority: P1)
@@ -70,7 +76,7 @@ From the store management screen, the Super Admin assigns which Admin user(s) ar
 ### Functional Requirements
 
 - **FR-001**: System MUST allow only the Super Admin to create, edit, and deactivate machine models.
-- **FR-002**: System MUST capture, for each machine model, a name, manufacturer, and category.
+- **FR-002**: System MUST capture, for each machine model, a name (the single identifying value used for both catalogue selection and history matching — equivalent to what `003-ticket-lifecycle` calls "machine model number"), a manufacturer, and a category.
 - **FR-003**: System MUST exclude deactivated machine models from the intake selection dropdown while leaving existing ticket references to them unaffected.
 - **FR-004**: System MUST support bulk-importing machine models from a CSV file, applying valid rows and reporting invalid/duplicate rows with the reason they failed.
 - **FR-005**: System MUST allow only the Super Admin to create, edit, and deactivate stores.
@@ -100,4 +106,5 @@ From the store management screen, the Super Admin assigns which Admin user(s) ar
 
 - A deactivated store's already-created tickets remain fully accessible and workable by staff who already have visibility into them; deactivation only prevents new ticket creation at that store.
 - Machine model categories (e.g., Washing Machine, Refrigerator, AC) are free-form or a maintained short list; the exact category taxonomy is a content decision for the Super Admin, not a fixed enumeration in this spec.
+- `003-ticket-lifecycle` refers to this same identifying value as "machine model number"; that spec's terminology should be aligned to "Model Name" for consistency if it's revisited, though this clarify pass does not edit it directly (out of scope for this command run).
 - Store-to-Admin assignment shown here is the same underlying capability required by `002-auth-rbac`; this spec only adds a convenient entry point for it from the store screen.
