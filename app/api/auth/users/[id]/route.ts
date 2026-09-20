@@ -5,8 +5,12 @@ import { auditLog, users, userStores } from "@/lib/db/schema";
 import { requireAuthenticatedSession } from "@/lib/auth/require-session";
 import { AccessDeniedError, requireSuperAdmin } from "@/lib/auth/rbac";
 import { writeAuditLog } from "@/lib/auth/audit";
+import { requireSameOrigin } from "@/lib/auth/csrf";
 
 async function requireSuperAdminSession(request: NextRequest) {
+  const csrfResponse = requireSameOrigin(request);
+  if (csrfResponse) return csrfResponse;
+
   const sessionOrResponse = await requireAuthenticatedSession(request);
   if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
   try {

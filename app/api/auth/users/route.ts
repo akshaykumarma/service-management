@@ -5,6 +5,7 @@ import { users, userStores } from "@/lib/db/schema";
 import { hashPassword, generateTemporaryPassword } from "@/lib/auth/auth.config";
 import { requireAuthenticatedSession } from "@/lib/auth/require-session";
 import { AccessDeniedError, requireSuperAdmin } from "@/lib/auth/rbac";
+import { requireSameOrigin } from "@/lib/auth/csrf";
 
 export async function GET(request: NextRequest) {
   const sessionOrResponse = await requireAuthenticatedSession(request);
@@ -39,6 +40,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const csrfResponse = requireSameOrigin(request);
+  if (csrfResponse) return csrfResponse;
+
   const sessionOrResponse = await requireAuthenticatedSession(request);
   if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
 

@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { sessions, users } from "@/lib/db/schema";
 
-export const SESSION_COOKIE_NAME = "sm_session";
+export { SESSION_COOKIE_NAME } from "@/lib/auth/session-constants";
 
 const ABSOLUTE_SESSION_LIFETIME_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 

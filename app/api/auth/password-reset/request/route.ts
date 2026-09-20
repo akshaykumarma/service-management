@@ -4,10 +4,14 @@ import { db } from "@/lib/db/client";
 import { users } from "@/lib/db/schema";
 import { createPasswordResetToken, isRateLimited } from "@/lib/auth/password-reset";
 import { sendPasswordResetEmail } from "@/lib/email/password-reset";
+import { requireSameOrigin } from "@/lib/auth/csrf";
 
 const GENERIC_MESSAGE = "If that email is registered, a reset link has been sent.";
 
 export async function POST(request: NextRequest) {
+  const csrfResponse = requireSameOrigin(request);
+  if (csrfResponse) return csrfResponse;
+
   const { email } = await request.json();
 
   // Always the same response, whether or not the email exists or the request was rate

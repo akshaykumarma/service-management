@@ -6,8 +6,12 @@ import { verifyPassword } from "@/lib/auth/auth.config";
 import { isLocked, recordFailedAttempt, clearFailedAttempts } from "@/lib/auth/lockout";
 import { createSession } from "@/lib/auth/session";
 import { setSessionCookie } from "@/lib/auth/cookies";
+import { requireSameOrigin } from "@/lib/auth/csrf";
 
 export async function POST(request: NextRequest) {
+  const csrfResponse = requireSameOrigin(request);
+  if (csrfResponse) return csrfResponse;
+
   const { email, password } = await request.json();
 
   if (typeof email !== "string" || typeof password !== "string") {

@@ -5,8 +5,12 @@ import { users } from "@/lib/db/schema";
 import { verifyAndConsumeToken } from "@/lib/auth/password-reset";
 import { hashPassword } from "@/lib/auth/auth.config";
 import { deleteAllSessionsForUser } from "@/lib/auth/session";
+import { requireSameOrigin } from "@/lib/auth/csrf";
 
 export async function POST(request: NextRequest) {
+  const csrfResponse = requireSameOrigin(request);
+  if (csrfResponse) return csrfResponse;
+
   const { token, newPassword } = await request.json();
 
   if (typeof token !== "string" || typeof newPassword !== "string" || newPassword.length < 8) {

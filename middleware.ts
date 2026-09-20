@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { SESSION_COOKIE_NAME } from "@/lib/auth/session";
+import { SESSION_COOKIE_NAME } from "@/lib/auth/session-constants";
 
 /**
  * Coarse, Edge-runtime-safe gate: redirects to /login when no session cookie is present
