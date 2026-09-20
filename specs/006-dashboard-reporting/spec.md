@@ -13,6 +13,7 @@
 ### Session 2026-09-20
 
 - Q: When a summary report is generated for a date range, which date determines whether a ticket counts toward that period — creation date or completion date? → A: Completion date — a ticket counts toward the period containing when it first reached "Completed" (its bill's lock point); a ticket not yet Completed by period-end isn't counted for that period.
+- Q: Does "average resolution time" in the summary report measure Open→Completed, or Open→Delivered? → A: Open → Completed — measures how long the actual service work took, independent of how long the customer takes to collect the machine afterward.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -89,7 +90,7 @@ Admins and the Super Admin export a filtered list of tickets, or a per-store sum
 **Acceptance Scenarios**:
 
 1. **Given** a filtered ticket list, **When** an Admin or Super Admin exports it, **Then** they can choose CSV or PDF and the exported file's contents match the filtered list.
-2. **Given** a chosen store and date range, **When** a summary report is generated, **Then** it shows total tickets, a breakdown by status, average resolution time, parts revenue, and services revenue for that store and period, counting only tickets that first reached "Completed" within that date range.
+2. **Given** a chosen store and date range, **When** a summary report is generated, **Then** it shows total tickets, a breakdown by status, average resolution time (Open-to-Completed duration, excluding pickup wait), parts revenue, and services revenue for that store and period, counting only tickets that first reached "Completed" within that date range.
 3. **Given** a Store Service Manager, **When** they attempt to access reporting/export, **Then** access is denied (reporting is an Admin/Super Admin capability per source PRD §6.10).
 
 ---
@@ -124,6 +125,7 @@ Admins and the Super Admin export a filtered list of tickets, or a per-store sum
 - **FR-015**: System MUST deny Store Service Managers access to report generation/export.
 - **FR-016**: System MUST clearly indicate an empty result set when no tickets match the applied filters.
 - **FR-017**: System MUST attribute a ticket to a report's date range based on the timestamp it first reached "Completed" status — not its creation date — and MUST exclude a ticket from all periods' ticket-count and revenue metrics until it first reaches "Completed." If a ticket reaches "Completed" more than once, system MUST use the timestamp of the first occurrence, matching the permanent bill lock defined in `004-parts-services-catalogue`.
+- **FR-018**: System MUST calculate a ticket's resolution time as the elapsed duration from its creation ("Open") to the timestamp it first reached "Completed," excluding any time spent afterward waiting for customer pickup/delivery. "Average resolution time" in a summary report MUST be the mean of this duration across the report's included tickets.
 
 ### Key Entities *(include if feature involves data)*
 
@@ -143,9 +145,11 @@ Admins and the Super Admin export a filtered list of tickets, or a per-store sum
 - **SC-004**: An Admin/Super Admin can produce a store's summary report and export it without any manual spreadsheet work.
 - **SC-005**: 100% of a ticket's recorded mutations are visible in its audit trail, with no gaps between what other specs record and what's displayed here.
 - **SC-006**: 100% of tickets in a summary report are attributed to the period containing their first "Completed" timestamp; 0% are attributed by creation date instead.
+- **SC-007**: 100% of "average resolution time" figures measure Open-to-Completed duration only; 0% include post-Completed pickup-wait time.
 
 ## Assumptions
 
 - The board and reporting features are read/interaction surfaces over data captured by `002-auth-rbac`, `003-ticket-lifecycle`, `004-parts-services-catalogue`, and `005-customer-notifications`; this spec does not duplicate how that underlying data is captured, only how it's viewed, filtered, and exported.
 - Reporting/export access is limited to Admin and Super Admin roles, consistent with the source PRD's framing of reporting as a management activity.
 - Exact CSV/PDF file formatting and rendering mechanics are technical decisions deferred to `/speckit-plan`; this spec requires only that exported content matches the filtered/summarized data shown on screen.
+- The "resolution time improves by X%" KPI referenced in `001-overview`'s SC-001 is assumed to mean the same Open-to-Completed duration defined here (FR-018); that spec should be updated to reference this definition explicitly if it's revisited.
