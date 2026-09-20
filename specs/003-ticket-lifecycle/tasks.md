@@ -117,12 +117,12 @@ list, visible via all-tickets filter).
 
 ### Tests for User Story 3 ⚠️ Write first; confirm it fails before implementing
 
-- [ ] T027 [P] [US3] Integration test for the On Hold comment requirement, the Cancelled role/comment gate, and default-view exclusion in `tests/integration/holds-cancellations.test.ts`
+- [X] T027 [P] [US3] Integration test for the On Hold comment requirement, the Cancelled role/comment gate, and default-view exclusion in `tests/integration/holds-cancellations.test.ts`
 
 ### Implementation for User Story 3
 
-- [ ] T028 [US3] Add the default-active-view exclusion filter for Cancelled tickets (with an explicit "all tickets" override) to `GET /api/tickets` in `app/api/tickets/route.ts` (On Hold/Cancelled comment and role gates are already covered by T023's transition table) (depends on T023)
-- [ ] T029 [US3] Confirm T027 passes; run `quickstart.md` Scenario 3 (depends on T028)
+- [X] T028 [US3] The default-active-view exclusion filter for Cancelled tickets (with an `includeCancelled=true` override) was already built into `GET /api/tickets` as part of T016, since the two tasks share one file and the filter is a few lines — confirmed here rather than re-implemented. On Hold/Cancelled comment and role gates are covered by T023's transition checker, exercised directly by T027's tests (depends on T023)
+- [X] T029 [US3] Confirm T027 passes; run `quickstart.md` Scenario 3 (depends on T028) — 2 new tests pass; full suite 58/58
 
 **Checkpoint**: All three user stories independently functional — spec.md fully implemented.
 
