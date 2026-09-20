@@ -13,6 +13,7 @@
 ### Session 2026-09-20
 
 - Q: Should this spec's business-facing term "job"/"jobs" be normalized to "ticket"/"tickets", matching the source PRD's glossary and specs 002-007? → A: Yes — replaced throughout this spec and added "Service Ticket" to Key Entities, cross-referencing `003-ticket-lifecycle` for full detail.
+- Q: Does this platform need to comply with any specific data-privacy or consumer-protection regulation for the customer PII it collects? → A: No specific regulatory regime targeted for v1; customer PII handling follows general good practice (minimal collection, no third-party resale) rather than a named compliance obligation.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -111,6 +112,7 @@ Instead of each store tracking its own inconsistent parts/services pricing, a si
 - **FR-011**: System MUST NOT integrate with third-party CRM or ERP systems in v1.
 - **FR-012**: System MUST present its interface in English only in v1.
 - **FR-013**: System MUST allow a service ticket to carry up to 5 intake photos as supporting evidence of the machine's condition (mechanics detailed in `003-ticket-lifecycle`).
+- **FR-014**: System MUST collect only the customer personal information (name, phone number(s), billing details) needed to deliver and bill for service, and MUST NOT share or sell it to third parties beyond what's required to deliver the service itself (e.g., the WhatsApp messaging provider for notifications).
 
 ### Key Entities *(include if feature involves data)*
 
@@ -137,3 +139,4 @@ Instead of each store tracking its own inconsistent parts/services pricing, a si
 - Parts, services, and machine model reference data are seeded by the Super Admin before a store's first day of use.
 - Initial planning scale is ~1,000 tickets/store/month, with the system expected to comfortably support up to 10 stores.
 - The detailed mechanics behind each business goal in this spec (notifications, delivery verification, pricing console, board view) are specified in their own dedicated feature specs, not repeated here.
+- No specific data-privacy or consumer-protection regulation (e.g., GDPR, India's DPDP Act) is targeted for v1; customer PII handling follows general good practice rather than a named compliance regime (see FR-014). If a specific regulation is later found to apply, this assumption MUST be revisited.
