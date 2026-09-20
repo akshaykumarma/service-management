@@ -12,13 +12,23 @@ import { db } from "@/lib/db/client";
 import { notifications, tickets } from "@/lib/db/schema";
 
 async function waitForOtpNotificationTo(ticketId: string, phone: string, status: "sent" | "failed") {
-  return waitFor(async () => {
-    const rows = await db
-      .select()
-      .from(notifications)
-      .where(eq(notifications.ticketId, ticketId));
-    return rows.find((r) => r.type === "otp" && r.recipientPhone === phone && r.status === status);
-  }, { message: `expected an otp notification to ${phone} with status ${status}` });
+  return waitFor(
+    async () => {
+      const rows = await db
+        .select()
+        .from(notifications)
+        .where(eq(notifications.ticketId, ticketId));
+      return rows.find((r) => r.type === "otp" && r.recipientPhone === phone && r.status === status);
+    },
+    {
+      // A "failed" status only appears after the job's own 3-attempt retry-with-backoff
+      // (jobs/send-whatsapp-message.ts: up to ~600ms of sleeps plus 3 round trips) on
+      // top of the worker's own poll interval — this test hits that path twice, so the
+      // default 5s margin can be too tight under full-suite worker contention.
+      timeoutMs: 10_000,
+      message: `expected an otp notification to ${phone} with status ${status}`,
+    },
+  );
 }
 
 describe("OTP delivery failure escalation (User Story 5)", () => {
