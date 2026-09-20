@@ -1,0 +1,1 @@
+CREATE INDEX IF NOT EXISTS "idx_tickets_customer_name" ON "tickets" USING btree ("customer_name");

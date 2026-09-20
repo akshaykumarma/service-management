@@ -174,6 +174,8 @@ export const tickets = pgTable("tickets", {
     table.status,
     table.storeId,
   ),
+  // 006-dashboard-reporting FR-008's Customer Name filter (data-model.md, research.md §3).
+  customerNameIdx: index("idx_tickets_customer_name").on(table.customerName),
 }));
 
 export const statusHistory = pgTable("status_history", {

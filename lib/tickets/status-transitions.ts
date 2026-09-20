@@ -44,6 +44,19 @@ export function checkTransition(input: TransitionCheckInput): TransitionError | 
   const toIdx = ORDER.indexOf(toStatus);
   if (fromIdx === -1 || toIdx === -1) return "invalid_transition";
 
+  // spec.md's own Assumption (003): "does not support skipping directly from Open to
+  // Completed/Delivered." On Hold is an optional pause state, not a mandatory waypoint —
+  // two existing tests already rely on skipping it entirely, forward (in_progress ->
+  // completed with no comment) and backward (completed -> in_progress) — so this is
+  // deliberately narrower than "every step must be adjacent": only Open itself may not
+  // jump straight to Completed or Delivered, skipping In Progress. Bug found and fixed
+  // while implementing 006-dashboard-reporting's drag-and-drop rejection test (its own
+  // quickstart.md literally scripts "dragging an Open card straight to Delivered" as
+  // FR-006's invalid-move example).
+  if (fromStatus === "open" && (toStatus === "completed" || toStatus === "delivered")) {
+    return "invalid_transition";
+  }
+
   const isBackward = toIdx < fromIdx;
 
   if (isBackward && fromStatus === "delivered" && role === "service_manager") {

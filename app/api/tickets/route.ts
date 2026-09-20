@@ -1,14 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import { and, desc, eq, inArray, ne } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { statusHistory, stores, tickets, ticketPhotos } from "@/lib/db/schema";
 import { requireAuthenticatedSession } from "@/lib/auth/require-session";
 import { requireSameOrigin } from "@/lib/auth/csrf";
-import { assertAccess, getScopedStoreIds, AccessDeniedError } from "@/lib/auth/rbac";
+import { assertAccess, AccessDeniedError } from "@/lib/auth/rbac";
 import { resolveCustomer } from "@/lib/tickets/customer";
 import { nextTicketNumber } from "@/lib/tickets/ticket-number";
 import { lookupHistory } from "@/lib/tickets/history";
 import { MAX_PHOTOS_PER_TICKET, verifyUploadedObject } from "@/lib/tickets/photos";
+import { queryScopedTickets } from "@/lib/board/ticket-query";
+import { toTicketCard } from "@/lib/board/card-shape";
+import type { TicketStatus } from "@/lib/tickets/status-transitions";
 
 const REQUIRED_FIELDS = ["storeId", "customerName", "customerPhone", "machineModel", "issueDescription"] as const;
 
@@ -128,33 +131,23 @@ export async function GET(request: NextRequest) {
   if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
   const caller = sessionOrResponse.user;
 
-  const scope = await getScopedStoreIds(caller);
-  const showAll = request.nextUrl.searchParams.get("includeCancelled") === "true";
+  const params = request.nextUrl.searchParams;
+  const storeIds = params.getAll("storeId");
+  const statuses = params.getAll("status") as TicketStatus[];
 
-  const conditions = [];
-  if (scope !== "all") {
-    if (scope.length === 0) {
-      return NextResponse.json({ tickets: [] });
-    }
-    conditions.push(inArray(tickets.storeId, scope));
-  }
-  // Default active view excludes Cancelled tickets unless explicitly requested (US3, FR-016 edge case).
-  if (!showAll) {
-    conditions.push(ne(tickets.status, "cancelled"));
-  }
+  // 006-dashboard-reporting's board/filters (FR-008/FR-009) share this one scoped-query
+  // function with 003's own pre-existing includeCancelled behavior (research.md §2) —
+  // never two independent implementations of "which tickets can this caller see."
+  const rows = await queryScopedTickets(caller, {
+    storeIds: storeIds.length > 0 ? storeIds : undefined,
+    statuses: statuses.length > 0 ? statuses : undefined,
+    dateFrom: params.get("dateFrom") ?? undefined,
+    dateTo: params.get("dateTo") ?? undefined,
+    ticketId: params.get("ticketId") ?? undefined,
+    customerName: params.get("customerName") ?? undefined,
+    machineModel: params.get("machineModel") ?? undefined,
+    includeCancelled: params.get("includeCancelled") === "true",
+  });
 
-  const rows = await db
-    .select({
-      id: tickets.id,
-      ticketNumber: tickets.ticketNumber,
-      customerName: tickets.customerName,
-      machineModel: tickets.machineModel,
-      status: tickets.status,
-      createdAt: tickets.createdAt,
-    })
-    .from(tickets)
-    .where(conditions.length > 0 ? and(...conditions) : undefined)
-    .orderBy(desc(tickets.createdAt));
-
-  return NextResponse.json({ tickets: rows });
+  return NextResponse.json({ tickets: rows.map(toTicketCard) });
 }
