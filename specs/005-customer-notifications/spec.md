@@ -8,6 +8,12 @@
 
 **Input**: User description: "PRD §6.6 Customer Notifications (automatic WhatsApp message to the customer's primary number when a ticket is marked Completed, containing customer name/ticket ID/machine model/bill total/store name/store contact; delivery status Sent/Delivered/Failed logged with timestamp; failed delivery raises an in-app alert requiring the Service Manager to confirm they notified the customer another way; Super Admin manages message templates with placeholders and a test-send function) and §6.7 OTP-Based Delivery Verification (mandatory 6-digit OTP sent via WhatsApp when delivery is initiated, valid 10 minutes, one resend after a 60-second cooldown, 3 failed attempts locks entry and requires Admin/Super Admin override, successful verification transitions the ticket to Delivered with an immutable record)."
 
+## Clarifications
+
+### Session 2026-09-20
+
+- Q: What should happen if the OTP message itself fails to reach the customer via WhatsApp (not a wrong code — the message never arrives)? → A: Two-step escalation — Admin/Super Admin first corrects the customer's phone number on the ticket and re-triggers the OTP send; if it fails again even to the corrected number, Admin/Super Admin can override and mark the ticket "Delivered" without a successful code verification, recording a mandatory reason.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Automatic Completion Notification (Priority: P1)
@@ -56,7 +62,7 @@ When the customer arrives to collect their machine, the Service Manager initiate
 3. **Given** an active code, **When** the Service Manager enters an incorrect code, **Then** the ticket does not transition and the attempt is counted.
 4. **Given** a code older than 10 minutes, **When** it is entered, **Then** it is rejected as expired.
 5. **Given** an expired or unreceived code, **When** the Service Manager requests a resend, **Then** a new code is sent after a 60-second cooldown and the previous code is invalidated; only one resend is available per delivery attempt.
-6. **Given** no successful code entry has occurred, **When** any other means is attempted to mark the ticket "Delivered," **Then** the system refuses — there is no way to bypass OTP verification.
+6. **Given** no successful code entry has occurred, **When** any other means is attempted to mark the ticket "Delivered," **Then** the system refuses — the only exception is the Admin/Super Admin OTP-failure override defined in User Story 5, which is itself gated on repeated OTP send failure, not available at will.
 
 ---
 
@@ -76,7 +82,24 @@ After 3 failed code attempts, entry locks to prevent guessing, and only an Admin
 
 ---
 
-### User Story 5 - Message Template Management (Priority: P5)
+### User Story 5 - OTP Delivery Failure Escalation (Priority: P5)
+
+If the OTP message itself never reaches the customer (as opposed to the customer entering a wrong code), an Admin or Super Admin can correct the customer's phone number on the ticket and re-send the code. If it still fails to deliver even to the corrected number, an Admin or Super Admin can override and confirm delivery without a successful code, recording why.
+
+**Why this priority**: A rarer, doubly-exceptional case (the OTP send itself fails, twice) compared to the wrong-code lockout (Story 4), but without it a ticket with an undeliverable OTP number would have no path to completion at all — a real business-continuity risk, not just an edge case to note and move on from.
+
+**Independent Test**: Simulate an OTP send failure, correct the phone number and confirm a retry is sent; simulate a second failure on the corrected number and confirm an Admin/Super Admin can override to "Delivered" with a recorded reason, while a Store Service Manager cannot.
+
+**Acceptance Scenarios**:
+
+1. **Given** an OTP fails to send to a ticket's customer, **When** an Admin or Super Admin updates the customer's phone number on the ticket, **Then** a fresh OTP is sent to the corrected number.
+2. **Given** the OTP also fails to send to the corrected number, **When** an Admin or Super Admin overrides delivery, **Then** the ticket transitions to "Delivered" without a successful code verification, and the override is recorded immutably with the reason, the overriding staff member, and a timestamp.
+3. **Given** the same failure, **When** a Store Service Manager (not Admin/Super Admin) attempts either the phone-number correction or the override, **Then** the system denies it.
+4. **Given** a ticket delivered via override, **When** its delivery record is viewed, **Then** it is clearly distinguishable from a normal OTP-verified delivery, not presented as if a code was successfully entered.
+
+---
+
+### User Story 6 - Message Template Management (Priority: P6)
 
 The Super Admin can edit the wording of the completion and OTP WhatsApp messages using placeholders for ticket-specific details, and can send a test message to a chosen phone number before making a template live.
 
@@ -98,6 +121,7 @@ The Super Admin can edit the wording of the completion and OTP WhatsApp messages
 - What happens if a Service Manager tries to initiate a second delivery/OTP attempt while one is already active and unexpired? The system MUST reuse or explicitly invalidate the existing attempt rather than issuing conflicting codes.
 - What happens if the OTP lock is triggered but the ticket is later reassigned to a different Service Manager? The lock and its override requirement persist with the ticket, not with the staff member.
 - What happens to a message template edit that has a malformed/unsupported placeholder? The system MUST reject saving it rather than sending a broken message to a customer later.
+- What happens if the OTP message itself fails to send at all (as opposed to the customer entering a wrong code)? An Admin/Super Admin can correct the customer's phone number and retry; if that also fails, an Admin/Super Admin can override to "Delivered" with a mandatory recorded reason, distinct from a normal OTP-verified delivery (see User Story 5, FR-020, FR-021).
 
 ## Requirements *(mandatory)*
 
@@ -117,16 +141,20 @@ The Super Admin can edit the wording of the completion and OTP WhatsApp messages
 - **FR-012**: System MUST count failed code-entry attempts per delivery attempt and lock further entry after 3 consecutive failures.
 - **FR-013**: System MUST restrict clearing an OTP lock to Admin and Super Admin roles.
 - **FR-014**: System MUST record, for a successful delivery verification, the timestamp and the verifying staff member, immutably.
-- **FR-015**: System MUST provide no path to mark a ticket "Delivered" other than a successful code verification.
+- **FR-015**: System MUST provide no path to mark a ticket "Delivered" other than a successful code verification, except the Admin/Super Admin OTP-failure override defined in FR-021, which is gated on repeated OTP send failure rather than available at will.
 - **FR-016**: System MUST allow the Super Admin to edit the wording of the completion and OTP message templates.
 - **FR-017**: System MUST support at minimum the placeholders: customer name, ticket ID, machine model, bill total, store name, and store phone number in templates, resolving each to the correct per-ticket value when a message is sent.
 - **FR-018**: System MUST allow the Super Admin to send a test message using a given template to a specified phone number before activating a template change.
 - **FR-019**: System MUST reject a template edit containing a placeholder it does not support.
+- **FR-020**: System MUST allow Admin and Super Admin roles to correct a ticket's customer phone number and re-trigger an OTP send when the original OTP message fails to reach the customer.
+- **FR-021**: If an OTP fails to send even to a corrected phone number, system MUST allow Admin and Super Admin roles to override and transition the ticket to "Delivered" without a successful code verification, requiring a mandatory recorded reason, and MUST record this as a distinct override (not a normal OTP-verified delivery) with the overriding staff member and timestamp, immutably.
+- **FR-022**: System MUST deny Store Service Managers the ability to correct a ticket's phone number for OTP retry or to perform an OTP-failure override; both are restricted to Admin and Super Admin.
 
 ### Key Entities *(include if feature involves data)*
 
 - **Notification**: A record of one outbound customer message — type (completion or OTP), channel, recipient, rendered content, delivery status, and timestamps — linked to a ticket.
 - **OTP Verification**: A one-time code issued for a ticket's delivery — code, issuance/expiry timestamps, number of failed attempts, lock state, and successful-verification record if applicable.
+- **Delivery Override Record**: An immutable record of an Admin/Super Admin overriding OTP verification after repeated send failure — reason, overriding staff member, and timestamp — kept distinct from a normal OTP-verified delivery.
 - **Message Template**: Editable wording (with supported placeholders) for the completion and OTP message types, maintained by the Super Admin.
 - **Manual Notification Confirmation**: A record that a Service Manager confirmed notifying a customer by another means after an automated notification failed.
 
@@ -136,8 +164,8 @@ The Super Admin can edit the wording of the completion and OTP WhatsApp messages
 
 - **SC-001**: 100% of tickets marked "Completed" trigger a WhatsApp notification attempt within 2 minutes of the status change.
 - **SC-002**: A failed notification surfaces an in-app alert to the responsible Service Manager within 30 seconds of the failure being known.
-- **SC-003**: 0% of tickets are ever marked "Delivered" without a successful, unexpired OTP verification.
-- **SC-004**: 100% of successful deliveries have an immutable record of who verified them and when.
+- **SC-003**: 100% of tickets marked "Delivered" have either a successful, unexpired OTP verification or a recorded Admin/Super Admin override with a reason — zero deliveries with neither.
+- **SC-004**: 100% of successful deliveries have an immutable record of who verified them and when; 100% of override deliveries are distinguishable from OTP-verified ones.
 - **SC-005**: A Super Admin can update a message template and confirm its correctness via test-send without needing developer involvement.
 
 ## Assumptions
