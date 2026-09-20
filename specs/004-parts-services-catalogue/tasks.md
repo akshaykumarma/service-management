@@ -81,19 +81,19 @@ selection while existing ticket references are unaffected.
 
 ### Tests for User Story 2 ⚠️ Write first; confirm they fail before implementing
 
-- [ ] T014 [P] [US2] Contract tests for parts/services CRUD and the CSV import endpoint in `tests/contract/catalogue-billing-api.test.ts`
-- [ ] T015 [P] [US2] Integration test for catalogue CRUD, deactivation exclusion from selection, and CSV import's per-row failure reporting in `tests/integration/catalogue-maintenance.test.ts`
+- [X] T014 [P] [US2] Contract tests for parts/services CRUD and the CSV import endpoint in `tests/contract/catalogue-billing-api.test.ts`
+- [X] T015 [P] [US2] Integration test for catalogue CRUD, deactivation exclusion from selection, and CSV import's per-row failure reporting in `tests/integration/catalogue-maintenance.test.ts`. **Test-infrastructure bug found here**: `tests/helpers/db.ts`'s `resetDb()` had never been updated to truncate `parts`/`services`/`ticket_line_items`, so a part created by one test silently persisted into the next and tripped the duplicate-name check nondeterministically. Fixed the shared helper.
 
 ### Implementation for User Story 2
 
-- [ ] T016 [US2] Implement parts CRUD (create/edit/deactivate, duplicate-name check) in `lib/catalogue/parts.ts` (depends on T002)
-- [ ] T017 [P] [US2] Implement services CRUD (create/edit/deactivate) in `lib/catalogue/services.ts` (depends on T002)
-- [ ] T018 [US2] Implement CSV bulk import with independent per-row validation and failure reporting (`research.md` §4) in `lib/catalogue/csv-import.ts` (depends on T016)
-- [ ] T019 [US2] Implement `GET`/`POST /api/catalogue/parts` and `PATCH /api/catalogue/parts/:id` in `app/api/catalogue/parts/route.ts` and `app/api/catalogue/parts/[id]/route.ts` (depends on T016)
-- [ ] T020 [US2] Implement `POST /api/catalogue/parts/import` in `app/api/catalogue/parts/import/route.ts` (depends on T018)
-- [ ] T021 [P] [US2] Implement `GET`/`POST`/`PATCH /api/catalogue/services` in `app/api/catalogue/services/route.ts` (depends on T017)
-- [ ] T022 [US2] Build the Super Admin catalogue maintenance UI (parts/services CRUD, CSV import) in `app/(dashboard)/admin/catalogue/page.tsx` (depends on T019-T021)
-- [ ] T023 [US2] Confirm T014-T015 pass; run `quickstart.md` Scenario 1 (depends on T016-T022)
+- [X] T016 [US2] Implement parts CRUD (create/edit/deactivate, duplicate-name check) in `lib/catalogue/parts.ts` (depends on T002)
+- [X] T017 [P] [US2] Implement services CRUD (create/edit/deactivate) in `lib/catalogue/services.ts` (depends on T002)
+- [X] T018 [US2] Implement CSV bulk import with independent per-row validation and failure reporting (`research.md` §4) in `lib/catalogue/csv-import.ts` (depends on T016). Duplicate-name checking considers both existing active rows and names already imported earlier in the same file, since two rows in one CSV can collide with each other.
+- [X] T019 [US2] Implement `GET`/`POST /api/catalogue/parts` and `PATCH /api/catalogue/parts/:id` in `app/api/catalogue/parts/route.ts` and `app/api/catalogue/parts/[id]/route.ts` (depends on T016)
+- [X] T020 [US2] Implement `POST /api/catalogue/parts/import` in `app/api/catalogue/parts/import/route.ts` (depends on T018)
+- [X] T021 [P] [US2] Implement `GET`/`POST`/`PATCH /api/catalogue/services` in `app/api/catalogue/services/route.ts` (depends on T017)
+- [X] T022 [US2] Build the Super Admin catalogue maintenance UI (parts/services CRUD, CSV import) in `app/(dashboard)/admin/catalogue/page.tsx`, gated by the existing Super-Admin-only `app/(dashboard)/admin/layout.tsx` from `002-auth-rbac` (depends on T019-T021)
+- [X] T023 [US2] Confirm T014-T015 pass; run `quickstart.md` Scenario 1 (depends on T016-T022) — 11 new tests pass; full suite 71/71; `next build` clean
 
 **Checkpoint**: User Stories 1 and 2 both independently functional.
 
