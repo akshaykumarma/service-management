@@ -12,6 +12,9 @@ import { POST as webhookPOST } from "@/app/api/webhooks/whatsapp/route";
 import { POST as deliverPOST } from "@/app/api/tickets/[id]/deliver/route";
 import { POST as verifyPOST } from "@/app/api/tickets/[id]/deliver/verify/route";
 import { POST as resendPOST } from "@/app/api/tickets/[id]/deliver/resend/route";
+import { GET as templatesGET } from "@/app/api/templates/route";
+import { PATCH as templatePATCH } from "@/app/api/templates/[type]/route";
+import { POST as testSendPOST } from "@/app/api/templates/[type]/test-send/route";
 
 function signPayload(payload: string): string {
   return "sha256=" + createHmac("sha256", process.env.WHATSAPP_WEBHOOK_SECRET!).update(payload).digest("hex");
@@ -222,5 +225,97 @@ describe("POST /api/tickets/:id/deliver/resend", () => {
     expect(second.status).toBe(409);
     const body = await second.json();
     expect(body.error.code).toBe("resend_already_used");
+  });
+});
+
+describe("GET/PATCH /api/templates", () => {
+  beforeEach(async () => {
+    await resetDb();
+    await resetMockWhatsApp();
+  });
+
+  async function superAdminCookie() {
+    const admin = await createUser({ role: "super_admin", password: "Correct123!" });
+    return loginAs(admin.email, "Correct123!");
+  }
+
+  it("200s and returns the built-in default as approved with no pending edit initially", async () => {
+    const cookie = await superAdminCookie();
+    const res = await templatesGET(jsonRequest("/api/templates", { cookie }));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.completion.pending).toBeNull();
+    expect(body.completion.approved.body).toContain("{{customer_name}}");
+  });
+
+  it("200s a PATCH with a valid body, setting it to pending without changing approved", async () => {
+    const cookie = await superAdminCookie();
+    const newBody = "Hi {{customer_name}}, thanks for choosing us!";
+    const res = await templatePATCH(
+      jsonRequest("/api/templates/completion", { method: "PATCH", cookie, body: { body: newBody } }),
+      { params: { type: "completion" } },
+    );
+    expect(res.status).toBe(200);
+    const responseBody = await res.json();
+    expect(responseBody.pending.body).toBe(newBody);
+    expect(responseBody.approved.body).not.toBe(newBody);
+  });
+
+  it("400s unsupported_placeholder for an unknown token", async () => {
+    const cookie = await superAdminCookie();
+    const res = await templatePATCH(
+      jsonRequest("/api/templates/completion", { method: "PATCH", cookie, body: { body: "Hi {{not_a_real_token}}" } }),
+      { params: { type: "completion" } },
+    );
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error.code).toBe("unsupported_placeholder");
+    expect(body.error.token).toBe("not_a_real_token");
+  });
+
+  it("403s a non-Super-Admin caller", async () => {
+    const store = await createStore();
+    const admin = await createUser({ role: "admin", storeIds: [store.id], password: "Correct123!" });
+    const cookie = await loginAs(admin.email, "Correct123!");
+    const res = await templatePATCH(
+      jsonRequest("/api/templates/completion", { method: "PATCH", cookie, body: { body: "Hi {{customer_name}}" } }),
+      { params: { type: "completion" } },
+    );
+    expect(res.status).toBe(403);
+  });
+});
+
+describe("POST /api/templates/:type/test-send", () => {
+  beforeEach(async () => {
+    await resetDb();
+    await resetMockWhatsApp();
+  });
+
+  it("200s and renders the pending wording without sending or recording a notification when usePending is true", async () => {
+    const admin = await createUser({ role: "super_admin", password: "Correct123!" });
+    const cookie = await loginAs(admin.email, "Correct123!");
+    await templatePATCH(
+      jsonRequest("/api/templates/completion", {
+        method: "PATCH",
+        cookie,
+        body: { body: "Hi {{customer_name}}, pending preview!" },
+      }),
+      { params: { type: "completion" } },
+    );
+
+    const res = await testSendPOST(
+      jsonRequest("/api/templates/completion/test-send", {
+        method: "POST",
+        cookie,
+        body: { phone: "+919111111111", usePending: true },
+      }),
+      { params: { type: "completion" } },
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.renderedContent).toContain("pending preview!");
+
+    const rows = await db.select().from(notifications).where(eq(notifications.recipientPhone, "+919111111111"));
+    expect(rows).toHaveLength(0);
   });
 });

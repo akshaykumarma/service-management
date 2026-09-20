@@ -1,4 +1,4 @@
-import { renderTemplate, DEFAULT_TEMPLATE_BODY } from "@/lib/whatsapp/templates";
+import { renderTemplate, getApprovedTemplateBody } from "@/lib/whatsapp/templates";
 import { getBoss } from "@/lib/jobs/boss";
 import { SEND_WHATSAPP_MESSAGE_QUEUE, type SendWhatsAppMessageJobData } from "@/jobs/send-whatsapp-message";
 
@@ -11,13 +11,14 @@ export async function enqueueOtpSend(
   code: string,
 ): Promise<void> {
   const boss = await getBoss();
+  const approvedBody = await getApprovedTemplateBody("otp");
   const jobData: SendWhatsAppMessageJobData = {
     ticketId: ticket.id,
     type: "otp",
     recipientPhone: ticket.customerPhone,
     templateParams: { ticket_id: ticket.ticketNumber, otp_code: code },
     // Redacted: never persist the real code (plan.md's Constraints — OTP codes never logged).
-    storedContent: renderTemplate(DEFAULT_TEMPLATE_BODY.otp, { ticket_id: ticket.ticketNumber, otp_code: "REDACTED" }),
+    storedContent: renderTemplate(approvedBody, { ticket_id: ticket.ticketNumber, otp_code: "REDACTED" }),
   };
   await boss.send(SEND_WHATSAPP_MESSAGE_QUEUE, jobData);
 }

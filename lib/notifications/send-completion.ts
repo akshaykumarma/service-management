@@ -2,7 +2,7 @@ import { sql, eq } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { stores, tickets } from "@/lib/db/schema";
 import { calculateBill } from "@/lib/billing/bill-calculation";
-import { renderTemplate, DEFAULT_TEMPLATE_BODY } from "@/lib/whatsapp/templates";
+import { renderTemplate, getApprovedTemplateBody } from "@/lib/whatsapp/templates";
 import { getBoss } from "@/lib/jobs/boss";
 import { SEND_WHATSAPP_MESSAGE_QUEUE, type SendWhatsAppMessageJobData } from "@/jobs/send-whatsapp-message";
 
@@ -44,7 +44,10 @@ export async function triggerCompletionNotification(ticketId: string): Promise<v
     store_phone: store?.phone ?? "",
   };
   // Nothing sensitive in a completion message — the stored copy is the same text sent.
-  const content = renderTemplate(DEFAULT_TEMPLATE_BODY.completion, templateParams);
+  // The rendered/stored copy reflects the currently-*approved* wording (research.md §5 —
+  // a pending edit never affects a real send); the actual Meta API call itself is keyed
+  // by `type` against Meta's own pre-approved template, not by this body text.
+  const content = renderTemplate(await getApprovedTemplateBody("completion"), templateParams);
 
   const boss = await getBoss();
   const jobData: SendWhatsAppMessageJobData = {
