@@ -8,35 +8,41 @@
 
 **Input**: User description: "Service Management Web App — Business & Product Requirements Document v1.1 (Executive Summary, Problem Statement, Goals & Success Metrics, and Scope sections): a Service Management Web Application to digitise and streamline machine-servicing workflows across one or more retail/service stores, replacing paper-based job-cards with a structured, role-governed ticketing platform. Multi-tenant, store-scoped model with Super Admin (global), Admin (one or more stores), and Store Service Manager (one store) roles. Core is a JIRA-style kanban board adapted for machine servicing. WhatsApp is the primary customer communication channel. Expected volume ~1,000 tickets/store/month."
 
+## Clarifications
+
+### Session 2026-09-20
+
+- Q: Should this spec's business-facing term "job"/"jobs" be normalized to "ticket"/"tickets", matching the source PRD's glossary and specs 002-007? → A: Yes — replaced throughout this spec and added "Service Ticket" to Key Entities, cross-referencing `003-ticket-lifecycle` for full detail.
+
 ## User Scenarios & Testing *(mandatory)*
 
-### User Story 1 - Digitized Job Tracking Replaces Paper Cards (Priority: P1)
+### User Story 1 - Digitized Ticket Tracking Replaces Paper Cards (Priority: P1)
 
-A store that currently tracks service jobs on paper job-cards or spreadsheets instead records every job in the system, so history can be queried, status is visible in real time, and information is shared across staff without relying on physical paper or one person's memory.
+A store that currently tracks service tickets on paper job-cards or spreadsheets instead records every ticket in the system, so history can be queried, status is visible in real time, and information is shared across staff without relying on physical paper or one person's memory.
 
-**Why this priority**: This is the foundational value proposition — every other capability (history lookup, notifications, delivery verification, reporting) only matters because jobs are now digital records instead of paper.
+**Why this priority**: This is the foundational value proposition — every other capability (history lookup, notifications, delivery verification, reporting) only matters because tickets are now digital records instead of paper.
 
-**Independent Test**: Can be tested by recording a service job in the system and confirming any authorized staff member can retrieve its full details later without needing the original paper card.
+**Independent Test**: Can be tested by recording a service ticket in the system and confirming any authorized staff member can retrieve its full details later without needing the original paper card.
 
 **Acceptance Scenarios**:
 
-1. **Given** a store has just gone live on the system, **When** a new machine comes in for service, **Then** the job is recorded digitally with no paper job-card created.
-2. **Given** a job was recorded by one staff member, **When** a different authorized staff member at the same store looks it up later, **Then** they see the complete, current record.
+1. **Given** a store has just gone live on the system, **When** a new machine comes in for service, **Then** the ticket is recorded digitally with no paper job-card created.
+2. **Given** a ticket was recorded by one staff member, **When** a different authorized staff member at the same store looks it up later, **Then** they see the complete, current record.
 
 ---
 
 ### User Story 2 - Consolidated Multi-Store Visibility for Owners (Priority: P2)
 
-A store owner (Admin) who operates more than one store location can see every open job across all of their stores from a single consolidated view, rather than having no visibility beyond what each store manager tells them.
+A store owner (Admin) who operates more than one store location can see every open ticket across all of their stores from a single consolidated view, rather than having no visibility beyond what each store manager tells them.
 
 **Why this priority**: This directly targets a named business pain point (owners have no consolidated view across branches) and is independently valuable and testable once any tickets exist, ahead of the full workflow being built out.
 
-**Independent Test**: Seed tickets across two stores assigned to the same Admin; confirm that Admin's consolidated view shows jobs from both, while a single-store Service Manager's view does not.
+**Independent Test**: Seed tickets across two stores assigned to the same Admin; confirm that Admin's consolidated view shows tickets from both, while a single-store Service Manager's view does not.
 
 **Acceptance Scenarios**:
 
-1. **Given** an Admin is assigned to two stores with open jobs in each, **When** they open their view, **Then** jobs from both stores are visible together.
-2. **Given** a Super Admin, **When** they open the same kind of view, **Then** jobs from every store in the system are visible, not just those of one Admin's assigned stores.
+1. **Given** an Admin is assigned to two stores with open tickets in each, **When** they open their view, **Then** tickets from both stores are visible together.
+2. **Given** a Super Admin, **When** they open the same kind of view, **Then** tickets from every store in the system are visible, not just those of one Admin's assigned stores.
 
 ---
 
@@ -46,11 +52,11 @@ Instead of staff manually phoning customers to say a machine is ready, the syste
 
 **Why this priority**: Directly targets the "unnecessary follow-up calls" pain point and the goal of reducing such calls to near-zero. Full notification mechanics are specified separately (see `005-customer-notifications`); this story establishes the business outcome this platform commits to.
 
-**Independent Test**: Complete a service job and confirm a customer notification is generated automatically, with no staff member placing a phone call.
+**Independent Test**: Complete a service ticket and confirm a customer notification is generated automatically, with no staff member placing a phone call.
 
 **Acceptance Scenarios**:
 
-1. **Given** a service job is finished, **When** staff mark it complete, **Then** the customer is notified automatically without a manual phone call being required.
+1. **Given** a service ticket is finished, **When** staff mark it complete, **Then** the customer is notified automatically without a manual phone call being required.
 
 ---
 
@@ -92,10 +98,10 @@ Instead of each store tracking its own inconsistent parts/services pricing, a si
 
 ### Functional Requirements
 
-- **FR-001**: System MUST operate as a multi-tenant, store-scoped platform where every service job belongs to exactly one store.
+- **FR-001**: System MUST operate as a multi-tenant, store-scoped platform where every service ticket belongs to exactly one store.
 - **FR-002**: System MUST support a Super Admin role with visibility and configuration authority spanning every store, distinct from store-level roles (detailed in `002-auth-rbac`).
-- **FR-003**: System MUST support at least 10 stores operating concurrently, each generating on the order of 1,000 service jobs per month, without requiring architectural redesign.
-- **FR-004**: System MUST present its primary working view as a status-column board (kanban-style), adapted to the machine-servicing job lifecycle (detailed in `003-ticket-lifecycle` and `006-dashboard-reporting`).
+- **FR-003**: System MUST support at least 10 stores operating concurrently, each generating on the order of 1,000 service tickets per month, without requiring architectural redesign.
+- **FR-004**: System MUST present its primary working view as a status-column board (kanban-style), adapted to the machine-servicing ticket lifecycle (detailed in `003-ticket-lifecycle` and `006-dashboard-reporting`).
 - **FR-005**: System MUST use a single messaging channel (WhatsApp) as the primary means of automated customer communication (detailed in `005-customer-notifications`).
 - **FR-006**: System MUST NOT provide a customer-facing self-service portal or mobile app in v1.
 - **FR-007**: System MUST NOT process payments or integrate with payment/invoicing systems in v1.
@@ -104,10 +110,11 @@ Instead of each store tracking its own inconsistent parts/services pricing, a si
 - **FR-010**: System MUST NOT require or provide an offline/PWA mode in v1.
 - **FR-011**: System MUST NOT integrate with third-party CRM or ERP systems in v1.
 - **FR-012**: System MUST present its interface in English only in v1.
-- **FR-013**: System MUST allow a service job to carry up to 5 intake photos as supporting evidence of the machine's condition (mechanics detailed in `003-ticket-lifecycle`).
+- **FR-013**: System MUST allow a service ticket to carry up to 5 intake photos as supporting evidence of the machine's condition (mechanics detailed in `003-ticket-lifecycle`).
 
 ### Key Entities *(include if feature involves data)*
 
+- **Service Ticket**: The core unit of work this platform is built around — one machine-servicing job from intake through delivery; full attributes and lifecycle are detailed in `003-ticket-lifecycle`.
 - **Store**: A single service location; the unit of data scoping for day-to-day operations.
 - **Business/Platform**: The overall multi-store system operated by the Super Admin, spanning all stores.
 
@@ -115,12 +122,12 @@ Instead of each store tracking its own inconsistent parts/services pricing, a si
 
 ### Measurable Outcomes
 
-- **SC-001**: Average service job resolution time improves by at least 20% within 6 months of going live, compared to the pre-digitization baseline.
+- **SC-001**: Average service ticket resolution time improves by at least 20% within 6 months of going live, compared to the pre-digitization baseline.
 - **SC-002**: Customer "machine ready" follow-up phone calls drop to near-zero within 6 months of going live.
 - **SC-003**: 100% of machine deliveries have a verifiable confirmation record; zero deliveries are disputed for lack of any record.
 - **SC-004**: Looking up a machine's repeat-service history takes under 30 seconds, down from 5-10 minutes of manual searching.
-- **SC-005**: An owner/Admin can generate a consolidated, real-time view of jobs across all their stores with zero manual spreadsheet effort.
-- **SC-006**: The system operates correctly at a load of at least 10 stores and ~10,000 jobs/month platform-wide without visible slowdown to users.
+- **SC-005**: An owner/Admin can generate a consolidated, real-time view of tickets across all their stores with zero manual spreadsheet effort.
+- **SC-006**: The system operates correctly at a load of at least 10 stores and ~10,000 tickets/month platform-wide without visible slowdown to users.
 
 ## Assumptions
 
