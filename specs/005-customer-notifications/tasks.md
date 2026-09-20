@@ -166,16 +166,16 @@ either step.
 
 ### Tests for User Story 5 ⚠️ Write first; confirm it fails before implementing
 
-- [ ] T036 [P] [US5] Integration test for the phone-correction-and-retry step, the override-to-Delivered step gated on correction having failed first, and Store-Service-Manager denial of both, in `tests/integration/otp-failure-escalation.test.ts`
+- [X] T036 [P] [US5] Integration test for the phone-correction-and-retry step, the override-to-Delivered step gated on correction having failed first, and Store-Service-Manager denial of both, in `tests/integration/otp-failure-escalation.test.ts`
 
 ### Implementation for User Story 5
 
-- [ ] T037 [US5] Implement FR-020 phone-correction-and-retry — updates only this ticket's own `customer_phone` field, never `003`'s shared `customers.phone` (`research.md` §3) — and enqueues a fresh OTP send to the corrected number, in `lib/delivery/override.ts` (depends on T024, T009)
-- [ ] T038 [US5] Implement FR-021 override-to-Delivered — `409 correction_not_yet_attempted` unless the FR-020 retry has itself already failed; creates a `delivery_overrides` row (structurally distinct from `otp_verifications`, `research.md` §3 of data-model.md) and transitions the ticket via `003`'s status-transition function — in `lib/delivery/override.ts` (depends on T037)
-- [ ] T039 [US5] Implement `POST /api/tickets/:id/deliver/correct-phone` (Admin/Super-Admin-only, FR-020/FR-022) in `app/api/tickets/[id]/deliver/correct-phone/route.ts` (depends on T037)
-- [ ] T040 [US5] Implement `POST /api/tickets/:id/deliver/override` (Admin/Super-Admin-only, FR-021/FR-022) in `app/api/tickets/[id]/deliver/override/route.ts` (depends on T038)
-- [ ] T041 [US5] Add the Admin/Super-Admin-only phone-correction and override controls to the delivery UI in `app/(dashboard)/tickets/[id]/page.tsx` (depends on T039-T040, T034)
-- [ ] T042 [US5] Confirm T036 passes; run `quickstart.md` Scenario 5 (depends on T037-T041)
+- [X] T037 [US5] Implement FR-020 phone-correction-and-retry — updates only this ticket's own `customer_phone` field, never `003`'s shared `customers.phone` (`research.md` §3) — and enqueues a fresh OTP send to the corrected number, in `lib/delivery/override.ts` (depends on T024, T009). **Gate design**: `hasFailedOtpSend`/`correctionRetryHasFailed` are both derived queries over `notifications` (no new "correction attempted" column) — `correctionRetryHasFailed` counts distinct `recipient_phone` values with a failed OTP send for the ticket (≥2 means a correction happened and its retry also failed), since `correct-phone` is the only way `tickets.customer_phone` ever changes.
+- [X] T038 [US5] Implement FR-021 override-to-Delivered — `409 correction_not_yet_attempted` unless the FR-020 retry has itself already failed; creates a `delivery_overrides` row (structurally distinct from `otp_verifications`, `research.md` §3 of data-model.md) and transitions the ticket via `003`'s status-transition function — in `lib/delivery/override.ts` (depends on T037)
+- [X] T039 [US5] Implement `POST /api/tickets/:id/deliver/correct-phone` (Admin/Super-Admin-only, FR-020/FR-022) in `app/api/tickets/[id]/deliver/correct-phone/route.ts` (depends on T037)
+- [X] T040 [US5] Implement `POST /api/tickets/:id/deliver/override` (Admin/Super-Admin-only, FR-021/FR-022) in `app/api/tickets/[id]/deliver/override/route.ts` (depends on T038)
+- [X] T041 [US5] Add the Admin/Super-Admin-only phone-correction and override controls to the delivery UI in `app/(dashboard)/tickets/[id]/page.tsx` (depends on T039-T040, T034). The page now fetches `GET /api/auth/session` once to know the caller's role client-side (nothing previously did) so these controls only render for Admin/Super Admin — the server-side `403` is still the actual enforcement. `GET /api/tickets/:id`'s `delivery` object gained `sendFailed`/`canOverride`.
+- [X] T042 [US5] Confirm T036 passes; run `quickstart.md` Scenario 5 (depends on T037-T041). Passes; full suite (99 tests) and all 5 e2e specs green; `npx tsc --noEmit` clean.
 
 **Checkpoint**: User Stories 1-5 independently functional.
 

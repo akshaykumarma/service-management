@@ -45,6 +45,8 @@ interface NotificationAlert {
 interface DeliveryState {
   activeAttempt: boolean;
   locked: boolean;
+  sendFailed: boolean;
+  canOverride: boolean;
 }
 
 const DELIVER_ERROR_MESSAGES: Record<string, string> = {
@@ -59,6 +61,14 @@ const VERIFY_ERROR_MESSAGES: Record<string, string> = {
 
 const RESEND_ERROR_MESSAGES: Record<string, string> = {
   resend_already_used: "This attempt has already used its one resend.",
+};
+
+const CORRECT_PHONE_ERROR_MESSAGES: Record<string, string> = {
+  no_send_failure_to_correct: "There is no OTP send failure to correct right now.",
+};
+
+const OVERRIDE_ERROR_MESSAGES: Record<string, string> = {
+  correction_not_yet_attempted: "A phone correction must be attempted (and fail) before overriding.",
 };
 
 interface CatalogueItem {
@@ -94,6 +104,13 @@ export default function TicketDetailPage() {
   const [resending, setResending] = useState(false);
   const [reinitiateError, setReinitiateError] = useState<string | null>(null);
   const [reinitiating, setReinitiating] = useState(false);
+  const [role, setRole] = useState<string | null>(null);
+  const [correctedPhone, setCorrectedPhone] = useState("");
+  const [correctPhoneError, setCorrectPhoneError] = useState<string | null>(null);
+  const [correctingPhone, setCorrectingPhone] = useState(false);
+  const [overrideReason, setOverrideReason] = useState("");
+  const [overrideError, setOverrideError] = useState<string | null>(null);
+  const [overriding, setOverriding] = useState(false);
   const [notFound, setNotFound] = useState(false);
   const [toStatus, setToStatus] = useState("");
   const [comment, setComment] = useState("");
@@ -134,6 +151,14 @@ export default function TicketDetailPage() {
     const interval = setInterval(load, 30_000);
     return () => clearInterval(interval);
   }, [load]);
+
+  useEffect(() => {
+    fetch("/api/auth/session")
+      .then((res) => res.json())
+      .then((body) => setRole(body.user?.role ?? null));
+  }, []);
+
+  const isAdminOrAbove = role === "admin" || role === "super_admin";
 
   async function handleConfirmNotification() {
     setConfirmingNotification(true);
@@ -229,6 +254,50 @@ export default function TicketDetailPage() {
       );
     } finally {
       setReinitiating(false);
+    }
+  }
+
+  async function handleCorrectPhone(e: React.FormEvent) {
+    e.preventDefault();
+    setCorrectPhoneError(null);
+    setCorrectingPhone(true);
+    try {
+      const res = await fetch(`/api/tickets/${params.id}/deliver/correct-phone`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ correctedPhone }),
+      });
+      if (res.ok) {
+        setCorrectedPhone("");
+        await load();
+        return;
+      }
+      const body = await res.json();
+      setCorrectPhoneError(CORRECT_PHONE_ERROR_MESSAGES[body.error?.code] ?? "Could not correct the phone number.");
+    } finally {
+      setCorrectingPhone(false);
+    }
+  }
+
+  async function handleOverride(e: React.FormEvent) {
+    e.preventDefault();
+    setOverrideError(null);
+    setOverriding(true);
+    try {
+      const res = await fetch(`/api/tickets/${params.id}/deliver/override`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ reason: overrideReason }),
+      });
+      if (res.ok) {
+        setOverrideReason("");
+        await load();
+        return;
+      }
+      const body = await res.json();
+      setOverrideError(OVERRIDE_ERROR_MESSAGES[body.error?.code] ?? "Could not override delivery.");
+    } finally {
+      setOverriding(false);
     }
   }
 
@@ -425,6 +494,58 @@ export default function TicketDetailPage() {
                 Resend code
               </button>
             </>
+          )}
+
+          {isAdminOrAbove && delivery?.sendFailed && (
+            <div aria-labelledby="correct-phone-heading">
+              <h3 id="correct-phone-heading">OTP send failed</h3>
+              <p>The one-time code could not be sent to the customer&apos;s phone. Correct the number and retry.</p>
+              <form onSubmit={handleCorrectPhone} noValidate>
+                <div>
+                  <label htmlFor="correctedPhone">Corrected phone number</label>
+                  <input
+                    id="correctedPhone"
+                    required
+                    value={correctedPhone}
+                    onChange={(e) => setCorrectedPhone(e.target.value)}
+                  />
+                </div>
+                {correctPhoneError && (
+                  <p role="alert" aria-live="assertive">
+                    {correctPhoneError}
+                  </p>
+                )}
+                <button type="submit" disabled={correctingPhone || !correctedPhone}>
+                  Correct phone &amp; retry
+                </button>
+              </form>
+            </div>
+          )}
+
+          {isAdminOrAbove && delivery?.canOverride && (
+            <div aria-labelledby="override-heading">
+              <h3 id="override-heading">Override to Delivered</h3>
+              <p>The corrected number also failed to receive the code. Override with a recorded reason instead.</p>
+              <form onSubmit={handleOverride} noValidate>
+                <div>
+                  <label htmlFor="overrideReason">Reason</label>
+                  <textarea
+                    id="overrideReason"
+                    required
+                    value={overrideReason}
+                    onChange={(e) => setOverrideReason(e.target.value)}
+                  />
+                </div>
+                {overrideError && (
+                  <p role="alert" aria-live="assertive">
+                    {overrideError}
+                  </p>
+                )}
+                <button type="submit" disabled={overriding || !overrideReason}>
+                  Override to Delivered
+                </button>
+              </form>
+            </div>
           )}
         </section>
       )}

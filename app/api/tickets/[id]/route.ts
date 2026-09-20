@@ -7,6 +7,7 @@ import { assertAccess, AccessDeniedError } from "@/lib/auth/rbac";
 import { calculateBill } from "@/lib/billing/bill-calculation";
 import { hasUnconfirmedFailedNotification, needsOtpOverride } from "@/lib/notifications/alerts";
 import { hasActiveOtpAttempt } from "@/lib/delivery/otp";
+import { correctionRetryHasFailed, hasFailedOtpSend } from "@/lib/delivery/override";
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   const sessionOrResponse = await requireAuthenticatedSession(request);
@@ -55,6 +56,8 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   const failedNotificationAlert = await hasUnconfirmedFailedNotification(ticket.id);
   const activeOtpAttempt = await hasActiveOtpAttempt(ticket.id);
   const otpLocked = await needsOtpOverride(ticket.id);
+  const sendFailed = await hasFailedOtpSend(ticket.id);
+  const canOverride = await correctionRetryHasFailed(ticket.id);
 
   return NextResponse.json({
     ticket,
@@ -70,6 +73,6 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     })),
     bill,
     notificationAlert: { failed: failedNotificationAlert },
-    delivery: { activeAttempt: activeOtpAttempt, locked: otpLocked },
+    delivery: { activeAttempt: activeOtpAttempt, locked: otpLocked, sendFailed, canOverride },
   });
 }
