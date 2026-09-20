@@ -49,6 +49,38 @@ interface DeliveryState {
   canOverride: boolean;
 }
 
+interface ServiceHistoryEntry {
+  id: string;
+  ticketNumber: string;
+  status: string;
+  createdAt: string;
+}
+
+interface ServiceHistory {
+  found: boolean;
+  entries: ServiceHistoryEntry[];
+}
+
+interface NotificationLogEntry {
+  type: string;
+  channel: string;
+  recipientPhone: string;
+  status: string;
+  sentAt: string;
+}
+
+type OtpOutcome =
+  | { method: "otp"; verifiedAt: string; verifiedBy: string | null }
+  | { method: "override"; reason: string; overriddenBy: string | null; createdAt: string }
+  | null;
+
+interface AuditTrailEntry {
+  source: string;
+  actor: string | null;
+  timestamp: string;
+  description: string;
+}
+
 const DELIVER_ERROR_MESSAGES: Record<string, string> = {
   ticket_not_completed: "The ticket must be Completed before delivery verification can start.",
   attempt_already_active: "A delivery verification attempt is already in progress.",
@@ -124,6 +156,11 @@ export default function TicketDetailPage() {
   const [quantity, setQuantity] = useState("1");
   const [lineItemError, setLineItemError] = useState<string | null>(null);
 
+  const [serviceHistory, setServiceHistory] = useState<ServiceHistory | null>(null);
+  const [notificationLog, setNotificationLog] = useState<NotificationLogEntry[]>([]);
+  const [otpOutcome, setOtpOutcome] = useState<OtpOutcome>(null);
+  const [auditTrail, setAuditTrail] = useState<AuditTrailEntry[]>([]);
+
   const load = useCallback(async () => {
     const res = await fetch(`/api/tickets/${params.id}`);
     if (res.status === 404) {
@@ -137,6 +174,14 @@ export default function TicketDetailPage() {
     setBill(body.bill);
     setNotificationAlert(body.notificationAlert);
     setDelivery(body.delivery);
+    setServiceHistory(body.serviceHistory);
+    setNotificationLog(body.notificationLog);
+    setOtpOutcome(body.otpOutcome);
+
+    const auditRes = await fetch(`/api/tickets/${params.id}/audit-trail`);
+    if (auditRes.ok) {
+      setAuditTrail((await auditRes.json()).entries);
+    }
   }, [params.id]);
 
   useEffect(() => {
@@ -651,6 +696,90 @@ export default function TicketDetailPage() {
             </li>
           ))}
         </ul>
+      </section>
+
+      <section aria-labelledby="service-history-heading">
+        <h2 id="service-history-heading">Service history</h2>
+        {serviceHistory?.found ? (
+          <ul>
+            {serviceHistory.entries.map((entry) => (
+              <li key={entry.id}>
+                <a href={`/tickets/${entry.id}`}>{entry.ticketNumber}</a> — {entry.status} (
+                {new Date(entry.createdAt).toLocaleDateString()})
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p>No prior service history for this machine model.</p>
+        )}
+      </section>
+
+      <section aria-labelledby="notification-log-heading">
+        <h2 id="notification-log-heading">WhatsApp notification log</h2>
+        {notificationLog.length === 0 ? (
+          <p>No notifications sent yet.</p>
+        ) : (
+          <table>
+            <caption>Notifications sent for this ticket</caption>
+            <thead>
+              <tr>
+                <th scope="col">Type</th>
+                <th scope="col">To</th>
+                <th scope="col">Status</th>
+                <th scope="col">Sent at</th>
+              </tr>
+            </thead>
+            <tbody>
+              {notificationLog.map((n, i) => (
+                <tr key={i}>
+                  <td>{n.type}</td>
+                  <td>{n.recipientPhone}</td>
+                  <td>{n.status}</td>
+                  <td>{new Date(n.sentAt).toLocaleString()}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </section>
+
+      <section aria-labelledby="otp-outcome-heading">
+        <h2 id="otp-outcome-heading">OTP verification outcome</h2>
+        {otpOutcome === null && <p>No delivery verification outcome recorded yet.</p>}
+        {otpOutcome?.method === "otp" && (
+          <p>
+            Verified by {otpOutcome.verifiedBy ?? "unknown"} at {new Date(otpOutcome.verifiedAt).toLocaleString()}.
+          </p>
+        )}
+        {otpOutcome?.method === "override" && (
+          <p>
+            Delivery overridden by {otpOutcome.overriddenBy ?? "unknown"} at{" "}
+            {new Date(otpOutcome.createdAt).toLocaleString()} — reason: &quot;{otpOutcome.reason}&quot;
+          </p>
+        )}
+      </section>
+
+      <section aria-labelledby="audit-trail-heading">
+        <h2 id="audit-trail-heading">Audit trail</h2>
+        <table>
+          <caption>Every recorded mutation to this ticket, chronologically</caption>
+          <thead>
+            <tr>
+              <th scope="col">When</th>
+              <th scope="col">Actor</th>
+              <th scope="col">What changed</th>
+            </tr>
+          </thead>
+          <tbody>
+            {auditTrail.map((entry, i) => (
+              <tr key={i}>
+                <td>{new Date(entry.timestamp).toLocaleString()}</td>
+                <td>{entry.actor ?? "System"}</td>
+                <td>{entry.description}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </section>
     </main>
   );

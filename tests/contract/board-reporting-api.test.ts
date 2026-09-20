@@ -3,6 +3,8 @@ import { resetDb } from "../helpers/db";
 import { createStore, createTicket, createUser } from "../helpers/factories";
 import { jsonRequest, loginAs } from "../helpers/http";
 import { GET as ticketsGET } from "@/app/api/tickets/route";
+import { GET as auditTrailGET } from "@/app/api/tickets/[id]/audit-trail/route";
+import { PATCH as statusPATCH } from "@/app/api/tickets/[id]/status/route";
 
 describe("GET /api/tickets filter query parameters", () => {
   beforeEach(resetDb);
@@ -84,5 +86,48 @@ describe("GET /api/tickets filter query parameters", () => {
     const resPast = await ticketsGET(jsonRequest(`/api/tickets?dateFrom=${past}&dateTo=${past}`, { cookie }));
     const bodyPast = await resPast.json();
     expect(bodyPast.tickets).toEqual([]);
+  });
+});
+
+describe("GET /api/tickets/:id/audit-trail", () => {
+  beforeEach(resetDb);
+
+  it("200s with a chronologically-sorted list of entries, including the ticket's creation", async () => {
+    const store = await createStore();
+    const sm = await createUser({ role: "service_manager", storeIds: [store.id], password: "Correct123!" });
+    const ticket = await createTicket({ storeId: store.id, createdBy: sm.id, status: "open" });
+    const cookie = await loginAs(sm.email, "Correct123!");
+
+    await statusPATCH(
+      jsonRequest(`/api/tickets/${ticket.id}/status`, { method: "PATCH", cookie, body: { toStatus: "in_progress", comment: null } }),
+      { params: { id: ticket.id } },
+    );
+
+    const res = await auditTrailGET(jsonRequest(`/api/tickets/${ticket.id}/audit-trail`, { cookie }), {
+      params: { id: ticket.id },
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.entries.length).toBeGreaterThanOrEqual(1);
+    expect(body.entries[0].source).toBe("status_history");
+    for (let i = 1; i < body.entries.length; i++) {
+      expect(new Date(body.entries[i].timestamp).getTime()).toBeGreaterThanOrEqual(
+        new Date(body.entries[i - 1].timestamp).getTime(),
+      );
+    }
+  });
+
+  it("404s for a ticket outside the caller's scope", async () => {
+    const storeA = await createStore();
+    const storeB = await createStore();
+    const smA = await createUser({ role: "service_manager", storeIds: [storeA.id], password: "Correct123!" });
+    const smB = await createUser({ role: "service_manager", storeIds: [storeB.id], password: "Correct123!" });
+    const ticketB = await createTicket({ storeId: storeB.id, createdBy: smB.id, status: "open" });
+    const cookieA = await loginAs(smA.email, "Correct123!");
+
+    const res = await auditTrailGET(jsonRequest(`/api/tickets/${ticketB.id}/audit-trail`, { cookie: cookieA }), {
+      params: { id: ticketB.id },
+    });
+    expect(res.status).toBe(404);
   });
 });

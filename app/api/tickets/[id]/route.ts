@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { asc, eq } from "drizzle-orm";
+import { asc, desc, eq } from "drizzle-orm";
 import { db } from "@/lib/db/client";
-import { statusHistory, tickets, ticketPhotos, ticketLineItems, users } from "@/lib/db/schema";
+import { deliveryOverrides, notifications, otpVerifications, statusHistory, tickets, ticketPhotos, ticketLineItems, users } from "@/lib/db/schema";
 import { requireAuthenticatedSession } from "@/lib/auth/require-session";
 import { assertAccess, AccessDeniedError } from "@/lib/auth/rbac";
 import { calculateBill } from "@/lib/billing/bill-calculation";
 import { hasUnconfirmedFailedNotification, needsOtpOverride } from "@/lib/notifications/alerts";
 import { hasActiveOtpAttempt } from "@/lib/delivery/otp";
 import { correctionRetryHasFailed, hasFailedOtpSend } from "@/lib/delivery/override";
+import { lookupHistory } from "@/lib/tickets/history";
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   const sessionOrResponse = await requireAuthenticatedSession(request);
@@ -59,6 +60,53 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   const sendFailed = await hasFailedOtpSend(ticket.id);
   const canOverride = await correctionRetryHasFailed(ticket.id);
 
+  // 006-dashboard-reporting FR-011: three more additive sections, same pattern as bill
+  // above — Service History, WhatsApp Notification Log, and the OTP/override outcome.
+  const rawHistory = await lookupHistory(caller, ticket.machineModel);
+  const serviceHistory = {
+    found: rawHistory.entries.some((e) => e.id !== ticket.id),
+    entries: rawHistory.entries.filter((e) => e.id !== ticket.id),
+  };
+
+  const notificationRows = await db
+    .select()
+    .from(notifications)
+    .where(eq(notifications.ticketId, ticket.id))
+    .orderBy(desc(notifications.sentAt));
+  const notificationLog = notificationRows.map((n) => ({
+    type: n.type,
+    channel: n.channel,
+    recipientPhone: n.recipientPhone,
+    status: n.status,
+    sentAt: n.sentAt,
+  }));
+
+  const otpRows = await db
+    .select()
+    .from(otpVerifications)
+    .where(eq(otpVerifications.ticketId, ticket.id))
+    .orderBy(desc(otpVerifications.issuedAt));
+  const verifiedRow = otpRows.find((r) => r.verifiedAt);
+
+  let otpOutcome: unknown = null;
+  if (verifiedRow) {
+    const verifierRows = verifiedRow.verifiedBy
+      ? await db.select().from(users).where(eq(users.id, verifiedRow.verifiedBy)).limit(1)
+      : [];
+    otpOutcome = { method: "otp", verifiedAt: verifiedRow.verifiedAt, verifiedBy: verifierRows[0]?.name ?? null };
+  } else {
+    const [overrideRow] = await db.select().from(deliveryOverrides).where(eq(deliveryOverrides.ticketId, ticket.id)).limit(1);
+    if (overrideRow) {
+      const overriderRows = await db.select().from(users).where(eq(users.id, overrideRow.overriddenBy)).limit(1);
+      otpOutcome = {
+        method: "override",
+        reason: overrideRow.reason,
+        overriddenBy: overriderRows[0]?.name ?? null,
+        createdAt: overrideRow.createdAt,
+      };
+    }
+  }
+
   return NextResponse.json({
     ticket,
     statusHistory: historyRows,
@@ -74,5 +122,8 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     bill,
     notificationAlert: { failed: failedNotificationAlert },
     delivery: { activeAttempt: activeOtpAttempt, locked: otpLocked, sendFailed, canOverride },
+    serviceHistory,
+    notificationLog,
+    otpOutcome,
   });
 }
