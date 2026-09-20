@@ -23,9 +23,9 @@ quickstart.md (all present). Assumes `002-auth-rbac`'s project scaffolding
 
 **Purpose**: Add this feature's infrastructure to the existing project
 
-- [ ] T001 [P] Add a `minio` service to `docker-compose.yml` for intake-photo object storage per `plan.md`
-- [ ] T002 [P] Install `@aws-sdk/client-s3` (S3-compatible client for MinIO)
-- [ ] T003 [P] Create the intake-photos bucket in MinIO (init script or documented manual setup step)
+- [X] T001 [P] Add a `minio` service (plus a `minio-init` bucket-creation step) to `docker-compose.yml` for intake-photo object storage per `plan.md`
+- [X] T002 [P] Install `@aws-sdk/client-s3` and `@aws-sdk/s3-request-presigner` (S3-compatible client for MinIO)
+- [X] T003 [P] **Implementation deviation**: MinIO's open-source server binaries were discontinued/archived after this feature's research.md was written (`dl.min.io` now returns `410 Gone` for the server download; only the still-current `minio/minio` container image remains, which needs Docker to run). This sandboxed dev/test environment has no working Docker daemon. Substituted `s3rver` (an npm package implementing enough of the S3 API for real integration testing, no external binary/daemon needed) for local dev/test only, started/stopped via Vitest's `globalSetup` in `tests/global-setup.ts`. `lib/storage/minio-client.ts` is a plain `@aws-sdk/client-s3` `S3Client` pointed at `MINIO_ENDPOINT` — genuinely S3-API-generic, so it targets real MinIO in `docker-compose.yml`'s production/deployment path unchanged.
 
 **Checkpoint**: MinIO reachable and ready; no ticket code yet.
 
@@ -37,12 +37,12 @@ quickstart.md (all present). Assumes `002-auth-rbac`'s project scaffolding
 
 **⚠️ CRITICAL**: No user story task may begin until this phase is complete
 
-- [ ] T004 Add/confirm a minimal `stores` table (`id`, `name`) in `lib/db/schema.ts`. **Cross-feature note**: `002-auth-rbac`'s `user_stores` table has a foreign key into `stores.id`; if `002` is implemented before this table exists, its own migration will fail. Coordinate: this table must exist in the shared `lib/db/schema.ts` before or alongside whichever of `002`/`003` is migrated first — don't assume the two features' schema work is fully independent.
-- [ ] T005 Define Drizzle schema for `tickets`, `customers`, `status_history`, `ticket_photos`, `ticket_number_counters` per `data-model.md` in `lib/db/schema.ts` (depends on T004)
-- [ ] T006 Generate and run the migration (depends on T005)
-- [ ] T007 [P] Implement the MinIO S3-compatible client config in `lib/storage/minio-client.ts` (depends on T001-T003)
-- [ ] T008 Implement the atomic ticket-number generator (`research.md` §1 — single upsert statement, no read-then-write race) in `lib/tickets/ticket-number.ts` (depends on T005)
-- [ ] T009 [P] Implement find-or-create-by-phone customer resolution (FR-020) in `lib/tickets/customer.ts` (depends on T005)
+- [X] T004 Confirmed: `002-auth-rbac`'s implementation already created the minimal `stores` table (`id`, `name`) in `lib/db/schema.ts`, exactly per this task's own coordination note — resolved by build order, not by this feature having to create it now.
+- [X] T005 Define Drizzle schema for `tickets`, `customers`, `status_history`, `ticket_photos`, `ticket_number_counters` per `data-model.md` in `lib/db/schema.ts` (depends on T004)
+- [X] T006 Generate and run the migration (depends on T005)
+- [X] T007 [P] Implement the S3-compatible client config in `lib/storage/minio-client.ts` (depends on T001-T003)
+- [X] T008 Implement the atomic ticket-number generator (`research.md` §1 — single upsert statement, no read-then-write race) in `lib/tickets/ticket-number.ts` (depends on T005)
+- [X] T009 [P] Implement find-or-create-by-phone customer resolution (FR-020) in `lib/tickets/customer.ts` (depends on T005)
 
 **Checkpoint**: Schema and core utilities exist — user story work can begin.
 
