@@ -224,3 +224,86 @@ export const ticketLineItems = pgTable("ticket_line_items", {
   lineTotal: numeric("line_total", { precision: 12, scale: 2 }).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+export const notificationTypeEnum = pgEnum("notification_type", ["completion", "otp"]);
+export const notificationStatusEnum = pgEnum("notification_status", ["sent", "delivered", "failed"]);
+
+export const notifications = pgTable("notifications", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  // Nullable — null for a Super Admin test-send, not tied to a real ticket (research.md §5).
+  ticketId: uuid("ticket_id").references(() => tickets.id, { onDelete: "cascade" }),
+  type: notificationTypeEnum("type").notNull(),
+  channel: text("channel").notNull().default("whatsapp"),
+  recipientPhone: text("recipient_phone").notNull(),
+  renderedContent: text("rendered_content").notNull(),
+  status: notificationStatusEnum("status").notNull(),
+  messageId: text("message_id"), // the WhatsApp message id, for correlating a later webhook
+  pgBossJobId: text("pg_boss_job_id"),
+  sentAt: timestamp("sent_at", { withTimezone: true }).notNull().defaultNow(),
+  statusUpdatedAt: timestamp("status_updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const otpVerifications = pgTable("otp_verifications", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  ticketId: uuid("ticket_id")
+    .notNull()
+    .references(() => tickets.id, { onDelete: "cascade" }),
+  codeHash: text("code_hash").notNull(),
+  issuedAt: timestamp("issued_at", { withTimezone: true }).notNull().defaultNow(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  resendUsed: boolean("resend_used").notNull().default(false),
+  failedAttempts: integer("failed_attempts").notNull().default(0),
+  locked: boolean("locked").notNull().default(false),
+  verifiedAt: timestamp("verified_at", { withTimezone: true }),
+  verifiedBy: uuid("verified_by").references(() => users.id),
+});
+
+export const deliveryOverrides = pgTable(
+  "delivery_overrides",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    ticketId: uuid("ticket_id")
+      .notNull()
+      .references(() => tickets.id, { onDelete: "cascade" }),
+    reason: text("reason").notNull(),
+    overriddenBy: uuid("overridden_by")
+      .notNull()
+      .references(() => users.id),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    ticketUnique: uniqueIndex("delivery_overrides_ticket_id_unique_idx").on(table.ticketId),
+  }),
+);
+
+export const templateTypeEnum = pgEnum("template_type", ["completion", "otp"]);
+export const templateApprovalStatusEnum = pgEnum("template_approval_status", ["approved", "pending"]);
+
+export const messageTemplates = pgTable("message_templates", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  type: templateTypeEnum("type").notNull(),
+  body: text("body").notNull(),
+  metaTemplateName: text("meta_template_name"),
+  approvalStatus: templateApprovalStatusEnum("approval_status").notNull().default("pending"),
+  updatedBy: uuid("updated_by").references(() => users.id),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const manualNotificationConfirmations = pgTable(
+  "manual_notification_confirmations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    notificationId: uuid("notification_id")
+      .notNull()
+      .references(() => notifications.id, { onDelete: "cascade" }),
+    confirmedBy: uuid("confirmed_by")
+      .notNull()
+      .references(() => users.id),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    notificationUnique: uniqueIndex("manual_notification_confirmations_notification_id_unique_idx").on(
+      table.notificationId,
+    ),
+  }),
+);

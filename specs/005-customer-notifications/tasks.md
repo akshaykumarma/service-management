@@ -26,9 +26,9 @@ real Meta Cloud API.
 
 ## Phase 1: Setup
 
-- [ ] T001 [P] Install `pg-boss` dependency for async WhatsApp sends and OTP-expiry sweeping (`research.md` §1)
-- [ ] T002 [P] Stand up a local mock WhatsApp Cloud API test server (fake HTTP server with configurable send-success/send-failure responses and webhook delivery-receipt simulation) for use across all test suites
-- [ ] T003 [P] Add Meta WhatsApp Business Cloud API configuration (access token, phone number ID, webhook verification secret) to environment config, pointed at the mock server in test/dev
+- [X] T001 [P] Install `pg-boss` dependency for async WhatsApp sends and OTP-expiry sweeping (`research.md` §1). Node 22.22.2 satisfies pg-boss 12.x's `>=22.12.0` engine requirement.
+- [X] T002 [P] Stand up a local mock WhatsApp Cloud API test server (real Node `http` server, `tests/helpers/mock-whatsapp-server.ts`, started once in Vitest `globalSetup`) with a `/messages` send endpoint (per-phone configurable failure) and HTTP control endpoints (`/__control/fail`, `/__control/reset`, `/__control/received`) — control is over HTTP, not shared module state, since `globalSetup` runs in a separate process from test-file workers; `tests/helpers/whatsapp-mock-client.ts` is what test files actually import
+- [X] T003 [P] Added Meta WhatsApp Business Cloud API configuration (`WHATSAPP_API_URL`, `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_WEBHOOK_SECRET`) plus `OTP_HASH_SECRET` to `.env`/`.env.test`/`.env.example`, pointed at the mock server in test/dev via `globalSetup`
 
 **Checkpoint**: Dependencies and mock infrastructure ready; no feature code yet.
 
@@ -40,13 +40,15 @@ real Meta Cloud API.
 
 **⚠️ CRITICAL**: No user story task may begin until this phase is complete
 
-- [ ] T004 Define Drizzle schema for `notifications`, `otp_verifications`, `delivery_overrides`, `message_templates`, `manual_notification_confirmations` per `data-model.md` in `lib/db/schema.ts`
-- [ ] T005 Generate and run the migration (depends on T004); confirm `pg-boss`'s own job-queue tables initialize into the same database on first worker start (`plan.md` — no separate infrastructure)
-- [ ] T006 [P] Implement the Meta Cloud API HTTP client (plain REST calls, no SDK) in `lib/whatsapp/client.ts`, pointed at the mock server per T003 in test/dev (depends on T003)
-- [ ] T007 [P] Implement placeholder substitution and the fixed allow-list validation (customer_name, ticket_id, machine_model, bill_total, store_name, store_phone — `research.md` §6) in `lib/whatsapp/templates.ts` (depends on T004)
-- [ ] T008 [P] Implement OTP generate/hash(HMAC-SHA256, never plaintext)/verify utilities (`research.md` §2) in `lib/delivery/otp.ts` (depends on T004)
-- [ ] T009 Implement the `pg-boss` job handler scaffold for sending a WhatsApp message, with retry-with-backoff on transient failure, in `jobs/send-whatsapp-message.ts` (depends on T006)
-- [ ] T010 [P] Implement the derived alert queries — failed notification awaiting manual confirmation (FR-004) and OTP attempt awaiting Admin/Super-Admin override (locked or timeout-exhausted) — as read-only queries, no new real-time push mechanism (`research.md` §7), in `lib/notifications/alerts.ts` (depends on T004)
+- [X] T004 Define Drizzle schema for `notifications`, `otp_verifications`, `delivery_overrides`, `message_templates`, `manual_notification_confirmations` per `data-model.md` in `lib/db/schema.ts`. Added `notifications.message_id` beyond data-model.md's own column list — required to correlate a later Meta webhook to the row it updates, per this feature's own contract; `pg_boss_job_id` (already documented) is for debugging only, not the same identifier.
+- [X] T005 Generate and run the migration (depends on T004); confirmed `pg-boss`'s own job-queue tables initialize into a separate `pgboss` schema on the same database on first `boss.start()` (`plan.md` — no separate infrastructure, no conflict with Drizzle's `public`/`drizzle` schemas)
+- [X] T006 [P] Implement the Meta Cloud API HTTP client (plain REST calls, no SDK) in `lib/whatsapp/client.ts`, pointed at the mock server per T003 in test/dev (depends on T003)
+- [X] T007 [P] Implement placeholder substitution and the fixed allow-list validation in `lib/whatsapp/templates.ts` (`research.md` §6) (depends on T004). Added a 7th placeholder, `otp_code`, beyond FR-017's six named ones — "at minimum" leaves room for it, and the OTP template cannot function without a way to insert the actual code.
+- [X] T008 [P] Implement OTP generate/hash(HMAC-SHA256, never plaintext)/verify utilities (`research.md` §2) in `lib/delivery/otp.ts` (depends on T004)
+- [X] T009 Implement the `pg-boss` job handler scaffold for sending a WhatsApp message, with retry-with-backoff on transient failure, in `jobs/send-whatsapp-message.ts` (depends on T006). **Design decision**: retries happen *inside* one job execution (in-process backoff loop, not pg-boss's own job-level retry), so exactly one `notifications` row is written per logical send attempt — letting pg-boss retry the whole job would insert a new row per retry. **Security fix applied here**: the job's `storedContent` is persisted separately from `sendContent` specifically so an OTP's real code (needed for the actual send) is never what gets written to `notifications.rendered_content` — plan.md's Constraints require OTP codes "never logged," and a naive single-content design would have violated that.
+- [X] T010 [P] Implement the derived alert queries — failed notification awaiting manual confirmation (FR-004) and OTP attempt awaiting Admin/Super-Admin override (locked or timeout-exhausted) — as read-only queries, no new real-time push mechanism (`research.md` §7), in `lib/notifications/alerts.ts` (depends on T004)
+
+**Infrastructure note beyond the original task list**: `lib/jobs/boss.ts` (pg-boss singleton) is enqueue-only — the actual `.work()` registration happens once via `instrumentation.ts` (a new file, Next.js's server-startup hook) in production/dev, and once via `tests/global-setup.ts` in tests, each on its own separate `PgBoss` instance. This split exists because Vitest resets the module registry between test files; sharing one enqueue+work singleton would have started (and never stopped) a redundant worker per test file.
 
 **Checkpoint**: Schema and core utilities exist — user story work can begin.
 
