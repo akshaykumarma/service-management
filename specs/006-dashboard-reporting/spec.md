@@ -8,6 +8,12 @@
 
 **Input**: User description: "PRD §6.8 Dashboard & Board View (JIRA-style kanban board, one column per ticket status, cards showing Ticket ID/Customer Name/Machine Model/status/created date/days-open, drag between valid adjacent columns, auto-refresh every 30 seconds; filters by Store, Status, Date Range, Ticket ID, Customer Name, Machine Model; Ticket Detail View with Intake Info, Service History, Status Timeline, Parts & Services, Bill Summary, WhatsApp Notification Log, OTP Verification, and Audit Trail sections) and §6.10 Reporting (CSV/PDF export of filtered ticket lists; per-store summary report of total tickets, tickets by status, average resolution time, parts revenue, services revenue; date-range selector on all reports)."
 
+## Clarifications
+
+### Session 2026-09-20
+
+- Q: When a summary report is generated for a date range, which date determines whether a ticket counts toward that period — creation date or completion date? → A: Completion date — a ticket counts toward the period containing when it first reached "Completed" (its bill's lock point); a ticket not yet Completed by period-end isn't counted for that period.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Kanban Board Overview of All Tickets (Priority: P1)
@@ -83,7 +89,7 @@ Admins and the Super Admin export a filtered list of tickets, or a per-store sum
 **Acceptance Scenarios**:
 
 1. **Given** a filtered ticket list, **When** an Admin or Super Admin exports it, **Then** they can choose CSV or PDF and the exported file's contents match the filtered list.
-2. **Given** a chosen store and date range, **When** a summary report is generated, **Then** it shows total tickets, a breakdown by status, average resolution time, parts revenue, and services revenue for that store and period.
+2. **Given** a chosen store and date range, **When** a summary report is generated, **Then** it shows total tickets, a breakdown by status, average resolution time, parts revenue, and services revenue for that store and period, counting only tickets that first reached "Completed" within that date range.
 3. **Given** a Store Service Manager, **When** they attempt to access reporting/export, **Then** access is denied (reporting is an Admin/Super Admin capability per source PRD §6.10).
 
 ---
@@ -94,6 +100,8 @@ Admins and the Super Admin export a filtered list of tickets, or a per-store sum
 - What happens when a drag-and-drop move requires a mandatory comment (e.g., a backward transition or Cancelled)? The system MUST prompt for that comment as part of the drag interaction rather than silently failing or silently skipping the requirement.
 - What happens to the "days-open" counter once a ticket reaches a terminal status (Delivered/Cancelled)? It MUST stop incrementing and reflect the final elapsed duration.
 - What happens if two staff members view the board at the same time and one changes a ticket? The other's board MUST reflect the change within the next auto-refresh cycle, not indefinitely show stale data.
+- What happens to a ticket created in one report period but not completed until a later one? It MUST count toward the period containing its completion date, not its creation date; it is simply excluded from any period's metrics until it first reaches "Completed" (see FR-017).
+- What happens to a ticket that reaches "Completed" more than once (e.g., moved backward and re-completed)? Reports MUST use the timestamp it *first* reached "Completed" — matching the permanent bill lock defined in `004-parts-services-catalogue` — not any later re-entry into that status.
 
 ## Requirements *(mandatory)*
 
@@ -115,6 +123,7 @@ Admins and the Super Admin export a filtered list of tickets, or a per-store sum
 - **FR-014**: System MUST allow Admin and Super Admin roles to generate a per-store summary report for a selected date range, showing total tickets, a breakdown by status, average resolution time, parts revenue, and services revenue.
 - **FR-015**: System MUST deny Store Service Managers access to report generation/export.
 - **FR-016**: System MUST clearly indicate an empty result set when no tickets match the applied filters.
+- **FR-017**: System MUST attribute a ticket to a report's date range based on the timestamp it first reached "Completed" status — not its creation date — and MUST exclude a ticket from all periods' ticket-count and revenue metrics until it first reaches "Completed." If a ticket reaches "Completed" more than once, system MUST use the timestamp of the first occurrence, matching the permanent bill lock defined in `004-parts-services-catalogue`.
 
 ### Key Entities *(include if feature involves data)*
 
@@ -133,6 +142,7 @@ Admins and the Super Admin export a filtered list of tickets, or a per-store sum
 - **SC-003**: 100% of drag-and-drop moves that violate the status transition rules are rejected, with zero invalid transitions occurring via the board.
 - **SC-004**: An Admin/Super Admin can produce a store's summary report and export it without any manual spreadsheet work.
 - **SC-005**: 100% of a ticket's recorded mutations are visible in its audit trail, with no gaps between what other specs record and what's displayed here.
+- **SC-006**: 100% of tickets in a summary report are attributed to the period containing their first "Completed" timestamp; 0% are attributed by creation date instead.
 
 ## Assumptions
 
