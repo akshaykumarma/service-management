@@ -1,10 +1,18 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { resetDb } from "../helpers/db";
 import { createUser } from "../helpers/factories";
 import { jsonRequest, extractSessionCookie } from "../helpers/http";
 import { POST as loginPOST } from "@/app/api/auth/login/route";
 import { GET as sessionGET } from "@/app/api/auth/session/route";
 import { POST as logoutPOST } from "@/app/api/auth/logout/route";
+
+vi.mock("@/lib/email/password-reset", () => ({
+  sendPasswordResetEmail: vi.fn(),
+}));
+
+import { POST as passwordResetRequestPOST } from "@/app/api/auth/password-reset/request/route";
+import { POST as passwordResetConfirmPOST } from "@/app/api/auth/password-reset/confirm/route";
+import { resetRequestCounts } from "@/lib/auth/password-reset";
 
 describe("POST /api/auth/login", () => {
   beforeEach(resetDb);
@@ -87,5 +95,37 @@ describe("POST /api/auth/logout", () => {
 
     const sessionRes = await sessionGET(jsonRequest("/api/auth/session", { cookie }));
     expect(sessionRes.status).toBe(401);
+  });
+});
+
+describe("POST /api/auth/password-reset/request", () => {
+  beforeEach(async () => {
+    await resetDb();
+    resetRequestCounts.clear();
+  });
+
+  it("200s with a generic message regardless of whether the email exists", async () => {
+    const res = await passwordResetRequestPOST(
+      jsonRequest("/api/auth/password-reset/request", { method: "POST", body: { email: "whoever@example.com" } }),
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.message).toMatch(/if that email is registered/i);
+  });
+});
+
+describe("POST /api/auth/password-reset/confirm", () => {
+  beforeEach(resetDb);
+
+  it("400s with invalid_or_expired_token for an unknown token", async () => {
+    const res = await passwordResetConfirmPOST(
+      jsonRequest("/api/auth/password-reset/confirm", {
+        method: "POST",
+        body: { token: "not-a-real-token", newPassword: "NewPassword1!" },
+      }),
+    );
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error.code).toBe("invalid_or_expired_token");
   });
 });

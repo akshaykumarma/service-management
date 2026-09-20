@@ -125,17 +125,17 @@ the identical response.
 
 ### Tests for User Story 3 ⚠️ Write first; confirm they fail before implementing
 
-- [ ] T027 [P] [US3] Contract tests for `POST /api/auth/password-reset/request` and `/confirm` in `tests/contract/auth-api.test.ts`
-- [ ] T028 [P] [US3] Integration test for the full reset flow, 30-minute expiry, single-use enforcement, and non-enumeration (identical response whether or not the email exists) in `tests/integration/password-reset.test.ts`
+- [X] T027 [P] [US3] Contract tests for `POST /api/auth/password-reset/request` and `/confirm` in `tests/contract/auth-api.test.ts`
+- [X] T028 [P] [US3] Integration test for the full reset flow, 30-minute expiry, single-use enforcement, and non-enumeration (identical response whether or not the email exists) in `tests/integration/password-reset.test.ts`
 
 ### Implementation for User Story 3
 
-- [ ] T029 [US3] Implement `password_reset_tokens` create/hash/verify logic in `lib/auth/password-reset.ts` (depends on T006)
-- [ ] T030 [P] [US3] Implement Nodemailer/SMTP reset-link email sending in `lib/email/password-reset.ts` (depends on T010)
-- [ ] T031 [US3] Implement `POST /api/auth/password-reset/request` with the non-revealing response and per-email rate limiting (`research.md` §7) in `app/api/auth/password-reset/route.ts` (depends on T029, T030)
-- [ ] T032 [US3] Implement `POST /api/auth/password-reset/confirm` (verify token, update password, invalidate the user's existing sessions) in `app/api/auth/password-reset/route.ts` (depends on T029)
-- [ ] T033 [US3] Build accessible forgot-password and reset-password pages in `app/(auth)/forgot-password/page.tsx` and `app/(auth)/reset-password/[token]/page.tsx` (depends on T031, T032)
-- [ ] T034 [US3] Confirm T027-T028 pass; run `quickstart.md` Scenario 3 (depends on T029-T033)
+- [X] T029 [US3] Implement `password_reset_tokens` create/hash(SHA-256)/verify logic plus per-email rate limiting in `lib/auth/password-reset.ts` (depends on T006)
+- [X] T030 [P] [US3] Implement Nodemailer/SMTP reset-link email sending in `lib/email/password-reset.ts` (depends on T010)
+- [X] T031 [US3] Implement `POST /api/auth/password-reset/request` with the non-revealing response and per-email rate limiting (`research.md` §7) in `app/api/auth/password-reset/request/route.ts` (path deviation, consistent with T017's discrete-route-per-contract-path approach) (depends on T029, T030)
+- [X] T032 [US3] Implement `POST /api/auth/password-reset/confirm` (verify token, update password, invalidate the user's existing sessions) in `app/api/auth/password-reset/confirm/route.ts` (same path deviation) (depends on T029)
+- [X] T033 [US3] Build accessible forgot-password and reset-password pages in `app/(auth)/forgot-password/page.tsx` and `app/(auth)/reset-password/[token]/page.tsx` (depends on T031, T032)
+- [X] T034 [US3] Confirm T027-T028 pass; run `quickstart.md` Scenario 3 (depends on T029-T033) — 12 new tests pass; full suite 21/21 passing
 
 **Checkpoint**: User Stories 1-3 all independently functional.
 
