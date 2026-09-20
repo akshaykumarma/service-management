@@ -13,6 +13,7 @@
 ### Session 2026-09-20
 
 - Q: What should happen if the OTP message itself fails to reach the customer via WhatsApp (not a wrong code — the message never arrives)? → A: Two-step escalation — Admin/Super Admin first corrects the customer's phone number on the ticket and re-triggers the OTP send; if it fails again even to the corrected number, Admin/Super Admin can override and mark the ticket "Delivered" without a successful code verification, recording a mandatory reason.
+- Q: After a code and its one resend both expire without any wrong-code entry (no lockout triggered), can the Service Manager freely start a new delivery attempt, or does that also need Admin/Super Admin override? → A: Same override requirement as the 3-strikes lockout — only an Admin/Super Admin can initiate the next attempt once one attempt (code + resend) is exhausted by timeout.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -68,17 +69,19 @@ When the customer arrives to collect their machine, the Service Manager initiate
 
 ### User Story 4 - OTP Lockout & Admin Override (Priority: P4)
 
-After 3 failed code attempts, entry locks to prevent guessing, and only an Admin or Super Admin can clear the lock to let delivery verification proceed.
+After 3 failed code attempts, entry locks to prevent guessing, and only an Admin or Super Admin can clear the lock to let delivery verification proceed. The same Admin/Super Admin gate also applies once a delivery attempt (its code and one resend) is fully exhausted by simply timing out, with no wrong entries at all — a fresh attempt isn't something a Service Manager can just start again on their own.
 
-**Why this priority**: A necessary safeguard against brute-forcing the delivery code, but only relevant in the exceptional case where Story 3's normal path repeatedly fails.
+**Why this priority**: A necessary safeguard against brute-forcing the delivery code, but only relevant in the exceptional case where Story 3's normal path repeatedly fails or simply times out.
 
-**Independent Test**: Enter 3 wrong codes in a row and confirm entry locks for the Service Manager, then confirm an Admin/Super Admin can override and unlock it.
+**Independent Test**: Enter 3 wrong codes in a row and confirm entry locks for the Service Manager, then confirm an Admin/Super Admin can override and unlock it. Separately, let a code and its resend both expire untouched and confirm the Service Manager cannot start a new attempt without the same override.
 
 **Acceptance Scenarios**:
 
 1. **Given** 2 prior failed attempts on the current code, **When** a 3rd incorrect code is entered, **Then** OTP entry locks for that ticket.
 2. **Given** a locked ticket, **When** the assigned Service Manager attempts to enter another code, **Then** the system refuses until an override occurs.
 3. **Given** a locked ticket, **When** an Admin or Super Admin overrides the lock, **Then** OTP entry becomes available again (e.g., via a fresh code).
+4. **Given** a delivery attempt's code and its one resend have both expired with zero wrong-code entries, **When** a Service Manager tries to start another delivery attempt on their own, **Then** the system refuses.
+5. **Given** the same timed-out attempt, **When** an Admin or Super Admin initiates a new delivery attempt, **Then** a fresh code is issued with its own single-resend allowance.
 
 ---
 
@@ -122,6 +125,7 @@ The Super Admin can edit the wording of the completion and OTP WhatsApp messages
 - What happens if the OTP lock is triggered but the ticket is later reassigned to a different Service Manager? The lock and its override requirement persist with the ticket, not with the staff member.
 - What happens to a message template edit that has a malformed/unsupported placeholder? The system MUST reject saving it rather than sending a broken message to a customer later.
 - What happens if the OTP message itself fails to send at all (as opposed to the customer entering a wrong code)? An Admin/Super Admin can correct the customer's phone number and retry; if that also fails, an Admin/Super Admin can override to "Delivered" with a mandatory recorded reason, distinct from a normal OTP-verified delivery (see User Story 5, FR-020, FR-021).
+- What happens when a code and its one resend both simply expire with no wrong entries at all (e.g., the customer was slow to check WhatsApp)? The Service Manager cannot self-initiate a new attempt; an Admin or Super Admin must start the next attempt, same as clearing a wrong-code lockout (see User Story 4, FR-023).
 
 ## Requirements *(mandatory)*
 
@@ -135,7 +139,7 @@ The Super Admin can edit the wording of the completion and OTP WhatsApp messages
 - **FR-006**: System MUST allow a Service Manager to initiate delivery verification only on a ticket that has reached "Completed."
 - **FR-007**: System MUST send a 6-digit one-time code via WhatsApp to the customer's primary phone number when delivery verification is initiated.
 - **FR-008**: System MUST treat a one-time code as valid for 10 minutes from issuance.
-- **FR-009**: System MUST allow exactly one resend of a one-time code per delivery attempt, gated by a 60-second cooldown, and MUST invalidate the prior code upon resend.
+- **FR-009**: System MUST allow exactly one resend of a one-time code per delivery attempt, gated by a 60-second cooldown, and MUST invalidate the prior code upon resend. Once both the original code and its resend have expired without a wrong-code entry, the delivery attempt is exhausted (FR-023 governs re-initiation).
 - **FR-010**: System MUST transition a ticket to "Delivered" only upon entry of the currently valid, unexpired one-time code.
 - **FR-011**: System MUST reject an expired or incorrect code without transitioning the ticket.
 - **FR-012**: System MUST count failed code-entry attempts per delivery attempt and lock further entry after 3 consecutive failures.
@@ -149,6 +153,7 @@ The Super Admin can edit the wording of the completion and OTP WhatsApp messages
 - **FR-020**: System MUST allow Admin and Super Admin roles to correct a ticket's customer phone number and re-trigger an OTP send when the original OTP message fails to reach the customer.
 - **FR-021**: If an OTP fails to send even to a corrected phone number, system MUST allow Admin and Super Admin roles to override and transition the ticket to "Delivered" without a successful code verification, requiring a mandatory recorded reason, and MUST record this as a distinct override (not a normal OTP-verified delivery) with the overriding staff member and timestamp, immutably.
 - **FR-022**: System MUST deny Store Service Managers the ability to correct a ticket's phone number for OTP retry or to perform an OTP-failure override; both are restricted to Admin and Super Admin.
+- **FR-023**: Once a delivery attempt's code and its one resend have both expired without triggering the 3-strikes lockout, system MUST restrict initiating a new delivery attempt (a fresh code and resend allowance) to Admin and Super Admin roles, the same as clearing a wrong-code lockout; a Store Service Manager MUST NOT be able to self-initiate another attempt.
 
 ### Key Entities *(include if feature involves data)*
 
@@ -167,6 +172,7 @@ The Super Admin can edit the wording of the completion and OTP WhatsApp messages
 - **SC-003**: 100% of tickets marked "Delivered" have either a successful, unexpired OTP verification or a recorded Admin/Super Admin override with a reason — zero deliveries with neither.
 - **SC-004**: 100% of successful deliveries have an immutable record of who verified them and when; 100% of override deliveries are distinguishable from OTP-verified ones.
 - **SC-005**: A Super Admin can update a message template and confirm its correctness via test-send without needing developer involvement.
+- **SC-006**: 0% of new delivery attempts (after a lockout or a timed-out attempt) are ever initiated by a Store Service Manager alone; 100% are initiated by an Admin or Super Admin.
 
 ## Assumptions
 
