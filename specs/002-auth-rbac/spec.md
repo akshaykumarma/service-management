@@ -8,6 +8,12 @@
 
 **Input**: User description: "PRD §5 Stakeholders & User Roles and §6.1 Authentication & User Management: three roles — Super Admin (global, all stores), Admin (one or more assigned stores, can create tickets, read-only on catalogue, no system config), Store Service Manager (exactly one store, full ticket operations, cannot manage users or catalogue). Email/password login with server-side sessions, configurable idle timeout (default 8h), rate-limited failed logins (lock 15 min after 5 failures), tokenized password reset (30 min expiry). Super Admin creates/edits/deactivates/deletes users and assigns stores. Every API route and UI view guarded by server-side role checks; deactivated users keep their history but cannot log in."
 
+## Clarifications
+
+### Session 2026-09-20
+
+- Q: When a user is deactivated (or their role/store assignment changes) while holding an active session, does the change apply on their very next request, or only once their session naturally expires or they log in again? → A: Live re-check on every request — deactivation/role/store changes take effect on the account's very next request; no explicit session termination is needed since access is never cached at login.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Secure Login & Session Management (Priority: P1)
@@ -74,6 +80,7 @@ The Super Admin creates staff accounts, assigns Admins to one or more stores and
 2. **Given** an existing Admin, **When** the Super Admin assigns them an additional store, **Then** the Admin immediately gains visibility into that store.
 3. **Given** an active user with a history of actions on tickets, **When** the Super Admin deactivates them, **Then** they can no longer log in, but their name still appears correctly on the historical tickets/actions they performed.
 4. **Given** a Store Service Manager account, **When** the Super Admin attempts to assign it to a second store, **Then** the system enforces the one-store-only rule for that role.
+5. **Given** a user with an active, unexpired session, **When** the Super Admin deactivates them or changes their role/store assignment, **Then** their very next request is evaluated against the new state — an active session does not keep operating under the old permissions for the rest of its normal duration.
 
 ---
 
@@ -84,6 +91,7 @@ The Super Admin creates staff accounts, assigns Admins to one or more stores and
 - What happens when a password reset is requested for an email that isn't a registered account? The system must not reveal whether the account exists (respond the same way either way).
 - What happens if a Store Service Manager tries to be assigned to zero stores, or an Admin to zero stores? The system MUST require at least one store assignment for these roles at creation time.
 - What happens after an account lockout expires? The account MUST become usable again automatically after 15 minutes, without requiring Super Admin intervention.
+- What happens to a user's already-active session when they are deactivated or their role/stores change mid-session? The change MUST take effect on their very next request — access and scope are re-evaluated live each time, never cached from login (see FR-019).
 
 ## Requirements *(mandatory)*
 
@@ -107,6 +115,7 @@ The Super Admin creates staff accounts, assigns Admins to one or more stores and
 - **FR-016**: System MUST deny an Admin access to the maintenance console (parts/services/machine-model/store configuration) and to user management screens.
 - **FR-017**: System MUST require at least one store assignment when creating an Admin or Store Service Manager account.
 - **FR-018**: System MUST record which staff member performed every access-controlled action, for use in the audit trail (see `003-ticket-lifecycle`).
+- **FR-019**: System MUST re-evaluate a staff member's active/deactivated state, role, and store assignment(s) on every request, not only at login, so that a deactivation or role/store change takes effect on that account's very next request without requiring session termination or re-login.
 
 ### Key Entities *(include if feature involves data)*
 
@@ -124,6 +133,7 @@ The Super Admin creates staff accounts, assigns Admins to one or more stores and
 - **SC-003**: An account locked out after failed login attempts becomes usable again automatically within 15 minutes, with no administrator action required.
 - **SC-004**: 100% of deactivated accounts are immediately unable to log in while 100% of their historical actions remain correctly attributed.
 - **SC-005**: The Super Admin can onboard a new store's staff (create accounts, assign roles and stores) without any code change or developer involvement.
+- **SC-006**: 100% of deactivation and role/store-assignment changes take effect on the affected account's very next request; 0% of active sessions continue operating under superseded permissions.
 
 ## Assumptions
 
