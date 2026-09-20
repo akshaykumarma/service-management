@@ -14,6 +14,7 @@
 
 - Q: When a summary report is generated for a date range, which date determines whether a ticket counts toward that period — creation date or completion date? → A: Completion date — a ticket counts toward the period containing when it first reached "Completed" (its bill's lock point); a ticket not yet Completed by period-end isn't counted for that period.
 - Q: Does "average resolution time" in the summary report measure Open→Completed, or Open→Delivered? → A: Open → Completed — measures how long the actual service work took, independent of how long the customer takes to collect the machine afterward.
+- Q: Does the "Customer Name" filter search each ticket's own historical name, or the canonical Customer record's current name? → A: Each ticket's own historical name, as entered at that ticket's intake — independent of any later correction to the Customer record.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -103,6 +104,7 @@ Admins and the Super Admin export a filtered list of tickets, or a per-store sum
 - What happens if two staff members view the board at the same time and one changes a ticket? The other's board MUST reflect the change within the next auto-refresh cycle, not indefinitely show stale data.
 - What happens to a ticket created in one report period but not completed until a later one? It MUST count toward the period containing its completion date, not its creation date; it is simply excluded from any period's metrics until it first reaches "Completed" (see FR-017).
 - What happens to a ticket that reaches "Completed" more than once (e.g., moved backward and re-completed)? Reports MUST use the timestamp it *first* reached "Completed" — matching the permanent bill lock defined in `004-parts-services-catalogue` — not any later re-entry into that status.
+- What happens when a customer's name is later corrected in their Customer record (per `003-ticket-lifecycle`) but an older ticket still shows the original, uncorrected name? Searching by "Customer Name" MUST still find that older ticket under the name it was entered with — the filter does not follow the customer's later name correction.
 
 ## Requirements *(mandatory)*
 
@@ -115,7 +117,7 @@ Admins and the Super Admin export a filtered list of tickets, or a per-store sum
 - **FR-005**: System MUST allow moving a ticket to a different status by dragging its card to another column.
 - **FR-006**: System MUST reject a drag-to-column move that is not a valid status transition, per the rules defined in `003-ticket-lifecycle`.
 - **FR-007**: System MUST prompt for a mandatory comment during a drag-and-drop move when the target transition requires one (per `003-ticket-lifecycle`).
-- **FR-008**: System MUST provide filters for store (Admin/Super Admin only), status (multi-select), creation date range, ticket ID, customer name, and machine model.
+- **FR-008**: System MUST provide filters for store (Admin/Super Admin only), status (multi-select), creation date range, ticket ID, customer name, and machine model. The customer name filter MUST match against each ticket's own historical name as entered at that ticket's intake, not the canonical Customer record's current name (see `003-ticket-lifecycle`).
 - **FR-009**: System MUST apply all currently selected filters together (as an AND condition) when narrowing the ticket list/board.
 - **FR-010**: System MUST restrict the store filter's available choices to the stores the viewer's role/assignment permits.
 - **FR-011**: System MUST provide a ticket detail view containing: intake information, service history, status timeline, parts & services with bill summary, WhatsApp notification log, OTP verification outcome, and an audit trail.
@@ -146,6 +148,7 @@ Admins and the Super Admin export a filtered list of tickets, or a per-store sum
 - **SC-005**: 100% of a ticket's recorded mutations are visible in its audit trail, with no gaps between what other specs record and what's displayed here.
 - **SC-006**: 100% of tickets in a summary report are attributed to the period containing their first "Completed" timestamp; 0% are attributed by creation date instead.
 - **SC-007**: 100% of "average resolution time" figures measure Open-to-Completed duration only; 0% include post-Completed pickup-wait time.
+- **SC-008**: 100% of "Customer Name" filter matches are against each ticket's own historical intake-time name; a later Customer-record name correction never changes what an older ticket matches on.
 
 ## Assumptions
 
