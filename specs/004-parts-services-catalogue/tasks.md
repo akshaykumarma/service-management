@@ -111,13 +111,13 @@ Completed ticket backward and confirm line items are still locked.
 
 ### Tests for User Story 3 ⚠️ Write first; confirm they fail before implementing
 
-- [ ] T024 [P] [US3] Integration test for price-snapshot immutability after a catalogue cost change in `tests/integration/price-snapshot.test.ts`
-- [ ] T025 [P] [US3] Integration test for the Completed-lock persisting across a `003-ticket-lifecycle` backward transition — the compound cross-spec case flagged in `quickstart.md` as the most important scenario to automate — in `tests/integration/completed-lock.test.ts`
+- [X] T024 [P] [US3] Integration test for price-snapshot immutability after a catalogue cost change in `tests/integration/price-snapshot.test.ts`
+- [X] T025 [P] [US3] Integration test for the Completed-lock persisting across a `003-ticket-lifecycle` backward transition — the compound cross-spec case flagged in `quickstart.md` as the most important scenario to automate — in `tests/integration/completed-lock.test.ts`
 
 ### Implementation for User Story 3
 
-- [ ] T026 [US3] Verify T004's Completed-lock check and T009's cost-snapshot logic satisfy T024-T025 without modification; if either test reveals a gap, harden `lib/billing/completed-lock.ts` or `lib/billing/line-items.ts` accordingly (depends on T004, T009)
-- [ ] T027 [US3] Confirm T024-T025 pass; run `quickstart.md` Scenarios 3-4 (depends on T026)
+- [X] T026 [US3] Verified T004's Completed-lock check and T009's cost-snapshot logic satisfy T024-T025 **without modification** — both tests passed on the first run, confirming the read-only `EXISTS` check against `status_history` and the never-re-read `unitCostSnapshot` design already handle the compound cross-spec case correctly (depends on T004, T009)
+- [X] T027 [US3] Confirm T024-T025 pass; run `quickstart.md` Scenarios 3-4 (depends on T026) — both tests pass; full suite 81/81
 
 **Checkpoint**: All three user stories independently functional — spec.md fully implemented.
 
