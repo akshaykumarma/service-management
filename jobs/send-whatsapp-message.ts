@@ -9,8 +9,9 @@ export interface SendWhatsAppMessageJobData {
   ticketId: string | null;
   type: "completion" | "otp";
   recipientPhone: string;
-  /** The full text actually sent to the customer (e.g. contains the real OTP code). */
-  sendContent: string;
+  /** The real per-message values (e.g. the actual OTP code) substituted into Meta's
+   * pre-approved template for the actual send — never persisted as-is. */
+  templateParams: Record<string, string>;
   /** What gets persisted in notifications.rendered_content — redacted for OTP sends, so
    * a plaintext code is never stored (plan.md's Constraints: "never logged"). */
   storedContent: string;
@@ -37,7 +38,7 @@ export async function processSendWhatsAppMessageJob(data: SendWhatsAppMessageJob
       const result = await sendWhatsAppMessage({
         to: data.recipientPhone,
         templateType: data.type,
-        params: {},
+        params: data.templateParams,
       });
       messageId = result.messageId;
       break;

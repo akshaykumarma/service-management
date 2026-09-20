@@ -6,6 +6,7 @@ import { requireAuthenticatedSession } from "@/lib/auth/require-session";
 import { assertAccess, AccessDeniedError } from "@/lib/auth/rbac";
 import { calculateBill } from "@/lib/billing/bill-calculation";
 import { hasUnconfirmedFailedNotification } from "@/lib/notifications/alerts";
+import { hasActiveOtpAttempt } from "@/lib/delivery/otp";
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   const sessionOrResponse = await requireAuthenticatedSession(request);
@@ -50,8 +51,9 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   const lineItemRows = await db.select().from(ticketLineItems).where(eq(ticketLineItems.ticketId, ticket.id));
   const bill = await calculateBill(ticket.id);
 
-  // 005-customer-notifications: additive extension to this contract, same as bill above.
+  // 005-customer-notifications: additive extensions to this contract, same pattern as bill above.
   const failedNotificationAlert = await hasUnconfirmedFailedNotification(ticket.id);
+  const activeOtpAttempt = await hasActiveOtpAttempt(ticket.id);
 
   return NextResponse.json({
     ticket,
@@ -67,5 +69,6 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     })),
     bill,
     notificationAlert: { failed: failedNotificationAlert },
+    delivery: { activeAttempt: activeOtpAttempt },
   });
 }

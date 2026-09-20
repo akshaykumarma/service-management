@@ -42,6 +42,24 @@ interface NotificationAlert {
   failed: boolean;
 }
 
+interface DeliveryState {
+  activeAttempt: boolean;
+}
+
+const DELIVER_ERROR_MESSAGES: Record<string, string> = {
+  ticket_not_completed: "The ticket must be Completed before delivery verification can start.",
+  attempt_already_active: "A delivery verification attempt is already in progress.",
+};
+
+const VERIFY_ERROR_MESSAGES: Record<string, string> = {
+  code_expired: "That code has expired. Resend a new one.",
+  locked: "Entry is locked after 3 incorrect attempts. An Admin or Super Admin must start a new attempt.",
+};
+
+const RESEND_ERROR_MESSAGES: Record<string, string> = {
+  resend_already_used: "This attempt has already used its one resend.",
+};
+
 interface CatalogueItem {
   id: string;
   name: string;
@@ -65,6 +83,14 @@ export default function TicketDetailPage() {
   const [bill, setBill] = useState<Bill | null>(null);
   const [notificationAlert, setNotificationAlert] = useState<NotificationAlert | null>(null);
   const [confirmingNotification, setConfirmingNotification] = useState(false);
+  const [delivery, setDelivery] = useState<DeliveryState | null>(null);
+  const [deliverError, setDeliverError] = useState<string | null>(null);
+  const [startingDelivery, setStartingDelivery] = useState(false);
+  const [otpCode, setOtpCode] = useState("");
+  const [verifyError, setVerifyError] = useState<string | null>(null);
+  const [verifying, setVerifying] = useState(false);
+  const [resendMessage, setResendMessage] = useState<string | null>(null);
+  const [resending, setResending] = useState(false);
   const [notFound, setNotFound] = useState(false);
   const [toStatus, setToStatus] = useState("");
   const [comment, setComment] = useState("");
@@ -90,6 +116,7 @@ export default function TicketDetailPage() {
     setLineItems(body.lineItems);
     setBill(body.bill);
     setNotificationAlert(body.notificationAlert);
+    setDelivery(body.delivery);
   }, [params.id]);
 
   useEffect(() => {
@@ -112,6 +139,68 @@ export default function TicketDetailPage() {
       await load();
     } finally {
       setConfirmingNotification(false);
+    }
+  }
+
+  async function handleStartDelivery() {
+    setDeliverError(null);
+    setStartingDelivery(true);
+    try {
+      const res = await fetch(`/api/tickets/${params.id}/deliver`, { method: "POST" });
+      if (res.ok) {
+        await load();
+        return;
+      }
+      const body = await res.json();
+      setDeliverError(DELIVER_ERROR_MESSAGES[body.error.code] ?? "Could not start delivery verification.");
+    } finally {
+      setStartingDelivery(false);
+    }
+  }
+
+  async function handleVerifyCode(e: React.FormEvent) {
+    e.preventDefault();
+    setVerifyError(null);
+    setVerifying(true);
+    try {
+      const res = await fetch(`/api/tickets/${params.id}/deliver/verify`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ code: otpCode }),
+      });
+      if (res.ok) {
+        setOtpCode("");
+        await load();
+        return;
+      }
+      const body = await res.json();
+      if (body.error.code === "incorrect_code") {
+        setVerifyError(`Incorrect code. ${body.error.attemptsRemaining} attempt(s) remaining.`);
+      } else {
+        setVerifyError(VERIFY_ERROR_MESSAGES[body.error.code] ?? "Could not verify code.");
+      }
+    } finally {
+      setVerifying(false);
+    }
+  }
+
+  async function handleResendCode() {
+    setResendMessage(null);
+    setResending(true);
+    try {
+      const res = await fetch(`/api/tickets/${params.id}/deliver/resend`, { method: "POST" });
+      if (res.ok) {
+        setResendMessage("A new code has been sent.");
+        return;
+      }
+      const body = await res.json();
+      if (body.error.code === "cooldown_active") {
+        setResendMessage(`Please wait ${body.error.retryAfterSeconds}s before resending.`);
+      } else {
+        setResendMessage(RESEND_ERROR_MESSAGES[body.error.code] ?? "Could not resend code.");
+      }
+    } finally {
+      setResending(false);
     }
   }
 
@@ -250,6 +339,52 @@ export default function TicketDetailPage() {
           </button>
         </form>
       </section>
+
+      {(ticket.status === "completed" || delivery?.activeAttempt) && (
+        <section aria-labelledby="delivery-heading">
+          <h2 id="delivery-heading">Delivery verification</h2>
+          {!delivery?.activeAttempt ? (
+            <>
+              <p>Send a one-time WhatsApp code to the customer to confirm delivery.</p>
+              {deliverError && (
+                <p role="alert" aria-live="assertive">
+                  {deliverError}
+                </p>
+              )}
+              <button type="button" onClick={handleStartDelivery} disabled={startingDelivery}>
+                Start delivery verification
+              </button>
+            </>
+          ) : (
+            <>
+              <form onSubmit={handleVerifyCode} noValidate>
+                <div>
+                  <label htmlFor="otpCode">One-time code</label>
+                  <input
+                    id="otpCode"
+                    inputMode="numeric"
+                    required
+                    value={otpCode}
+                    onChange={(e) => setOtpCode(e.target.value)}
+                  />
+                </div>
+                {verifyError && (
+                  <p role="alert" aria-live="assertive">
+                    {verifyError}
+                  </p>
+                )}
+                <button type="submit" disabled={verifying || !otpCode}>
+                  Verify code
+                </button>
+              </form>
+              {resendMessage && <p aria-live="polite">{resendMessage}</p>}
+              <button type="button" onClick={handleResendCode} disabled={resending}>
+                Resend code
+              </button>
+            </>
+          )}
+        </section>
+      )}
 
       <section aria-labelledby="line-items-heading">
         <h2 id="line-items-heading">Parts &amp; services</h2>

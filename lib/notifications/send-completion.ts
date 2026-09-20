@@ -35,21 +35,23 @@ export async function triggerCompletionNotification(ticketId: string): Promise<v
   const [store] = await db.select().from(stores).where(eq(stores.id, ticket.storeId)).limit(1);
   const bill = await calculateBill(ticketId);
 
-  const content = renderTemplate(DEFAULT_TEMPLATE_BODY.completion, {
+  const templateParams = {
     customer_name: ticket.customerName,
     ticket_id: ticket.ticketNumber,
     machine_model: ticket.machineModel,
     bill_total: bill.total.toFixed(2),
     store_name: store?.name ?? "",
     store_phone: store?.phone ?? "",
-  });
+  };
+  // Nothing sensitive in a completion message — the stored copy is the same text sent.
+  const content = renderTemplate(DEFAULT_TEMPLATE_BODY.completion, templateParams);
 
   const boss = await getBoss();
   const jobData: SendWhatsAppMessageJobData = {
     ticketId: ticket.id,
     type: "completion",
     recipientPhone: ticket.customerPhone,
-    sendContent: content,
+    templateParams,
     storedContent: content,
   };
   await boss.send(SEND_WHATSAPP_MESSAGE_QUEUE, jobData);
