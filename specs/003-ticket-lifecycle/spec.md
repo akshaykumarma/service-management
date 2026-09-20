@@ -14,6 +14,7 @@
 
 - Q: Should "Delivered" be a true terminal status, or stay subject to the same backward-transition-with-comment rule as every other status? → A: Backward transition out of Delivered stays allowed, but is restricted to Admin/Super Admin (not Store Service Manager), in addition to the existing mandatory comment.
 - Q: When two staff members change the same ticket's status at nearly the same moment, what happens to the second, conflicting change? → A: Last write wins — the second change becomes the ticket's current status, and both transitions are recorded in the status history.
+- Q: Should a customer be tracked as a distinct, reusable record, or is customer identity purely free-text embedded per ticket? → A: Customer identity is keyed by primary phone number — the system reuses/updates a customer record by phone across tickets, but intake still just asks for name/phone every time (no separate lookup step).
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -103,10 +104,12 @@ When work can't continue (waiting on a part, waiting on the customer), a Service
 - **FR-017**: System MUST enforce that only staff assigned to a ticket's store (or Admin/Super Admin per their scope) can change that ticket's status, consistent with `002-auth-rbac`.
 - **FR-018**: System MUST restrict any backward transition out of "Delivered" status to Admin and Super Admin roles, in addition to the mandatory comment already required for backward transitions (FR-013); a Store Service Manager MUST NOT be permitted to perform this specific transition even with a comment.
 - **FR-019**: When two status changes are submitted for the same ticket in close succession, system MUST apply the one that reaches the system second as the ticket's current status (last write wins), and MUST record both as separate entries in the ticket's status history rather than discarding either.
+- **FR-020**: System MUST resolve a ticket's customer by primary phone number at intake: if a customer record for that phone number already exists, this ticket MUST be linked to it and that record's stored name MUST be updated to the value entered on this ticket; otherwise, system MUST create a new customer record with the provided name and phone number.
 
 ### Key Entities *(include if feature involves data)*
 
-- **Service Ticket**: The core job record — store, customer name, phone number(s), machine model, issue description, optional estimated pickup date, current status, immutable ticket ID, creator and creation timestamp.
+- **Service Ticket**: The core job record — store, customer name and phone number(s) as entered at intake, machine model, issue description, optional estimated pickup date, current status, immutable ticket ID, creator and creation timestamp.
+- **Customer**: A cross-ticket identity keyed by primary phone number, holding that customer's most recently provided name; distinct from the name/phone recorded on any individual historical ticket, which reflects what was entered at that ticket's intake time.
 - **Intake Photo**: An image (up to 5 per ticket) attached at intake depicting the machine's condition.
 - **Status History Entry**: An immutable record of one status transition on a ticket — from-status, to-status, actor, timestamp, and an optional/mandatory comment depending on the transition type.
 - **Machine Model** *(reference)*: The model identifier selected or free-typed at intake; full catalogue maintenance is covered in `007-admin-console`.
@@ -131,3 +134,4 @@ When work can't continue (waiting on a part, waiting on the customer), a Service
 - A Cancelled ticket cannot be reactivated; a new ticket must be created if service is later needed.
 - Ticket ID format and generation mechanics (e.g., exact numbering scheme) are a business-visible identifier requirement here; the underlying implementation (e.g., database sequence) is a technical decision for `/speckit-plan`.
 - Intake photo storage mechanics (where/how images are stored) are a technical decision deferred to `/speckit-plan`; this spec only requires that up to 5 photos can be attached and later viewed.
+- Customer identity is keyed by primary phone number only; if a phone number is later reused by a different person (e.g., reassigned by the carrier) or shared across a household, the system has no way to distinguish them and will treat them as the same customer record. This is an accepted limitation for v1, not a defect.
