@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db/client";
-import { statusHistory, tickets } from "@/lib/db/schema";
+import { tickets } from "@/lib/db/schema";
 import { requireAuthenticatedSession } from "@/lib/auth/require-session";
 import { requireSameOrigin } from "@/lib/auth/csrf";
 import { assertAccess, AccessDeniedError } from "@/lib/auth/rbac";
-import { checkTransition } from "@/lib/tickets/status-transitions";
+import { applyStatusTransition, checkTransition } from "@/lib/tickets/status-transitions";
 
 const STATUS_CODE_FOR_ERROR = {
   invalid_transition: 400,
@@ -55,22 +55,12 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   // Plain UPDATE, no optimistic-concurrency check (research.md §2 — required by FR-019):
   // the second concurrent request to reach here simply overwrites tickets.status, and
   // every request that passes validation unconditionally inserts its own history row.
-  const [updatedTicket] = await db
-    .update(tickets)
-    .set({ status: toStatus, updatedAt: new Date() })
-    .where(eq(tickets.id, ticket.id))
-    .returning();
-
-  const [historyEntry] = await db
-    .insert(statusHistory)
-    .values({
-      ticketId: ticket.id,
-      fromStatus: ticket.status,
-      toStatus,
-      actorId: caller.id,
-      comment: comment ?? null,
-    })
-    .returning();
+  const { updatedTicket, historyEntry } = await applyStatusTransition({
+    ticket,
+    toStatus,
+    comment: comment ?? null,
+    actorId: caller.id,
+  });
 
   return NextResponse.json({ ticket: updatedTicket, historyEntry });
 }

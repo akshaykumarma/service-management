@@ -64,15 +64,15 @@ containing the expected bill details, without any manual action beyond the statu
 
 ### Tests for User Story 1 ⚠️ Write first; confirm they fail before implementing
 
-- [ ] T011 [P] [US1] Contract test for `POST /api/webhooks/whatsapp` (Meta signature verification, status update by message ID) in `tests/contract/notifications-api.test.ts`
-- [ ] T012 [P] [US1] Integration test for completion-message content/recipient and the first-Completed-only trigger (`research.md` §4 — no second message on a later re-Completed transition) in `tests/integration/completion-notification.test.ts`
+- [X] T011 [P] [US1] Contract test for `POST /api/webhooks/whatsapp` (Meta signature verification, status update by message ID) in `tests/contract/notifications-api.test.ts`
+- [X] T012 [P] [US1] Integration test for completion-message content/recipient and the first-Completed-only trigger (`research.md` §4 — no second message on a later re-Completed transition) in `tests/integration/completion-notification.test.ts`
 
 ### Implementation for User Story 1
 
-- [ ] T013 [US1] Implement the first-Completed-only check (`status_history` contains no prior `to_status = 'completed'` row, mirroring `004`'s Completed-lock pattern) and completion-notification job enqueue in `lib/notifications/send-completion.ts` (depends on T004, T007, T009)
-- [ ] T014 [US1] Hook `send-completion.ts` into `003-ticket-lifecycle`'s existing status-transition function on a transition to "completed" — do not duplicate the status-writing code path (`plan.md`'s Structure Decision) — in `lib/tickets/status-transitions.ts` (depends on T013)
-- [ ] T015 [US1] Implement `POST /api/webhooks/whatsapp` (Meta signature verification; always responds `200`; updates the matching `notifications.status` by message ID) in `app/api/webhooks/whatsapp/route.ts` (depends on T004)
-- [ ] T016 [US1] Confirm T011-T012 pass; run `quickstart.md` Scenario 1 (depends on T013-T015)
+- [X] T013 [US1] Implement the first-Completed-only check (`status_history` contains no prior `to_status = 'completed'` row, mirroring `004`'s Completed-lock pattern) and completion-notification job enqueue in `lib/notifications/send-completion.ts` (depends on T004, T007, T009). Implemented as a `COUNT(*) = 1` read (not `004`'s `EXISTS`) since the caller inserts this transition's own `status_history` row before invoking this check.
+- [X] T014 [US1] Hook `send-completion.ts` into `003-ticket-lifecycle`'s existing status-transition function on a transition to "completed" — do not duplicate the status-writing code path (`plan.md`'s Structure Decision) — in `lib/tickets/status-transitions.ts` (depends on T013). The actual `tickets`/`status_history` write previously lived inline in `app/api/tickets/[id]/status/route.ts` (no separate function existed yet); extracted it into a new `applyStatusTransition()` in `status-transitions.ts` so this is the single write path, and the route now calls it.
+- [X] T015 [US1] Implement `POST /api/webhooks/whatsapp` (Meta signature verification; always responds `200`; updates the matching `notifications.status` by message ID) in `app/api/webhooks/whatsapp/route.ts` (depends on T004). Signature check uses HMAC-SHA256 over the raw body compared via `timingSafeEqual`; an invalid/missing signature returns `200` without touching `notifications` (fail-closed).
+- [X] T016 [US1] Confirm T011-T012 pass; run `quickstart.md` Scenario 1 (depends on T013-T015). Both pass; full suite (84 tests) green; `npx tsc --noEmit` clean.
 
 **Checkpoint**: User Story 1 fully functional and independently testable/deployable (MVP).
 

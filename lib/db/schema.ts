@@ -37,6 +37,10 @@ export const stores = pgTable("stores", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
   taxRate: numeric("tax_rate", { precision: 5, scale: 2 }).notNull().default("0"),
+  // Added by 005-customer-notifications: the completion message needs a store contact
+  // number (FR-002) and 007-admin-console hasn't built store management yet — same
+  // incremental-extension pattern as taxRate above.
+  phone: text("phone"),
 });
 
 export const users = pgTable("users", {

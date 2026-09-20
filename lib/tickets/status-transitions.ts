@@ -1,3 +1,8 @@
+import { eq } from "drizzle-orm";
+import { db } from "@/lib/db/client";
+import { statusHistory, tickets } from "@/lib/db/schema";
+import { triggerCompletionNotification } from "@/lib/notifications/send-completion";
+
 export type TicketStatus = "open" | "in_progress" | "on_hold" | "completed" | "delivered" | "cancelled";
 export type StaffRole = "super_admin" | "admin" | "service_manager";
 export type TransitionError = "invalid_transition" | "comment_required" | "role_not_permitted";
@@ -51,4 +56,42 @@ export function checkTransition(input: TransitionCheckInput): TransitionError | 
   if (commentRequired && !comment) return "comment_required";
 
   return null;
+}
+
+/**
+ * The one place tickets.status is actually written (called only from
+ * app/api/tickets/[id]/status/route.ts, after checkTransition has already passed) —
+ * 005-customer-notifications hooks its completion notification in here rather than in
+ * a second copy of this write, per plan.md's Structure Decision.
+ */
+export async function applyStatusTransition(input: {
+  ticket: typeof tickets.$inferSelect;
+  toStatus: TicketStatus;
+  comment: string | null;
+  actorId: string;
+}) {
+  const { ticket, toStatus, comment, actorId } = input;
+
+  const [updatedTicket] = await db
+    .update(tickets)
+    .set({ status: toStatus, updatedAt: new Date() })
+    .where(eq(tickets.id, ticket.id))
+    .returning();
+
+  const [historyEntry] = await db
+    .insert(statusHistory)
+    .values({
+      ticketId: ticket.id,
+      fromStatus: ticket.status,
+      toStatus,
+      actorId,
+      comment,
+    })
+    .returning();
+
+  if (toStatus === "completed") {
+    await triggerCompletionNotification(ticket.id);
+  }
+
+  return { updatedTicket, historyEntry };
 }
