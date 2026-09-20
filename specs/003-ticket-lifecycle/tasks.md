@@ -59,20 +59,20 @@ cross-store for Admin/Super Admin) — per spec.md's Acceptance Scenarios.
 
 ### Tests for User Story 1 ⚠️ Write first; confirm they fail before implementing
 
-- [ ] T010 [P] [US1] Contract tests for `POST /api/tickets/photo-upload-url` and `POST /api/tickets` (all documented status codes) in `tests/contract/tickets-api.test.ts`
-- [ ] T011 [P] [US1] Integration test for intake + history lookup (found/not-found, store-scoped vs. cross-store) in `tests/integration/ticket-intake-history.test.ts`
-- [ ] T012 [P] [US1] Integration test for collision-free ticket-number generation under concurrent creation in `tests/integration/ticket-number-collision.test.ts`
-- [ ] T013 [P] [US1] E2E test for the intake-to-history flow in `tests/e2e/intake-to-history.spec.ts`
+- [X] T010 [P] [US1] Contract tests for `POST /api/tickets/photo-upload-url` and `POST /api/tickets` (all documented status codes) in `tests/contract/tickets-api.test.ts`
+- [X] T011 [P] [US1] Integration test for intake + history lookup (found/not-found, store-scoped vs. cross-store) in `tests/integration/ticket-intake-history.test.ts`
+- [X] T012 [P] [US1] Integration test for collision-free ticket-number generation under concurrent creation in `tests/integration/ticket-number-collision.test.ts`
+- [X] T013 [P] [US1] E2E test for the intake-to-history flow in `tests/e2e/intake-to-history.spec.ts`
 
 ### Implementation for User Story 1
 
-- [ ] T014 [US1] Implement the role-scoped history-lookup query (`research.md` §6 — single indexed query, not per-call-site filtering) in `lib/tickets/history.ts` (depends on T005)
-- [ ] T015 [US1] Implement `POST /api/tickets/photo-upload-url` (presigned MinIO URL issuance, content-type/size validation per `research.md` §5) in `app/api/tickets/photo-upload-url/route.ts` (depends on T007)
-- [ ] T016 [US1] Implement `POST /api/tickets` (customer resolution, ticket-number generation, up-to-5-photo validation, inline history-lookup response) in `app/api/tickets/route.ts` (depends on T008, T009, T014, T015)
-- [ ] T017 [US1] Implement `GET /api/tickets/:id` (detail including status history and photos) in `app/api/tickets/[id]/route.ts` (depends on T016)
-- [ ] T018 [US1] Build an accessible (WCAG 2.1 AA) ticket intake form in `app/(dashboard)/tickets/new/page.tsx` (depends on T016)
-- [ ] T019 [US1] Build the ticket detail page including the history panel in `app/(dashboard)/tickets/[id]/page.tsx` (depends on T017)
-- [ ] T020 [US1] Confirm T010-T013 pass; run `quickstart.md` Scenario 1 (depends on T014-T019)
+- [X] T014 [US1] Implement the role-scoped history-lookup query (`research.md` §6 — single indexed query, not per-call-site filtering) in `lib/tickets/history.ts` (depends on T005). **Schema fix found here**: `tickets.ticket_number` was originally made globally unique, but plan.md's own Constraints say the numbering is "store+year-scoped" — two different stores legitimately both issue `SVC-2026-00001`. Changed the unique index to `(store_id, ticket_number)`.
+- [X] T015 [US1] Implement `POST /api/tickets/photo-upload-url` (presigned S3-compatible URL issuance, content-type/size validation per `research.md` §5) in `app/api/tickets/photo-upload-url/route.ts` (depends on T007)
+- [X] T016 [US1] Implement `POST /api/tickets` (customer resolution, ticket-number generation, up-to-5-photo validation, inline history-lookup response, and an initial `status_history` row for the creation event per `data-model.md`) in `app/api/tickets/route.ts` (depends on T008, T009, T014, T015). Also implements `GET /api/tickets` (role-scoped list) here, since US3's T028 extends this same file and the contract defines it.
+- [X] T017 [US1] Implement `GET /api/tickets/:id` (detail including status history and photos; 404 — not 403 — for an out-of-scope caller, per contract's no-existence-leak requirement) in `app/api/tickets/[id]/route.ts` (depends on T016)
+- [X] T018 [US1] Build an accessible (WCAG 2.1 AA) ticket intake form in `app/(dashboard)/tickets/new/page.tsx`, showing the inline history result immediately on success (matching the contract's inline-with-creation response, rather than navigating straight to the detail page and losing that context) (depends on T016). Also adds `GET /api/stores` (`app/api/stores/route.ts`) as a minimal scoped store-list endpoint — the intake form has no other way to populate its store selector, and no earlier feature exposes one; a thin read-only list `007-admin-console` can absorb later.
+- [X] T019 [US1] Build the ticket detail page including the status-timeline history panel in `app/(dashboard)/tickets/[id]/page.tsx` (depends on T017)
+- [X] T020 [US1] Confirm T010-T013 pass; run `quickstart.md` Scenario 1 (depends on T014-T019) — all 12 new tests plus 2 e2e tests pass; full suite 49/49. Also fixed a real bug in `scripts/bench-auth-routes.ts` (left over from `002-auth-rbac`'s polish phase) that had silently truncated the persistent dev database instead of the test one, due to a dotenv override running after `lib/db/client.ts`'s module-load-time `Pool` construction had already read the wrong `DATABASE_URL` — added a hard guard requiring `DATABASE_URL` to look like a test database before that script's `TRUNCATE` runs.
 
 **Checkpoint**: User Story 1 fully functional and independently testable/deployable (MVP).
 

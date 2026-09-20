@@ -130,7 +130,12 @@ export const tickets = pgTable("tickets", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => ({
-  ticketNumberUnique: uniqueIndex("tickets_ticket_number_unique_idx").on(table.ticketNumber),
+  // Store+year-scoped (plan.md's Constraints), not globally unique: two different
+  // stores legitimately both issue "SVC-2026-00001" independently.
+  ticketNumberUniquePerStore: uniqueIndex("tickets_store_ticket_number_unique_idx").on(
+    table.storeId,
+    table.ticketNumber,
+  ),
   historyLookupIdx: index("tickets_machine_model_status_store_idx").on(
     table.machineModel,
     table.status,

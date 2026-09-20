@@ -15,6 +15,13 @@
       "when": 1789914310710,
       "tag": "0001_red_kinsey_walden",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1789914677667,
+      "tag": "0002_lumpy_christian_walker",
+      "breakpoints": true
     }
   ]
 }

@@ -23,3 +23,11 @@ export function extractSessionCookie(response: Response): string | null {
   const match = setCookie.match(/sm_session=([^;]+)/);
   return match ? `sm_session=${match[1]}` : null;
 }
+
+export async function loginAs(email: string, password: string): Promise<string> {
+  const { POST: loginPOST } = await import("@/app/api/auth/login/route");
+  const res = await loginPOST(jsonRequest("/api/auth/login", { method: "POST", body: { email, password } }));
+  const cookie = extractSessionCookie(res);
+  if (!cookie) throw new Error(`loginAs(${email}) failed: ${res.status}`);
+  return cookie;
+}

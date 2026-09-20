@@ -1,13 +1,18 @@
-import "dotenv/config";
 import { config } from "dotenv";
-config({ path: ".env.test", override: true });
 
-import { db, pool } from "@/lib/db/client";
-import { sql } from "drizzle-orm";
-import { createUser } from "../tests/helpers/factories";
-import { jsonRequest, extractSessionCookie } from "../tests/helpers/http";
-import { POST as loginPOST } from "@/app/api/auth/login/route";
-import { GET as sessionGET } from "@/app/api/auth/session/route";
+// Set env vars BEFORE any dynamic import of lib/db/client, since that module reads
+// process.env.DATABASE_URL at module-load time — a static top-of-file import would have
+// already constructed the Pool against .env's dev DATABASE_URL before this override ran
+// (exactly what happened once: this script silently truncated the dev database instead
+// of the test one). Dynamic imports below guarantee correct ordering.
+config({ path: ".env.test" });
+
+if (!process.env.DATABASE_URL?.includes("_test")) {
+  throw new Error(
+    `Refusing to run: DATABASE_URL does not look like a test database (${process.env.DATABASE_URL}). ` +
+      "This script truncates tables — never point it at a real database.",
+  );
+}
 
 function percentile(sorted: number[], p: number): number {
   const idx = Math.ceil((p / 100) * sorted.length) - 1;
@@ -28,6 +33,13 @@ async function bench(label: string, iterations: number, fn: () => Promise<unknow
 }
 
 async function main() {
+  const { db, pool } = await import("@/lib/db/client");
+  const { sql } = await import("drizzle-orm");
+  const { createUser } = await import("../tests/helpers/factories");
+  const { jsonRequest, extractSessionCookie } = await import("../tests/helpers/http");
+  const { POST: loginPOST } = await import("@/app/api/auth/login/route");
+  const { GET: sessionGET } = await import("@/app/api/auth/session/route");
+
   await db.execute(
     sql`TRUNCATE TABLE audit_log, password_reset_tokens, sessions, user_stores, users, stores RESTART IDENTITY CASCADE`,
   );

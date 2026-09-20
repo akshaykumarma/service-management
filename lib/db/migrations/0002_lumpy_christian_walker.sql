@@ -1,0 +1,2 @@
+DROP INDEX IF EXISTS "tickets_ticket_number_unique_idx";--> statement-breakpoint
+CREATE UNIQUE INDEX IF NOT EXISTS "tickets_store_ticket_number_unique_idx" ON "tickets" USING btree ("store_id","ticket_number");
