@@ -14,6 +14,7 @@
 
 - Q: Should this spec's business-facing term "job"/"jobs" be normalized to "ticket"/"tickets", matching the source PRD's glossary and specs 002-007? → A: Yes — replaced throughout this spec and added "Service Ticket" to Key Entities, cross-referencing `003-ticket-lifecycle` for full detail.
 - Q: Does this platform need to comply with any specific data-privacy or consumer-protection regulation for the customer PII it collects? → A: No specific regulatory regime targeted for v1; customer PII handling follows general good practice (minimal collection, no third-party resale) rather than a named compliance obligation.
+- Q: SC-002 says follow-up calls should drop to "near-zero" — what specific, measurable threshold counts as meeting that target? → A: Fewer than 5% of completed tickets result in a customer follow-up call.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -125,7 +126,7 @@ Instead of each store tracking its own inconsistent parts/services pricing, a si
 ### Measurable Outcomes
 
 - **SC-001**: Average service ticket resolution time improves by at least 20% within 6 months of going live, compared to the pre-digitization baseline.
-- **SC-002**: Customer "machine ready" follow-up phone calls drop to near-zero within 6 months of going live.
+- **SC-002**: Customer "machine ready" follow-up phone calls occur for fewer than 5% of completed tickets within 6 months of going live.
 - **SC-003**: 100% of machine deliveries have a verifiable confirmation record; zero deliveries are disputed for lack of any record.
 - **SC-004**: Looking up a machine's repeat-service history takes under 30 seconds, down from 5-10 minutes of manual searching.
 - **SC-005**: An owner/Admin can generate a consolidated, real-time view of tickets across all their stores with zero manual spreadsheet effort.
