@@ -8,6 +8,12 @@
 
 **Input**: User description: "PRD §6.5 Parts & Services Selection (globally priced parts and services added to an in-progress ticket from a searchable dropdown; each line captures name, quantity, unit cost snapshotted at selection time, and auto-calculated line total; bill = subtotal of all lines + store-configured tax; historical bills unaffected by later price changes) and §6.9.1-6.9.2 Super Admin catalogue maintenance (CRUD for parts — name, optional SKU, unit cost, category, active flag, bulk CSV import; CRUD for services — name, description, unit cost, active flag)."
 
+## Clarifications
+
+### Session 2026-09-20
+
+- Q: Once a ticket reaches "Completed," can line items still be added/changed/removed if the ticket is later moved backward (per `003-ticket-lifecycle`'s backward-transition rule)? → A: No — the bill locks permanently the first time a ticket reaches "Completed," regardless of any later backward transition. A billing correction after that point is a separate mechanism, out of scope for this spec.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Applying Parts & Services with Automatic Bill Calculation (Priority: P1)
@@ -24,6 +30,7 @@ While working a ticket, a Service Manager or Admin selects the parts used and/or
 2. **Given** one or more part/service lines on a ticket, **When** any line is added, changed, or removed, **Then** the ticket's subtotal, tax amount, and total bill recalculate automatically.
 3. **Given** a store with a configured tax rate, **When** a ticket's bill is calculated, **Then** tax is computed as the subtotal multiplied by that store's tax rate.
 4. **Given** a ticket not yet "In Progress" (still "Open"), **When** an attempt is made to add parts/services, **Then** the system prevents it until the ticket has moved past "Open."
+5. **Given** a ticket that has already reached "Completed" at some point, **When** it is later moved backward to "In Progress" or "On Hold" (per `003-ticket-lifecycle`) and an attempt is made to add, change, or remove a line item, **Then** the system prevents it — the bill is permanently locked once "Completed" is first reached.
 
 ---
 
@@ -56,6 +63,7 @@ Once a part or service has been applied to a ticket, that ticket's line item kee
 
 1. **Given** a part applied to Ticket A at cost X, **When** the Super Admin later changes that part's catalogue cost to Y, **Then** Ticket A's line item and bill total still reflect cost X.
 2. **Given** the same price change, **When** a new Ticket B applies the same part afterward, **Then** Ticket B's line item reflects the new cost Y.
+3. **Given** a ticket that has reached "Completed," **When** any attempt is made to add, change, or remove one of its line items — regardless of the ticket's current status afterward — **Then** the system refuses, keeping the bill exactly as it was when "Completed" was first reached.
 
 ---
 
@@ -65,12 +73,13 @@ Once a part or service has been applied to a ticket, that ticket's line item kee
 - What happens if a CSV bulk import contains a duplicate or malformed row? The system MUST report which rows failed and why, rather than failing the entire import silently or partially importing without explanation.
 - What happens if a store's tax rate is changed after some tickets already have a calculated bill? Already-calculated bills are not required to be retroactively recalculated; only new/ongoing bill calculations use the updated rate (see Assumptions).
 - What happens if a quantity of zero or a negative quantity is entered for a line item? The system MUST reject it.
+- What happens if a ticket that already reached "Completed" is later moved backward (per `003-ticket-lifecycle`) and someone tries to change its parts/services? The system MUST refuse — the bill locked permanently the first time the ticket reached "Completed," and that lock does not lift on a backward transition (see FR-015).
 
 ## Requirements *(mandatory)*
 
 ### Functional Requirements
 
-- **FR-001**: System MUST allow a Service Manager or Admin to add one or more parts and/or services from the active catalogue to a ticket that is "In Progress" or "On Hold," each with a quantity.
+- **FR-001**: System MUST allow a Service Manager or Admin to add one or more parts and/or services from the active catalogue to a ticket that is "In Progress" or "On Hold," each with a quantity — unless the ticket's line items are already locked per FR-015.
 - **FR-002**: System MUST reject a line-item quantity that is zero or negative.
 - **FR-003**: System MUST capture, for each ticket line item, the catalogue item's name, the quantity, the unit cost at the moment of selection, and the resulting line total.
 - **FR-004**: System MUST lock in ("snapshot") the unit cost on a ticket line item at the time it is added, independent of any later catalogue price change.
@@ -84,6 +93,7 @@ Once a part or service has been applied to a ticket, that ticket's line item kee
 - **FR-012**: System MUST exclude deactivated parts/services from selection on new ticket lines while leaving existing ticket lines that reference them unaffected.
 - **FR-013**: System MUST support bulk-importing parts from a CSV file, applying all valid rows and reporting any invalid rows with the reason they failed.
 - **FR-014**: System MUST deny Service Manager and Admin roles access to catalogue create/edit/deactivate actions.
+- **FR-015**: System MUST permanently lock a ticket's line items — no further additions, changes, or removals — the first time the ticket reaches "Completed" status, and MUST keep that lock in effect even if the ticket is later moved to an earlier status.
 
 ### Key Entities *(include if feature involves data)*
 
@@ -102,6 +112,7 @@ Once a part or service has been applied to a ticket, that ticket's line item kee
 - **SC-003**: A new part or service added by the Super Admin is selectable by every store immediately, with no per-store setup needed.
 - **SC-004**: A bulk CSV import of parts reports 100% of failed rows with a specific reason, with zero silent failures.
 - **SC-005**: Zero deactivated catalogue entries appear as selectable options for new ticket lines.
+- **SC-006**: Zero line-item changes (add, edit, or remove) ever succeed on a ticket that has already reached "Completed," even after a backward transition to an earlier status.
 
 ## Assumptions
 
@@ -109,3 +120,4 @@ Once a part or service has been applied to a ticket, that ticket's line item kee
 - A ticket's tax amount, once calculated and the ticket has reached a billed state, is not required to be retroactively recalculated if the store's tax rate changes afterward; only ongoing/new calculations use the current rate.
 - Bulk import in v1 applies to parts (per source PRD); services are managed one at a time through the catalogue screen.
 - The specific file format/parsing mechanics for CSV import are a technical concern for `/speckit-plan`; this spec only requires that valid/invalid rows are both handled visibly.
+- A mechanism for correcting a bill after a ticket has already reached "Completed" (e.g., a follow-up ticket, a distinct billing-adjustment record) is not defined here and is out of scope for this spec; the only guarantee made here is that the original bill never silently changes.
