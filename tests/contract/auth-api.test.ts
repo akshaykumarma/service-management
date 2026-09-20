@@ -129,3 +129,143 @@ describe("POST /api/auth/password-reset/confirm", () => {
     expect(body.error.code).toBe("invalid_or_expired_token");
   });
 });
+
+import { GET as usersGET, POST as usersPOST } from "@/app/api/auth/users/route";
+import { PATCH as userPATCH } from "@/app/api/auth/users/[id]/route";
+import { createStore } from "../helpers/factories";
+
+async function loginAs(email: string, password: string) {
+  const res = await loginPOST(jsonRequest("/api/auth/login", { method: "POST", body: { email, password } }));
+  return extractSessionCookie(res)!;
+}
+
+describe("POST /api/auth/users", () => {
+  beforeEach(resetDb);
+
+  it("creates a staff account and returns a one-time temporary password", async () => {
+    const superAdmin = await createUser({ role: "super_admin", password: "Correct123!" });
+    const store = await createStore();
+    const cookie = await loginAs(superAdmin.email, "Correct123!");
+
+    const res = await usersPOST(
+      jsonRequest("/api/auth/users", {
+        method: "POST",
+        cookie,
+        body: { name: "New SM", email: "newsm@example.com", role: "service_manager", storeIds: [store.id] },
+      }),
+    );
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.user.temporaryPassword).toBeTruthy();
+    expect(body.user.storeIds).toEqual([store.id]);
+  });
+
+  it("400s with store_assignment_required when storeIds is empty", async () => {
+    const superAdmin = await createUser({ role: "super_admin", password: "Correct123!" });
+    const cookie = await loginAs(superAdmin.email, "Correct123!");
+
+    const res = await usersPOST(
+      jsonRequest("/api/auth/users", {
+        method: "POST",
+        cookie,
+        body: { name: "New Admin", email: "newadmin@example.com", role: "admin", storeIds: [] },
+      }),
+    );
+    expect(res.status).toBe(400);
+    expect((await res.json()).error.code).toBe("store_assignment_required");
+  });
+
+  it("400s with invalid_store_count for a service_manager with more than one store", async () => {
+    const superAdmin = await createUser({ role: "super_admin", password: "Correct123!" });
+    const storeA = await createStore();
+    const storeB = await createStore();
+    const cookie = await loginAs(superAdmin.email, "Correct123!");
+
+    const res = await usersPOST(
+      jsonRequest("/api/auth/users", {
+        method: "POST",
+        cookie,
+        body: { name: "X", email: "x@example.com", role: "service_manager", storeIds: [storeA.id, storeB.id] },
+      }),
+    );
+    expect(res.status).toBe(400);
+    expect((await res.json()).error.code).toBe("invalid_store_count");
+  });
+
+  it("409s with email_already_registered for a duplicate email", async () => {
+    const superAdmin = await createUser({ role: "super_admin", password: "Correct123!" });
+    const store = await createStore();
+    const existing = await createUser({ email: "dup@example.com" });
+    const cookie = await loginAs(superAdmin.email, "Correct123!");
+
+    const res = await usersPOST(
+      jsonRequest("/api/auth/users", {
+        method: "POST",
+        cookie,
+        body: { name: "X", email: existing.email, role: "admin", storeIds: [store.id] },
+      }),
+    );
+    expect(res.status).toBe(409);
+    expect((await res.json()).error.code).toBe("email_already_registered");
+  });
+
+  it("denies a non-Super-Admin caller", async () => {
+    const admin = await createUser({ role: "admin", password: "Correct123!" });
+    const store = await createStore();
+    const cookie = await loginAs(admin.email, "Correct123!");
+
+    const res = await usersPOST(
+      jsonRequest("/api/auth/users", {
+        method: "POST",
+        cookie,
+        body: { name: "X", email: "x2@example.com", role: "admin", storeIds: [store.id] },
+      }),
+    );
+    expect(res.status).toBe(403);
+  });
+});
+
+describe("GET /api/auth/users", () => {
+  beforeEach(resetDb);
+
+  it("lists staff accounts for a Super Admin", async () => {
+    const superAdmin = await createUser({ role: "super_admin", password: "Correct123!" });
+    await createUser({ role: "admin" });
+    const cookie = await loginAs(superAdmin.email, "Correct123!");
+
+    const res = await usersGET(jsonRequest("/api/auth/users", { cookie }));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.users.length).toBeGreaterThanOrEqual(2);
+  });
+});
+
+describe("PATCH /api/auth/users/:id", () => {
+  beforeEach(resetDb);
+
+  it("edits a user and writes an audit_log row", async () => {
+    const superAdmin = await createUser({ role: "super_admin", password: "Correct123!" });
+    const target = await createUser({ role: "admin" });
+    const cookie = await loginAs(superAdmin.email, "Correct123!");
+
+    const res = await userPATCH(
+      jsonRequest(`/api/auth/users/${target.id}`, { method: "PATCH", cookie, body: { active: false } }),
+      { params: { id: target.id } },
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.user.active).toBe(false);
+  });
+
+  it("409s with last_super_admin when deactivating the last active Super Admin", async () => {
+    const superAdmin = await createUser({ role: "super_admin", password: "Correct123!" });
+    const cookie = await loginAs(superAdmin.email, "Correct123!");
+
+    const res = await userPATCH(
+      jsonRequest(`/api/auth/users/${superAdmin.id}`, { method: "PATCH", cookie, body: { active: false } }),
+      { params: { id: superAdmin.id } },
+    );
+    expect(res.status).toBe(409);
+    expect((await res.json()).error.code).toBe("last_super_admin");
+  });
+});

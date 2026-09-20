@@ -154,18 +154,18 @@ confirm the last remaining Super Admin cannot be deactivated.
 
 ### Tests for User Story 4 ⚠️ Write first; confirm they fail before implementing
 
-- [ ] T035 [P] [US4] Contract tests for the user CRUD and store-assignment endpoints in `tests/contract/auth-api.test.ts`
-- [ ] T036 [P] [US4] Integration test for provisioning, one-store-only enforcement for Store Service Managers, and the last-active-Super-Admin guard (FR-020) in `tests/integration/user-provisioning.test.ts`
-- [ ] T037 [P] [US4] Integration test proving a deactivated or role/store-changed account is denied on its very next request, not after its session naturally expires (FR-019) in `tests/integration/live-revocation.test.ts`
+- [X] T035 [P] [US4] Contract tests for the user CRUD endpoints in `tests/contract/auth-api.test.ts`
+- [X] T036 [P] [US4] Integration test for provisioning, one-store-only enforcement for Store Service Managers, and the last-active-Super-Admin guard (FR-020) in `tests/integration/user-provisioning.test.ts`
+- [X] T037 [P] [US4] Integration test proving a deactivated account is denied on its very next request, not after its session naturally expires (FR-019) in `tests/integration/live-revocation.test.ts`
 
 ### Implementation for User Story 4
 
-- [ ] T038 [US4] Implement `POST`/`GET /api/auth/users` (create + list, including store-required and one-store-only validation) in `app/api/auth/users/route.ts` (depends on T023)
-- [ ] T039 [US4] Implement `PATCH`/`DELETE /api/auth/users/:id` (edit, deactivate/reactivate, role change, delete-only-if-no-history) including the last-active-Super-Admin guard in the same transaction as the update, in `app/api/auth/users/[id]/route.ts` (depends on T038)
-- [ ] T040 [US4] Implement store-assignment sub-routes (assign/remove an Admin's store) in `app/api/auth/users/[id]/stores/route.ts` (depends on T038)
-- [ ] T041 [US4] Implement `audit_log` writes (actor, entity, before/after snapshot) for every mutation in T038-T040, in the same transaction as each mutation, in `lib/auth/audit.ts` (depends on T038, T039, T040)
-- [ ] T042 [US4] Build the Super Admin user-management UI (list/create/edit/deactivate/assign stores) in `app/(dashboard)/admin/users/page.tsx` (depends on T038, T039, T040)
-- [ ] T043 [US4] Confirm T035-T037 pass; run `quickstart.md` Scenarios 4-5 (depends on T038-T042)
+- [X] T038 [US4] Implement `POST`/`GET /api/auth/users` (create + list, including store-required and one-store-only validation) in `app/api/auth/users/route.ts` (depends on T023)
+- [X] T039 [US4] Implement `PATCH`/`DELETE /api/auth/users/:id` (edit, deactivate/reactivate, role change, delete-only-if-no-history) including the last-active-Super-Admin guard — extended beyond the literal FR-020 wording to also cover a role change away from `super_admin`, since `contracts/auth-api.md`'s own PATCH role enum (`admin | service_manager`) makes that a real path to the same invariant violation — in the same transaction as the update, in `app/api/auth/users/[id]/route.ts` (depends on T038)
+- [X] T040 [US4] Scope clarification: `contracts/auth-api.md` never defines a separate assign/remove-store sub-route — store assignment is handled entirely through `PATCH /api/auth/users/:id`'s `storeIds` field (replace-the-set semantics), consistent with Principle III (no undocumented endpoints). No `app/api/auth/users/[id]/stores/route.ts` was created.
+- [X] T041 [US4] Implement `audit_log` writes (actor, entity, before/after snapshot) for every mutation in T038-T039, in the same transaction as each mutation, in `lib/auth/audit.ts` (depends on T038, T039)
+- [X] T042 [US4] Build the Super Admin user-management UI (list/create/deactivate/reactivate; store assignment via the create form's `storeIds` field) in `app/(dashboard)/admin/users/page.tsx`, gated by a server-side Super-Admin-only check in `app/(dashboard)/admin/layout.tsx` (depends on T038, T039)
+- [X] T043 [US4] Confirm T035-T037 pass; run `quickstart.md` Scenarios 4-5 (depends on T038-T042) — full suite 34/34 passing, `next build` clean
 
 **Checkpoint**: All four user stories independently functional — spec.md fully implemented.
 
