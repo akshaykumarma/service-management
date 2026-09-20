@@ -8,6 +8,12 @@
 
 **Input**: User description: "PRD §6.2 Ticket Creation & Intake (customer name, primary/alternate phone, machine model number via searchable dropdown with free-type fallback, issue description, optional estimated pickup date, up to 5 intake photos; ticket ID format SVC-{YYYY}-{5-digit store+year-scoped sequence}, immutable; initial state Open), §6.3 Service History Lookup (query all prior closed tickets for the same machine model number on save; Admin/Super Admin see history across all stores, Store Service Manager sees only their own store's history), and §6.4 Ticket Status Workflow (Open → In Progress → On Hold → Completed → Delivered, plus Cancelled; role-restricted transitions; mandatory reason comments for On Hold, Cancelled, and any backward transition; Cancelled tickets hidden from the active board but retrievable)."
 
+## Clarifications
+
+### Session 2026-09-20
+
+- Q: Should "Delivered" be a true terminal status, or stay subject to the same backward-transition-with-comment rule as every other status? → A: Backward transition out of Delivered stays allowed, but is restricted to Admin/Super Admin (not Store Service Manager), in addition to the existing mandatory comment.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Ticket Intake with Model-Based History Lookup (Priority: P1)
@@ -42,6 +48,7 @@ Once a ticket exists, a Service Manager or Admin moves it forward through its li
 2. **Given** a ticket in any status, **When** a Service Manager or Admin moves it to an earlier status in the sequence (e.g., Completed → In Progress), **Then** the system requires a comment explaining why before accepting the change.
 3. **Given** a ticket status change, **When** it is saved, **Then** it is added to that ticket's permanent, ordered status history (from-status, to-status, who, when, comment if any).
 4. **Given** a Store Service Manager, **When** they attempt to change the status of a ticket at a store they're not assigned to, **Then** the change is denied (per `002-auth-rbac`).
+5. **Given** a "Delivered" ticket, **When** a Store Service Manager attempts to move it backward to any earlier status, **Then** the system denies it regardless of whether a comment is provided; only an Admin or Super Admin may perform that specific transition, still with a mandatory comment.
 
 ---
 
@@ -69,6 +76,7 @@ When work can't continue (waiting on a part, waiting on the customer), a Service
 - What happens if two tickets are created for the same store in the same second? Ticket ID generation MUST still produce a unique, sequential ID per store per year with no collisions.
 - What happens when a ticket needs to skip a status (e.g., Open directly to Completed)? Out of scope for this spec unless the source PRD's transition table allows it — see Assumptions.
 - What happens when a Cancelled ticket needs to be reactivated? Not supported in v1; a new ticket must be created instead (see Assumptions).
+- What happens when a "Delivered" ticket needs to be moved backward (e.g., correcting a mistaken OTP confirmation)? Only an Admin or Super Admin may perform this transition, on top of the standard mandatory-comment requirement for backward transitions — a Store Service Manager cannot do this even with a comment (see FR-018).
 
 ## Requirements *(mandatory)*
 
@@ -91,6 +99,7 @@ When work can't continue (waiting on a part, waiting on the customer), a Service
 - **FR-015**: System MUST record every status change as an immutable, ordered entry (from-status, to-status, actor, timestamp, comment if provided) on the ticket.
 - **FR-016**: System MUST exclude Cancelled tickets from the default active-tickets view while keeping them retrievable through an explicit "all tickets" view or filter.
 - **FR-017**: System MUST enforce that only staff assigned to a ticket's store (or Admin/Super Admin per their scope) can change that ticket's status, consistent with `002-auth-rbac`.
+- **FR-018**: System MUST restrict any backward transition out of "Delivered" status to Admin and Super Admin roles, in addition to the mandatory comment already required for backward transitions (FR-013); a Store Service Manager MUST NOT be permitted to perform this specific transition even with a comment.
 
 ### Key Entities *(include if feature involves data)*
 
@@ -109,6 +118,7 @@ When work can't continue (waiting on a part, waiting on the customer), a Service
 - **SC-004**: 100% of "On Hold" and "Cancelled" transitions carry a recorded reason; zero occur without one.
 - **SC-005**: 100% of status changes are traceable to a specific staff member and timestamp.
 - **SC-006**: Cancelled tickets never appear in the default active view — 0% leakage — while remaining 100% retrievable via the all-tickets view.
+- **SC-007**: 0% of backward transitions out of "Delivered" status are ever performed by a Store Service Manager; 100% are performed by an Admin or Super Admin with a recorded reason.
 
 ## Assumptions
 
