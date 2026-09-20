@@ -23,11 +23,17 @@ interface HistoryEntryRow {
   createdAt: string;
 }
 
+const ALL_STATUSES = ["open", "in_progress", "on_hold", "completed", "delivered", "cancelled"];
+
 export default function TicketDetailPage() {
   const params = useParams<{ id: string }>();
   const [ticket, setTicket] = useState<TicketDetail | null>(null);
   const [statusHistory, setStatusHistory] = useState<HistoryEntryRow[]>([]);
   const [notFound, setNotFound] = useState(false);
+  const [toStatus, setToStatus] = useState("");
+  const [comment, setComment] = useState("");
+  const [statusError, setStatusError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/tickets/${params.id}`);
@@ -43,6 +49,34 @@ export default function TicketDetailPage() {
   useEffect(() => {
     load();
   }, [load]);
+
+  async function handleStatusChange(e: React.FormEvent) {
+    e.preventDefault();
+    setStatusError(null);
+    setSubmitting(true);
+    try {
+      const res = await fetch(`/api/tickets/${params.id}/status`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ toStatus, comment: comment || null }),
+      });
+      if (res.ok) {
+        setToStatus("");
+        setComment("");
+        await load();
+        return;
+      }
+      const body = await res.json();
+      const messages: Record<string, string> = {
+        comment_required: "A comment is required for this transition.",
+        invalid_transition: "That status change isn't allowed from the current status.",
+        role_not_permitted: "Your role doesn't permit this status change.",
+      };
+      setStatusError(messages[body.error.code] ?? "Could not update status.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   if (notFound) {
     return (
@@ -77,6 +111,35 @@ export default function TicketDetailPage() {
           <dt>Status</dt>
           <dd>{ticket.status}</dd>
         </dl>
+      </section>
+
+      <section aria-labelledby="status-change-heading">
+        <h2 id="status-change-heading">Change status</h2>
+        <form onSubmit={handleStatusChange} noValidate>
+          <div>
+            <label htmlFor="toStatus">New status</label>
+            <select id="toStatus" required value={toStatus} onChange={(e) => setToStatus(e.target.value)}>
+              <option value="">Select a status</option>
+              {ALL_STATUSES.filter((s) => s !== ticket.status).map((s) => (
+                <option key={s} value={s}>
+                  {s.replace("_", " ")}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label htmlFor="comment">Comment (required for backward moves, On Hold, or Cancelled)</label>
+            <textarea id="comment" value={comment} onChange={(e) => setComment(e.target.value)} />
+          </div>
+          {statusError && (
+            <p role="alert" aria-live="assertive">
+              {statusError}
+            </p>
+          )}
+          <button type="submit" disabled={submitting || !toStatus}>
+            Update status
+          </button>
+        </form>
       </section>
 
       <section aria-labelledby="status-history-heading">

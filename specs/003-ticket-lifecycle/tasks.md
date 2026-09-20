@@ -92,15 +92,15 @@ both land in history with the second-committed one as current.
 
 ### Tests for User Story 2 ⚠️ Write first; confirm they fail before implementing
 
-- [ ] T021 [P] [US2] Integration test for forward/backward transitions, including the Delivered-backward Admin/Super-Admin-only gate, in `tests/integration/status-transitions.test.ts`
-- [ ] T022 [P] [US2] Integration test for last-write-wins on concurrent status changes (FR-019) in `tests/integration/concurrent-status-change.test.ts`
+- [X] T021 [P] [US2] Integration test for forward/backward transitions, including the Delivered-backward Admin/Super-Admin-only gate, in `tests/integration/status-transitions.test.ts`
+- [X] T022 [P] [US2] Integration test for last-write-wins on concurrent status changes (FR-019) in `tests/integration/concurrent-status-change.test.ts`
 
 ### Implementation for User Story 2
 
-- [ ] T023 [US2] Implement the allowed-transition table with role and mandatory-comment gates (including the Delivered-backward exception, FR-018) in `lib/tickets/status-transitions.ts` (depends on T005)
-- [ ] T024 [US2] Implement `PATCH /api/tickets/:id/status` — a plain `UPDATE` with **no optimistic-concurrency check** (`research.md` §2 — required by FR-019) plus an unconditional `status_history` insert on every request — in `app/api/tickets/[id]/status/route.ts` (depends on T023)
-- [ ] T025 [US2] Add status-change controls to the ticket detail page in `app/(dashboard)/tickets/[id]/page.tsx` (depends on T024, T019)
-- [ ] T026 [US2] Confirm T021-T022 pass; run `quickstart.md` Scenarios 2 and 4 (depends on T023-T025)
+- [X] T023 [US2] Implement the allowed-transition checker with role and mandatory-comment gates (including the Delivered-backward exception, FR-018) in `lib/tickets/status-transitions.ts` (depends on T005). Confirmed against `quickstart.md` Scenario 2's own example (`in_progress` → `completed` directly, skipping `on_hold`) that forward moves may skip intermediate statuses — the state diagram's arrows are the *allowed* path, not a mandatory sequence every ticket must pass through.
+- [X] T024 [US2] Implement `PATCH /api/tickets/:id/status` — a plain `UPDATE` with **no optimistic-concurrency check** (`research.md` §2 — required by FR-019) plus a `status_history` insert on every successful transition — in `app/api/tickets/[id]/status/route.ts` (depends on T023)
+- [X] T025 [US2] Add status-change controls (status selector, comment field, inline error messages for each rejection code) to the ticket detail page in `app/(dashboard)/tickets/[id]/page.tsx` (depends on T024, T019)
+- [X] T026 [US2] Confirm T021-T022 pass; run `quickstart.md` Scenarios 2 and 4 (depends on T023-T025) — 7 new tests pass; full suite 56/56; `next build` clean
 
 **Checkpoint**: User Stories 1 and 2 both independently functional.
 
