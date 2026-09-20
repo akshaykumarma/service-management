@@ -5,6 +5,8 @@ import { jsonRequest, loginAs } from "../helpers/http";
 import { GET as ticketsGET } from "@/app/api/tickets/route";
 import { GET as auditTrailGET } from "@/app/api/tickets/[id]/audit-trail/route";
 import { PATCH as statusPATCH } from "@/app/api/tickets/[id]/status/route";
+import { GET as summaryGET } from "@/app/api/reports/summary/route";
+import { GET as exportGET } from "@/app/api/reports/export/route";
 
 describe("GET /api/tickets filter query parameters", () => {
   beforeEach(resetDb);
@@ -129,5 +131,89 @@ describe("GET /api/tickets/:id/audit-trail", () => {
       params: { id: ticketB.id },
     });
     expect(res.status).toBe(404);
+  });
+});
+
+describe("GET /api/reports/summary", () => {
+  beforeEach(resetDb);
+
+  it("403s for a Store Service Manager", async () => {
+    const store = await createStore();
+    const sm = await createUser({ role: "service_manager", storeIds: [store.id], password: "Correct123!" });
+    const cookie = await loginAs(sm.email, "Correct123!");
+
+    const res = await summaryGET(
+      jsonRequest(`/api/reports/summary?storeId=${store.id}&dateFrom=2026-01-01&dateTo=2026-12-31`, { cookie }),
+    );
+    expect(res.status).toBe(403);
+  });
+
+  it("200s for an Admin with the documented shape", async () => {
+    const store = await createStore();
+    const admin = await createUser({ role: "admin", storeIds: [store.id], password: "Correct123!" });
+    const cookie = await loginAs(admin.email, "Correct123!");
+
+    const res = await summaryGET(
+      jsonRequest(`/api/reports/summary?storeId=${store.id}&dateFrom=2026-01-01&dateTo=2026-12-31`, { cookie }),
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body).toMatchObject({
+      totalTickets: expect.any(Number),
+      byStatus: expect.any(Object),
+      avgResolutionTimeHours: expect.any(Number),
+      partsRevenue: expect.any(Number),
+      servicesRevenue: expect.any(Number),
+    });
+  });
+});
+
+describe("GET /api/reports/export", () => {
+  beforeEach(resetDb);
+
+  it("400s invalid_format for anything other than csv/pdf", async () => {
+    const store = await createStore();
+    const admin = await createUser({ role: "admin", storeIds: [store.id], password: "Correct123!" });
+    const cookie = await loginAs(admin.email, "Correct123!");
+
+    const res = await exportGET(jsonRequest("/api/reports/export?format=xml", { cookie }));
+    expect(res.status).toBe(400);
+    expect((await res.json()).error.code).toBe("invalid_format");
+  });
+
+  it("403s for a Store Service Manager", async () => {
+    const store = await createStore();
+    const sm = await createUser({ role: "service_manager", storeIds: [store.id], password: "Correct123!" });
+    const cookie = await loginAs(sm.email, "Correct123!");
+
+    const res = await exportGET(jsonRequest("/api/reports/export?format=csv", { cookie }));
+    expect(res.status).toBe(403);
+  });
+
+  it("200s a CSV list export with the correct content type", async () => {
+    const store = await createStore();
+    const admin = await createUser({ role: "admin", storeIds: [store.id], password: "Correct123!" });
+    await createTicket({ storeId: store.id, createdBy: admin.id, status: "open" });
+    const cookie = await loginAs(admin.email, "Correct123!");
+
+    const res = await exportGET(jsonRequest("/api/reports/export?format=csv", { cookie }));
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toContain("text/csv");
+    const text = await res.text();
+    expect(text).toContain("ticketNumber");
+  });
+
+  it("200s a PDF summary export with the correct content type", async () => {
+    const store = await createStore();
+    const admin = await createUser({ role: "admin", storeIds: [store.id], password: "Correct123!" });
+    const cookie = await loginAs(admin.email, "Correct123!");
+
+    const res = await exportGET(
+      jsonRequest(`/api/reports/export?format=pdf&type=summary&storeId=${store.id}&dateFrom=2026-01-01&dateTo=2026-12-31`, {
+        cookie,
+      }),
+    );
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toContain("application/pdf");
   });
 });
