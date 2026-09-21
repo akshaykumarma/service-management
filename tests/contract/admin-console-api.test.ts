@@ -133,7 +133,7 @@ describe("POST/PATCH /api/admin/stores", () => {
     expect((await res.json()).error.code).toBe("invalid_tax_rate");
   });
 
-  it("activates once whatsappNumber validates, and 409s whatsapp_number_required_to_activate otherwise", async () => {
+  it("activates once whatsappNumber validates", async () => {
     const cookie = await superAdminCookie();
     const createRes = await storesPOST(
       jsonRequest("/api/admin/stores", {
@@ -150,18 +150,31 @@ describe("POST/PATCH /api/admin/stores", () => {
     );
     expect(activateRes.status).toBe(200);
     expect((await activateRes.json()).store.active).toBe(true);
+  });
 
-    const secondCreate = await storesPOST(
+  it("400s invalid_whatsapp_number at creation for a malformed number, rather than deferring the failure to activation", async () => {
+    const cookie = await superAdminCookie();
+    const res = await storesPOST(
       jsonRequest("/api/admin/stores", {
         method: "POST",
         cookie,
         body: { name: "Y", address: "A", primaryContact: "B", whatsappNumber: "not-a-number", taxRate: 18 },
       }),
     );
-    const { store: secondStore } = await secondCreate.json();
+    expect(res.status).toBe(400);
+    expect((await res.json()).error.code).toBe("invalid_whatsapp_number");
+  });
+
+  it("409s whatsapp_number_required_to_activate for a store whose on-file number is empty (a pre-007 row)", async () => {
+    const cookie = await superAdminCookie();
+    // createStore's own API validation can no longer produce a store with no usable
+    // number — this reproduces the one remaining way it happens: a row that predates
+    // 007-admin-console's whatsappNumber column being a real gate on activation.
+    const store = await createStore({ active: false, whatsappNumber: "" });
+
     const failedActivate = await storePATCH(
-      jsonRequest(`/api/admin/stores/${secondStore.id}`, { method: "PATCH", cookie, body: { active: true } }),
-      { params: { id: secondStore.id } },
+      jsonRequest(`/api/admin/stores/${store.id}`, { method: "PATCH", cookie, body: { active: true } }),
+      { params: { id: store.id } },
     );
     expect(failedActivate.status).toBe(409);
     expect((await failedActivate.json()).error.code).toBe("whatsapp_number_required_to_activate");

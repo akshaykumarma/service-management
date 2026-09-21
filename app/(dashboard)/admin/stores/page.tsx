@@ -123,7 +123,16 @@ export default function StoresPage() {
           </div>
           <div>
             <label htmlFor="storeWhatsapp">WhatsApp number</label>
-            <input id="storeWhatsapp" required value={whatsappNumber} onChange={(e) => setWhatsappNumber(e.target.value)} />
+            <input
+              id="storeWhatsapp"
+              required
+              placeholder="+919876543210"
+              pattern="\+[1-9]\d{7,14}"
+              title="International format starting with +, e.g. +919876543210 — no spaces or dashes."
+              value={whatsappNumber}
+              onChange={(e) => setWhatsappNumber(e.target.value)}
+            />
+            <small>International format, e.g. +919876543210 — country code with +, no spaces or dashes.</small>
           </div>
           <div>
             <label htmlFor="storeTaxRate">Tax rate (%)</label>

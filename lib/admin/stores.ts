@@ -29,6 +29,7 @@ export async function createStore(input: {
   taxRate: number;
 }): Promise<{ error: StoreError } | { store: typeof stores.$inferSelect }> {
   if (!isValidTaxRate(input.taxRate)) return { error: "invalid_tax_rate" };
+  if (!isValidWhatsAppNumber(input.whatsappNumber)) return { error: "invalid_whatsapp_number" };
 
   const [store] = await db
     .insert(stores)
