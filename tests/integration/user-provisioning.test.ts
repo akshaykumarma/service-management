@@ -26,12 +26,18 @@ describe("Super Admin user provisioning (User Story 4)", () => {
       jsonRequest("/api/auth/users", {
         method: "POST",
         cookie,
-        body: { name: "New SM", email: "smprov@example.com", role: "service_manager", storeIds: [store.id] },
+        body: {
+          name: "New SM",
+          email: "smprov@example.com",
+          role: "service_manager",
+          storeIds: [store.id],
+          password: "NewHire#2026",
+        },
       }),
     );
-    const created = (await createRes.json()).user;
+    expect(createRes.status).toBe(201);
 
-    const smCookie = await loginAs("smprov@example.com", created.temporaryPassword);
+    const smCookie = await loginAs("smprov@example.com", "NewHire#2026");
     const sessionRes = await sessionGET(jsonRequest("/api/auth/session", { cookie: smCookie }));
     const sessionBody = await sessionRes.json();
     expect(sessionBody.user.storeIds).toEqual([store.id]);

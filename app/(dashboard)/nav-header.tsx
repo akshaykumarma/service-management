@@ -31,12 +31,12 @@ export default function NavHeader({ name, role }: NavHeaderProps) {
         <a href="/board">Board</a>
         <a href="/tickets/new">New ticket</a>
         {(role === "admin" || role === "super_admin") && <a href="/reports">Reports</a>}
+        {(role === "admin" || role === "super_admin") && <a href="/team">Team</a>}
         {role === "super_admin" && (
           <>
             <a href="/admin/stores">Stores</a>
             <a href="/admin/machine-models">Machine models</a>
             <a href="/admin/catalogue">Catalogue</a>
-            <a href="/admin/users">Staff accounts</a>
           </>
         )}
       </nav>

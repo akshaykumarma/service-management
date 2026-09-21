@@ -132,6 +132,7 @@ describe("POST /api/auth/password-reset/confirm", () => {
 
 import { GET as usersGET, POST as usersPOST } from "@/app/api/auth/users/route";
 import { PATCH as userPATCH } from "@/app/api/auth/users/[id]/route";
+import { POST as resetPasswordPOST } from "@/app/api/auth/users/[id]/reset-password/route";
 import { createStore } from "../helpers/factories";
 
 async function loginAs(email: string, password: string) {
@@ -142,7 +143,7 @@ async function loginAs(email: string, password: string) {
 describe("POST /api/auth/users", () => {
   beforeEach(resetDb);
 
-  it("creates a staff account and returns a one-time temporary password", async () => {
+  it("creates a staff account with the Super Admin's own chosen password, usable to log in immediately", async () => {
     const superAdmin = await createUser({ role: "super_admin", password: "Correct123!" });
     const store = await createStore();
     const cookie = await loginAs(superAdmin.email, "Correct123!");
@@ -151,13 +152,44 @@ describe("POST /api/auth/users", () => {
       jsonRequest("/api/auth/users", {
         method: "POST",
         cookie,
-        body: { name: "New SM", email: "newsm@example.com", role: "service_manager", storeIds: [store.id] },
+        body: {
+          name: "New SM",
+          email: "newsm@example.com",
+          role: "service_manager",
+          storeIds: [store.id],
+          password: "NewHire#2026",
+        },
       }),
     );
     expect(res.status).toBe(201);
     const body = await res.json();
-    expect(body.user.temporaryPassword).toBeTruthy();
+    expect(body.user.temporaryPassword).toBeUndefined();
     expect(body.user.storeIds).toEqual([store.id]);
+
+    const smCookie = await loginAs("newsm@example.com", "NewHire#2026");
+    expect(smCookie).toBeTruthy();
+  });
+
+  it("400s with invalid_password for a password that doesn't meet the complexity rule", async () => {
+    const superAdmin = await createUser({ role: "super_admin", password: "Correct123!" });
+    const store = await createStore();
+    const cookie = await loginAs(superAdmin.email, "Correct123!");
+
+    const res = await usersPOST(
+      jsonRequest("/api/auth/users", {
+        method: "POST",
+        cookie,
+        body: {
+          name: "New SM",
+          email: "weakpw@example.com",
+          role: "service_manager",
+          storeIds: [store.id],
+          password: "lowercase1",
+        },
+      }),
+    );
+    expect(res.status).toBe(400);
+    expect((await res.json()).error.code).toBe("invalid_password");
   });
 
   it("400s with store_assignment_required when storeIds is empty", async () => {
@@ -168,7 +200,7 @@ describe("POST /api/auth/users", () => {
       jsonRequest("/api/auth/users", {
         method: "POST",
         cookie,
-        body: { name: "New Admin", email: "newadmin@example.com", role: "admin", storeIds: [] },
+        body: { name: "New Admin", email: "newadmin@example.com", role: "admin", storeIds: [], password: "ValidPass1!" },
       }),
     );
     expect(res.status).toBe(400);
@@ -185,7 +217,7 @@ describe("POST /api/auth/users", () => {
       jsonRequest("/api/auth/users", {
         method: "POST",
         cookie,
-        body: { name: "X", email: "x@example.com", role: "service_manager", storeIds: [storeA.id, storeB.id] },
+        body: { name: "X", email: "x@example.com", role: "service_manager", storeIds: [storeA.id, storeB.id], password: "ValidPass1!" },
       }),
     );
     expect(res.status).toBe(400);
@@ -200,7 +232,7 @@ describe("POST /api/auth/users", () => {
       jsonRequest("/api/auth/users", {
         method: "POST",
         cookie,
-        body: { name: "X", email: "nostoresuchid@example.com", role: "admin", storeIds: ["00000000-0000-0000-0000-000000000000"] },
+        body: { name: "X", email: "nostoresuchid@example.com", role: "admin", storeIds: ["00000000-0000-0000-0000-000000000000"], password: "ValidPass1!" },
       }),
     );
     expect(res.status).toBe(400);
@@ -217,7 +249,7 @@ describe("POST /api/auth/users", () => {
       jsonRequest("/api/auth/users", {
         method: "POST",
         cookie,
-        body: { name: "X", email: existing.email, role: "admin", storeIds: [store.id] },
+        body: { name: "X", email: existing.email, role: "admin", storeIds: [store.id], password: "ValidPass1!" },
       }),
     );
     expect(res.status).toBe(409);
@@ -253,6 +285,22 @@ describe("GET /api/auth/users", () => {
     const body = await res.json();
     expect(body.users.length).toBeGreaterThanOrEqual(2);
   });
+
+  it("restricts an Admin to Store Service Managers within their own stores", async () => {
+    const storeA = await createStore();
+    const storeB = await createStore();
+    const admin = await createUser({ role: "admin", storeIds: [storeA.id], password: "Correct123!" });
+    const inScopeSm = await createUser({ role: "service_manager", storeIds: [storeA.id] });
+    const outOfScopeSm = await createUser({ role: "service_manager", storeIds: [storeB.id] });
+    const cookie = await loginAs(admin.email, "Correct123!");
+
+    const res = await usersGET(jsonRequest("/api/auth/users", { cookie }));
+    expect(res.status).toBe(200);
+    const ids = (await res.json()).users.map((u: { id: string }) => u.id);
+    expect(ids).toContain(inScopeSm.id);
+    expect(ids).not.toContain(outOfScopeSm.id);
+    expect(ids).not.toContain(admin.id);
+  });
 });
 
 describe("PATCH /api/auth/users/:id", () => {
@@ -282,5 +330,121 @@ describe("PATCH /api/auth/users/:id", () => {
     );
     expect(res.status).toBe(409);
     expect((await res.json()).error.code).toBe("last_super_admin");
+  });
+});
+
+describe("POST /api/auth/users/:id/reset-password", () => {
+  beforeEach(resetDb);
+
+  it("lets a Super Admin reset any staff member's password, and it's usable to log in, replacing their session", async () => {
+    const superAdmin = await createUser({ role: "super_admin", password: "Correct123!" });
+    const target = await createUser({ role: "admin", password: "OldPassword1!" });
+    const cookie = await loginAs(superAdmin.email, "Correct123!");
+    const targetOldCookie = await loginAs(target.email, "OldPassword1!");
+
+    const res = await resetPasswordPOST(
+      jsonRequest(`/api/auth/users/${target.id}/reset-password`, {
+        method: "POST",
+        cookie,
+        body: { password: "BrandNew#1" },
+      }),
+      { params: { id: target.id } },
+    );
+    expect(res.status).toBe(200);
+
+    // The old session is revoked by the reset (credential-rotation exception to FR-019).
+    const staleSessionRes = await sessionGET(jsonRequest("/api/auth/session", { cookie: targetOldCookie }));
+    expect(staleSessionRes.status).toBe(401);
+
+    const newCookie = await loginAs(target.email, "BrandNew#1");
+    expect(newCookie).toBeTruthy();
+  });
+
+  it("lets an Admin reset a Store Service Manager's password within their own store", async () => {
+    const store = await createStore();
+    const admin = await createUser({ role: "admin", storeIds: [store.id], password: "Correct123!" });
+    const sm = await createUser({ role: "service_manager", storeIds: [store.id], password: "OldPassword1!" });
+    const cookie = await loginAs(admin.email, "Correct123!");
+
+    const res = await resetPasswordPOST(
+      jsonRequest(`/api/auth/users/${sm.id}/reset-password`, {
+        method: "POST",
+        cookie,
+        body: { password: "BrandNew#1" },
+      }),
+      { params: { id: sm.id } },
+    );
+    expect(res.status).toBe(200);
+
+    const newCookie = await loginAs(sm.email, "BrandNew#1");
+    expect(newCookie).toBeTruthy();
+  });
+
+  it("404s (not 403) when an Admin targets a Service Manager outside their own stores", async () => {
+    const storeA = await createStore();
+    const storeB = await createStore();
+    const admin = await createUser({ role: "admin", storeIds: [storeA.id], password: "Correct123!" });
+    const outOfScopeSm = await createUser({ role: "service_manager", storeIds: [storeB.id] });
+    const cookie = await loginAs(admin.email, "Correct123!");
+
+    const res = await resetPasswordPOST(
+      jsonRequest(`/api/auth/users/${outOfScopeSm.id}/reset-password`, {
+        method: "POST",
+        cookie,
+        body: { password: "BrandNew#1" },
+      }),
+      { params: { id: outOfScopeSm.id } },
+    );
+    expect(res.status).toBe(404);
+  });
+
+  it("404s when an Admin targets another Admin or a Super Admin, even within their own store", async () => {
+    const store = await createStore();
+    const admin = await createUser({ role: "admin", storeIds: [store.id], password: "Correct123!" });
+    const otherAdmin = await createUser({ role: "admin", storeIds: [store.id] });
+    const cookie = await loginAs(admin.email, "Correct123!");
+
+    const res = await resetPasswordPOST(
+      jsonRequest(`/api/auth/users/${otherAdmin.id}/reset-password`, {
+        method: "POST",
+        cookie,
+        body: { password: "BrandNew#1" },
+      }),
+      { params: { id: otherAdmin.id } },
+    );
+    expect(res.status).toBe(404);
+  });
+
+  it("403s for a Store Service Manager caller", async () => {
+    const sm = await createUser({ role: "service_manager", password: "Correct123!" });
+    const other = await createUser({ role: "service_manager" });
+    const cookie = await loginAs(sm.email, "Correct123!");
+
+    const res = await resetPasswordPOST(
+      jsonRequest(`/api/auth/users/${other.id}/reset-password`, {
+        method: "POST",
+        cookie,
+        body: { password: "BrandNew#1" },
+      }),
+      { params: { id: other.id } },
+    );
+    expect(res.status).toBe(403);
+  });
+
+  it("400s with invalid_password for a password that doesn't meet the complexity rule", async () => {
+    const superAdmin = await createUser({ role: "super_admin", password: "Correct123!" });
+    const target = await createUser({ role: "admin" });
+    const cookie = await loginAs(superAdmin.email, "Correct123!");
+
+    const res = await resetPasswordPOST(
+      jsonRequest(`/api/auth/users/${target.id}/reset-password`, {
+        method: "POST",
+        cookie,
+        body: { password: "allsmall" },
+      }),
+      { params: { id: target.id } },
+    );
+    expect(res.status).toBe(400);
+    expect((await res.json()).error.code).toBe("invalid_password");
   });
 });

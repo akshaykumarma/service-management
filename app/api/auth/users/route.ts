@@ -2,17 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 import { eq, inArray } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { stores, users, userStores } from "@/lib/db/schema";
-import { hashPassword, generateTemporaryPassword } from "@/lib/auth/auth.config";
+import { hashPassword } from "@/lib/auth/auth.config";
+import { isValidPassword } from "@/lib/auth/password-policy";
 import { requireAuthenticatedSession } from "@/lib/auth/require-session";
-import { AccessDeniedError, requireSuperAdmin } from "@/lib/auth/rbac";
+import { AccessDeniedError, getScopedStoreIds, requireAdminOrAbove, requireSuperAdmin } from "@/lib/auth/rbac";
 import { requireSameOrigin } from "@/lib/auth/csrf";
 
 export async function GET(request: NextRequest) {
   const sessionOrResponse = await requireAuthenticatedSession(request);
   if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
+  const caller = sessionOrResponse.user;
 
   try {
-    requireSuperAdmin(sessionOrResponse.user);
+    requireAdminOrAbove(caller);
   } catch (err) {
     if (err instanceof AccessDeniedError) {
       return NextResponse.json({ error: { code: "forbidden", message: err.message } }, { status: 403 });
@@ -27,8 +29,17 @@ export async function GET(request: NextRequest) {
     storeIdsByUser.set(a.userId, [...(storeIdsByUser.get(a.userId) ?? []), a.storeId]);
   }
 
+  // An Admin only manages Service Managers within their own stores (password-reset scope
+  // below enforces the same boundary) — a Super Admin sees everyone.
+  const scope = caller.role === "super_admin" ? "all" : await getScopedStoreIds(caller);
+  const visible = rows.filter((u) => {
+    if (scope === "all") return true;
+    if (u.role !== "service_manager") return false;
+    return (storeIdsByUser.get(u.id) ?? []).some((id) => scope.includes(id));
+  });
+
   return NextResponse.json({
-    users: rows.map((u) => ({
+    users: visible.map((u) => ({
       id: u.id,
       name: u.name,
       email: u.email,
@@ -55,11 +66,27 @@ export async function POST(request: NextRequest) {
     throw err;
   }
 
-  const { name, email, role, storeIds } = await request.json();
+  const { name, email, role, storeIds, password } = await request.json();
 
   if (role !== "admin" && role !== "service_manager") {
     return NextResponse.json(
       { error: { code: "invalid_role", message: "role must be admin or service_manager." } },
+      { status: 400 },
+    );
+  }
+
+  // Deviation from contracts/auth-api.md's original design (a system-generated one-time
+  // password relayed by the Super Admin): the Super Admin now sets the account's initial
+  // password directly, so there's no "relay this" step. Same complexity rule as
+  // password-reset (lib/auth/password-policy.ts) — one policy, not a stricter one here.
+  if (!isValidPassword(password)) {
+    return NextResponse.json(
+      {
+        error: {
+          code: "invalid_password",
+          message: "Password must be at least 8 characters and include an uppercase letter, a lowercase letter, and a special character.",
+        },
+      },
       { status: 400 },
     );
   }
@@ -95,8 +122,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const temporaryPassword = generateTemporaryPassword();
-  const passwordHash = await hashPassword(temporaryPassword);
+  const passwordHash = await hashPassword(password);
 
   const created = await db.transaction(async (tx) => {
     const [user] = await tx
@@ -120,7 +146,6 @@ export async function POST(request: NextRequest) {
         role: created.role,
         active: created.active,
         storeIds: ids,
-        temporaryPassword,
       },
     },
     { status: 201 },
