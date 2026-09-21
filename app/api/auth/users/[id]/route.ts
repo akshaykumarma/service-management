@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { and, eq, ne } from "drizzle-orm";
+import { and, eq, inArray, ne } from "drizzle-orm";
 import { db } from "@/lib/db/client";
-import { auditLog, users, userStores } from "@/lib/db/schema";
+import { auditLog, stores, users, userStores } from "@/lib/db/schema";
 import { requireAuthenticatedSession } from "@/lib/auth/require-session";
 import { AccessDeniedError, requireSuperAdmin } from "@/lib/auth/rbac";
 import { writeAuditLog } from "@/lib/auth/audit";
@@ -53,6 +53,16 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       { error: { code: "invalid_store_count", message: "A Service Manager must have exactly one store." } },
       { status: 400 },
     );
+  }
+
+  if (patch.storeIds !== undefined && patch.storeIds.length > 0) {
+    const matchingStores = await db.select({ id: stores.id }).from(stores).where(inArray(stores.id, patch.storeIds));
+    if (matchingStores.length !== patch.storeIds.length) {
+      return NextResponse.json(
+        { error: { code: "invalid_store_id", message: "One or more store ids do not exist." } },
+        { status: 400 },
+      );
+    }
   }
 
   const losingActiveSuperAdminStatus =

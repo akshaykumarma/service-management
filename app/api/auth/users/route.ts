@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { db } from "@/lib/db/client";
-import { users, userStores } from "@/lib/db/schema";
+import { stores, users, userStores } from "@/lib/db/schema";
 import { hashPassword, generateTemporaryPassword } from "@/lib/auth/auth.config";
 import { requireAuthenticatedSession } from "@/lib/auth/require-session";
 import { AccessDeniedError, requireSuperAdmin } from "@/lib/auth/rbac";
@@ -84,6 +84,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       { error: { code: "email_already_registered", message: "That email is already registered." } },
       { status: 409 },
+    );
+  }
+
+  const matchingStores = await db.select({ id: stores.id }).from(stores).where(inArray(stores.id, ids));
+  if (matchingStores.length !== ids.length) {
+    return NextResponse.json(
+      { error: { code: "invalid_store_id", message: "One or more store ids do not exist." } },
+      { status: 400 },
     );
   }
 

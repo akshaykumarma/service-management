@@ -192,6 +192,21 @@ describe("POST /api/auth/users", () => {
     expect((await res.json()).error.code).toBe("invalid_store_count");
   });
 
+  it("400s with invalid_store_id for a store id that doesn't exist, instead of crashing on the FK constraint", async () => {
+    const superAdmin = await createUser({ role: "super_admin", password: "Correct123!" });
+    const cookie = await loginAs(superAdmin.email, "Correct123!");
+
+    const res = await usersPOST(
+      jsonRequest("/api/auth/users", {
+        method: "POST",
+        cookie,
+        body: { name: "X", email: "nostoresuchid@example.com", role: "admin", storeIds: ["00000000-0000-0000-0000-000000000000"] },
+      }),
+    );
+    expect(res.status).toBe(400);
+    expect((await res.json()).error.code).toBe("invalid_store_id");
+  });
+
   it("409s with email_already_registered for a duplicate email", async () => {
     const superAdmin = await createUser({ role: "super_admin", password: "Correct123!" });
     const store = await createStore();

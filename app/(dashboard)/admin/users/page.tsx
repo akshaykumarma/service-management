@@ -11,13 +11,19 @@ interface StaffUser {
   storeIds: string[];
 }
 
+interface StoreOption {
+  id: string;
+  name: string;
+}
+
 export default function UserManagementPage() {
   const [users, setUsers] = useState<StaffUser[]>([]);
+  const [storeOptions, setStoreOptions] = useState<StoreOption[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<"admin" | "service_manager">("service_manager");
-  const [storeIdsInput, setStoreIdsInput] = useState("");
+  const [storeIds, setStoreIds] = useState<string[]>([]);
   const [lastTemporaryPassword, setLastTemporaryPassword] = useState<string | null>(null);
 
   const loadUsers = useCallback(async () => {
@@ -32,15 +38,24 @@ export default function UserManagementPage() {
     loadUsers();
   }, [loadUsers]);
 
+  useEffect(() => {
+    fetch("/api/admin/stores")
+      .then((res) => res.json())
+      .then((body) => setStoreOptions(body.stores));
+  }, []);
+
+  function storeNames(ids: string[]): string {
+    return (
+      ids
+        .map((id) => storeOptions.find((s) => s.id === id)?.name ?? id)
+        .join(", ") || "—"
+    );
+  }
+
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     setLastTemporaryPassword(null);
-
-    const storeIds = storeIdsInput
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
 
     const res = await fetch("/api/auth/users", {
       method: "POST",
@@ -53,7 +68,7 @@ export default function UserManagementPage() {
       setLastTemporaryPassword(body.user.temporaryPassword);
       setName("");
       setEmail("");
-      setStoreIdsInput("");
+      setStoreIds([]);
       loadUsers();
     } else {
       const body = await res.json();
@@ -99,13 +114,23 @@ export default function UserManagementPage() {
             </select>
           </div>
           <div>
-            <label htmlFor="storeIds">Store IDs (comma-separated)</label>
-            <input
+            <label htmlFor="storeIds">
+              Store{role === "admin" ? "s" : ""} (
+              {role === "service_manager" ? "select exactly one" : "ctrl/cmd-click to select more than one"})
+            </label>
+            <select
               id="storeIds"
+              multiple
               required
-              value={storeIdsInput}
-              onChange={(e) => setStoreIdsInput(e.target.value)}
-            />
+              value={storeIds}
+              onChange={(e) => setStoreIds(Array.from(e.target.selectedOptions).map((o) => o.value))}
+            >
+              {storeOptions.map((store) => (
+                <option key={store.id} value={store.id}>
+                  {store.name}
+                </option>
+              ))}
+            </select>
           </div>
           {error && (
             <p role="alert" aria-live="assertive">
@@ -141,7 +166,7 @@ export default function UserManagementPage() {
                 <td>{u.email}</td>
                 <td>{u.role}</td>
                 <td>{u.active ? "Active" : "Deactivated"}</td>
-                <td>{u.storeIds.join(", ") || "—"}</td>
+                <td>{storeNames(u.storeIds)}</td>
                 <td>
                   <button type="button" onClick={() => toggleActive(u)}>
                     {u.active ? "Deactivate" : "Reactivate"}
