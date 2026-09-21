@@ -11,7 +11,7 @@ test.describe("Complete and deliver (005-customer-notifications, US1+US3)", () =
     await page.getByLabel("Email").fill(process.env.E2E_SUPER_ADMIN_EMAIL ?? "admin@example.com");
     await page.getByLabel("Password").fill(process.env.E2E_SUPER_ADMIN_PASSWORD ?? "SuperSecret123!");
     await page.getByRole("button", { name: "Log in" }).click();
-    await expect(page).toHaveURL(/\/dashboard/);
+    await expect(page).toHaveURL(/\/board/);
 
     await page.goto("/tickets/new");
     // 007-admin-console can add more active stores over time (the intake form no longer

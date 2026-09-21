@@ -6,7 +6,7 @@ test.describe("Apply parts to ticket", () => {
     await page.getByLabel("Email").fill(process.env.E2E_SUPER_ADMIN_EMAIL ?? "admin@example.com");
     await page.getByLabel("Password").fill(process.env.E2E_SUPER_ADMIN_PASSWORD ?? "SuperSecret123!");
     await page.getByRole("button", { name: "Log in" }).click();
-    await expect(page).toHaveURL(/\/dashboard/);
+    await expect(page).toHaveURL(/\/board/);
 
     // Ensure a catalogue part exists to select (idempotent-ish: unique name per run).
     const partName = `E2E Part ${Date.now()}`;

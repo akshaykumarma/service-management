@@ -62,7 +62,15 @@ function TicketCardItem({ ticket }: { ticket: TicketCard }) {
     : undefined;
 
   return (
-    <li ref={setNodeRef} style={style} data-ticket-id={ticket.id} data-status={ticket.status} {...listeners} {...attributes}>
+    <li
+      ref={setNodeRef}
+      style={style}
+      className="board-card"
+      data-ticket-id={ticket.id}
+      data-status={ticket.status}
+      {...listeners}
+      {...attributes}
+    >
       <a href={`/tickets/${ticket.id}`} onClick={(e) => isDragging && e.preventDefault()}>
         <strong>{ticket.ticketNumber}</strong>
       </a>
@@ -86,7 +94,12 @@ function BoardColumn({
   const { setNodeRef, isOver } = useDroppable({ id: status });
 
   return (
-    <section aria-labelledby={`column-${status}-heading`} ref={setNodeRef} data-over={isOver}>
+    <section
+      aria-labelledby={`column-${status}-heading`}
+      ref={setNodeRef}
+      data-over={isOver}
+      className={`board-column status-${status}`}
+    >
       <h2 id={`column-${status}-heading`}>
         {label} ({tickets.length})
       </h2>
@@ -213,63 +226,65 @@ export default function BoardPage() {
 
       <section aria-labelledby="filters-heading">
         <h2 id="filters-heading">Filters</h2>
-        <div>
-          <label htmlFor="storeFilter">Store(s)</label>
-          <select
-            id="storeFilter"
-            multiple
-            value={selectedStoreIds}
-            onChange={(e) => setSelectedStoreIds(selectedOptions(e))}
-          >
-            {storeOptions.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label htmlFor="statusFilter">Status</label>
-          <select
-            id="statusFilter"
-            multiple
-            value={selectedStatuses}
-            onChange={(e) => setSelectedStatuses(selectedOptions(e))}
-          >
-            {ALL_STATUSES.map((s) => (
-              <option key={s} value={s}>
-                {s.replace("_", " ")}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label htmlFor="dateFrom">Created from</label>
-          <input id="dateFrom" type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
-        </div>
-        <div>
-          <label htmlFor="dateTo">Created to</label>
-          <input id="dateTo" type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
-        </div>
-        <div>
-          <label htmlFor="ticketIdFilter">Ticket ID</label>
-          <input id="ticketIdFilter" value={ticketIdFilter} onChange={(e) => setTicketIdFilter(e.target.value)} />
-        </div>
-        <div>
-          <label htmlFor="customerNameFilter">Customer name</label>
-          <input
-            id="customerNameFilter"
-            value={customerNameFilter}
-            onChange={(e) => setCustomerNameFilter(e.target.value)}
-          />
-        </div>
-        <div>
-          <label htmlFor="machineModelFilter">Machine model</label>
-          <input
-            id="machineModelFilter"
-            value={machineModelFilter}
-            onChange={(e) => setMachineModelFilter(e.target.value)}
-          />
+        <div className="board-filters">
+          <div>
+            <label htmlFor="storeFilter">Store(s)</label>
+            <select
+              id="storeFilter"
+              multiple
+              value={selectedStoreIds}
+              onChange={(e) => setSelectedStoreIds(selectedOptions(e))}
+            >
+              {storeOptions.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label htmlFor="statusFilter">Status</label>
+            <select
+              id="statusFilter"
+              multiple
+              value={selectedStatuses}
+              onChange={(e) => setSelectedStatuses(selectedOptions(e))}
+            >
+              {ALL_STATUSES.map((s) => (
+                <option key={s} value={s}>
+                  {s.replace("_", " ")}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label htmlFor="dateFrom">Created from</label>
+            <input id="dateFrom" type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+          </div>
+          <div>
+            <label htmlFor="dateTo">Created to</label>
+            <input id="dateTo" type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+          </div>
+          <div>
+            <label htmlFor="ticketIdFilter">Ticket ID</label>
+            <input id="ticketIdFilter" value={ticketIdFilter} onChange={(e) => setTicketIdFilter(e.target.value)} />
+          </div>
+          <div>
+            <label htmlFor="customerNameFilter">Customer name</label>
+            <input
+              id="customerNameFilter"
+              value={customerNameFilter}
+              onChange={(e) => setCustomerNameFilter(e.target.value)}
+            />
+          </div>
+          <div>
+            <label htmlFor="machineModelFilter">Machine model</label>
+            <input
+              id="machineModelFilter"
+              value={machineModelFilter}
+              onChange={(e) => setMachineModelFilter(e.target.value)}
+            />
+          </div>
         </div>
       </section>
 
@@ -294,7 +309,7 @@ export default function BoardPage() {
       {loaded && tickets.length === 0 && <p>No tickets match the current view.</p>}
 
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <div aria-label="Kanban board">
+        <div aria-label="Kanban board" className="board">
           {columns.map((column) => (
             <BoardColumn
               key={column.status}

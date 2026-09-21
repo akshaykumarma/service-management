@@ -6,7 +6,7 @@ test.describe("Configure a new store end-to-end (007-admin-console, US2)", () =>
     await page.getByLabel("Email").fill(process.env.E2E_SUPER_ADMIN_EMAIL ?? "admin@example.com");
     await page.getByLabel("Password").fill(process.env.E2E_SUPER_ADMIN_PASSWORD ?? "SuperSecret123!");
     await page.getByRole("button", { name: "Log in" }).click();
-    await expect(page).toHaveURL(/\/dashboard/);
+    await expect(page).toHaveURL(/\/board/);
 
     const storeName = `E2E Store ${Date.now()}`;
     await page.goto("/admin/stores");

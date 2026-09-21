@@ -1,19 +1,8 @@
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { getValidSession, SESSION_COOKIE_NAME } from "@/lib/auth/session";
 
-export default async function DashboardPage() {
-  const token = cookies().get(SESSION_COOKIE_NAME)?.value;
-  const session = await getValidSession(token);
-
-  if (!session) {
-    redirect("/login");
-  }
-
-  return (
-    <main>
-      <h1>Welcome, {session.user.name}</h1>
-      <p>Role: {session.user.role}</p>
-    </main>
-  );
+// The (dashboard) group layout already establishes the session (redirecting to /login
+// if absent), so this route's only job is picking a landing page — the board, since
+// that's the actual day-to-day view (Jira-style status columns), not a bare welcome page.
+export default function DashboardPage() {
+  redirect("/board");
 }

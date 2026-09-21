@@ -18,7 +18,7 @@ test.describe("Drag-and-drop status updates on the board (006-dashboard-reportin
     await page.getByLabel("Email").fill(process.env.E2E_SUPER_ADMIN_EMAIL ?? "admin@example.com");
     await page.getByLabel("Password").fill(process.env.E2E_SUPER_ADMIN_PASSWORD ?? "SuperSecret123!");
     await page.getByRole("button", { name: "Log in" }).click();
-    await expect(page).toHaveURL(/\/dashboard/);
+    await expect(page).toHaveURL(/\/board/);
 
     const ticketId = await createTicketAndGetId(page, "E2E DnD");
 
@@ -46,7 +46,7 @@ test.describe("Drag-and-drop status updates on the board (006-dashboard-reportin
     await page.getByLabel("Email").fill(process.env.E2E_SUPER_ADMIN_EMAIL ?? "admin@example.com");
     await page.getByLabel("Password").fill(process.env.E2E_SUPER_ADMIN_PASSWORD ?? "SuperSecret123!");
     await page.getByRole("button", { name: "Log in" }).click();
-    await expect(page).toHaveURL(/\/dashboard/);
+    await expect(page).toHaveURL(/\/board/);
 
     const ticketId = await createTicketAndGetId(page, "E2E DnD Comment");
 
@@ -80,7 +80,7 @@ test.describe("Drag-and-drop status updates on the board (006-dashboard-reportin
     await page.getByLabel("Email").fill(process.env.E2E_SUPER_ADMIN_EMAIL ?? "admin@example.com");
     await page.getByLabel("Password").fill(process.env.E2E_SUPER_ADMIN_PASSWORD ?? "SuperSecret123!");
     await page.getByRole("button", { name: "Log in" }).click();
-    await expect(page).toHaveURL(/\/dashboard/);
+    await expect(page).toHaveURL(/\/board/);
 
     const ticketId = await createTicketAndGetId(page, "E2E DnD Invalid");
 

@@ -6,7 +6,7 @@ test.describe("Message template management (005-customer-notifications, US6)", (
     await page.getByLabel("Email").fill(process.env.E2E_SUPER_ADMIN_EMAIL ?? "admin@example.com");
     await page.getByLabel("Password").fill(process.env.E2E_SUPER_ADMIN_PASSWORD ?? "SuperSecret123!");
     await page.getByRole("button", { name: "Log in" }).click();
-    await expect(page).toHaveURL(/\/dashboard/);
+    await expect(page).toHaveURL(/\/board/);
 
     await page.goto("/admin/templates");
     await expect(page.getByRole("heading", { name: "Completion notification" })).toBeVisible();
