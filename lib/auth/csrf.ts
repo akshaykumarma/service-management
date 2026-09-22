@@ -20,25 +20,43 @@ import { NextRequest, NextResponse } from "next/server";
  * property.
  */
 export function isSameOrigin(request: NextRequest): boolean {
+  // The raw incoming Host header is the most authoritative source for "what host was
+  // this request addressed to" — it's exactly what a reverse proxy (ngrok, Nginx) must
+  // forward correctly for name-based routing to work at all, unlike request.nextUrl,
+  // which is Next.js's own derived value and a synthetic NextRequest in tests never sets
+  // a Host header, so fall back to nextUrl.host there.
+  const expectedHost = request.headers.get("host") ?? request.nextUrl.host;
+
   const origin = request.headers.get("origin");
-  if (origin) {
-    try {
-      return new URL(origin).host === request.nextUrl.host;
-    } catch {
-      return false;
-    }
-  }
-
   const referer = request.headers.get("referer");
-  if (referer) {
-    try {
-      return new URL(referer).host === request.nextUrl.host;
-    } catch {
-      return false;
+  const candidate = origin ?? referer;
+
+  if (!candidate) {
+    if (process.env.NODE_ENV !== "production") {
+      console.warn("[csrf] rejected: no Origin or Referer header present", {
+        expectedHost,
+        path: request.nextUrl.pathname,
+      });
     }
+    return false;
   }
 
-  return false;
+  try {
+    const candidateHost = new URL(candidate).host;
+    const same = candidateHost === expectedHost;
+    if (!same && process.env.NODE_ENV !== "production") {
+      console.warn("[csrf] rejected: host mismatch", {
+        expectedHost,
+        candidateHost,
+        origin,
+        referer,
+        path: request.nextUrl.pathname,
+      });
+    }
+    return same;
+  } catch {
+    return false;
+  }
 }
 
 export function requireSameOrigin(request: NextRequest): NextResponse | null {
