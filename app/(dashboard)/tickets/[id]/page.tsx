@@ -293,7 +293,7 @@ export default function TicketDetailPage() {
       }
       const body = await res.json();
       setReinitiateError(
-        res.status === 403
+        body.error?.code === "forbidden"
           ? "Only an Admin or Super Admin can start a new attempt after a lockout."
           : (DELIVER_ERROR_MESSAGES[body.error?.code] ?? "Could not start a new attempt."),
       );

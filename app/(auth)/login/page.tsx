@@ -32,8 +32,10 @@ export default function LoginPage() {
         setError(
           `Too many failed attempts. Try again in ${body.error.retryAfterSeconds} seconds.`,
         );
-      } else if (res.status === 403) {
+      } else if (body.error?.code === "account_deactivated") {
         setError("This account has been deactivated.");
+      } else if (body.error?.code === "csrf_check_failed") {
+        setError("This request was blocked for security reasons. Please refresh the page and try again.");
       } else {
         setError("Invalid email or password.");
       }
