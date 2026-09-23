@@ -7,6 +7,10 @@ import { GET as auditTrailGET } from "@/app/api/tickets/[id]/audit-trail/route";
 import { PATCH as statusPATCH } from "@/app/api/tickets/[id]/status/route";
 import { GET as summaryGET } from "@/app/api/reports/summary/route";
 import { GET as exportGET } from "@/app/api/reports/export/route";
+import { GET as reportTicketsGET } from "@/app/api/reports/tickets/route";
+import { POST as lineItemsPOST } from "@/app/api/tickets/[id]/line-items/route";
+import { PATCH as taxRatePATCH } from "@/app/api/tickets/[id]/tax-rate/route";
+import { POST as partsPOST } from "@/app/api/catalogue/parts/route";
 
 describe("GET /api/tickets filter query parameters", () => {
   beforeEach(resetDb);
@@ -227,5 +231,92 @@ describe("GET /api/reports/export", () => {
     );
     expect(res.status).toBe(200);
     expect(res.headers.get("content-type")).toContain("application/pdf");
+  });
+});
+
+describe("GET /api/reports/tickets (post-006 product feedback: table view)", () => {
+  beforeEach(resetDb);
+
+  it("403s for a Store Service Manager", async () => {
+    const store = await createStore();
+    const sm = await createUser({ role: "service_manager", storeIds: [store.id], password: "Correct123!" });
+    const cookie = await loginAs(sm.email, "Correct123!");
+
+    const res = await reportTicketsGET(jsonRequest("/api/reports/tickets", { cookie }));
+    expect(res.status).toBe(403);
+  });
+
+  it("200s for an Admin with full ticket details across every status, including a Technician column and computed bill totals", async () => {
+    const store = await createStore();
+    const admin = await createUser({ role: "admin", storeIds: [store.id], password: "Correct123!" });
+    const cookie = await loginAs(admin.email, "Correct123!");
+    const superAdmin = await createUser({ role: "super_admin", password: "Correct123!" });
+    const superAdminCookie = await loginAs(superAdmin.email, "Correct123!");
+    const sm = await createUser({ role: "service_manager", storeIds: [store.id], password: "Correct123!" });
+    const smCookie = await loginAs(sm.email, "Correct123!");
+    const technician = await createUser({ role: "technician", storeIds: [store.id], name: "Tech One" });
+
+    const openTicket = await createTicket({ storeId: store.id, createdBy: sm.id, status: "open" });
+    const cancelledTicket = await createTicket({ storeId: store.id, createdBy: sm.id, status: "in_progress" });
+    await statusPATCH(
+      jsonRequest(`/api/tickets/${cancelledTicket.id}/status`, {
+        method: "PATCH",
+        cookie,
+        body: { toStatus: "cancelled", comment: "customer withdrew" },
+      }),
+      { params: { id: cancelledTicket.id } },
+    );
+
+    const billedTicket = await createTicket({
+      storeId: store.id,
+      createdBy: sm.id,
+      status: "in_progress",
+      assignedTechnicianId: technician.id,
+    });
+    const partRes = await partsPOST(
+      jsonRequest("/api/catalogue/parts", { method: "POST", cookie: superAdminCookie, body: { name: "Belt", unitCost: 100 } }),
+    );
+    const part = (await partRes.json()).part;
+    await lineItemsPOST(
+      jsonRequest(`/api/tickets/${billedTicket.id}/line-items`, {
+        method: "POST",
+        cookie: smCookie,
+        body: { itemType: "part", itemId: part.id, quantity: 2 },
+      }),
+      { params: { id: billedTicket.id } },
+    );
+    await taxRatePATCH(
+      jsonRequest(`/api/tickets/${billedTicket.id}/tax-rate`, { method: "PATCH", cookie: smCookie, body: { taxRate: 10 } }),
+      { params: { id: billedTicket.id } },
+    );
+
+    const res = await reportTicketsGET(jsonRequest("/api/reports/tickets", { cookie }));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    const ids = body.tickets.map((t: { id: string }) => t.id);
+    // Every status is included by default — Open and Cancelled alike, unlike the board's
+    // default view.
+    expect(ids).toEqual(expect.arrayContaining([openTicket.id, cancelledTicket.id, billedTicket.id]));
+
+    const billedRow = body.tickets.find((t: { id: string }) => t.id === billedTicket.id);
+    expect(billedRow.technicianName).toBe("Tech One");
+    expect(billedRow.subtotal).toBe(200);
+    expect(billedRow.taxAmount).toBe(20);
+    expect(billedRow.total).toBe(220);
+
+    const openRow = body.tickets.find((t: { id: string }) => t.id === openTicket.id);
+    expect(openRow.technicianName).toBeNull();
+  });
+
+  it("applies status[] and the shared filter set the same way GET /api/tickets does", async () => {
+    const store = await createStore();
+    const admin = await createUser({ role: "admin", storeIds: [store.id], password: "Correct123!" });
+    const cookie = await loginAs(admin.email, "Correct123!");
+    const openTicket = await createTicket({ storeId: store.id, createdBy: admin.id, status: "open" });
+    await createTicket({ storeId: store.id, createdBy: admin.id, status: "in_progress" });
+
+    const res = await reportTicketsGET(jsonRequest("/api/reports/tickets?status=open", { cookie }));
+    const body = await res.json();
+    expect(body.tickets.map((t: { id: string }) => t.id)).toEqual([openTicket.id]);
   });
 });

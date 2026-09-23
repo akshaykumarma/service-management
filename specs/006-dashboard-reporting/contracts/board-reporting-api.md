@@ -48,6 +48,33 @@ merged and chronologically sorted per `data-model.md`'s Consolidated Audit Trail
 
 ---
 
+## `GET /api/reports/tickets`
+
+**Deviation** (post-v1, per direct product feedback): the Reports page's table view — every
+ticket's full detail, across every status, for a date range (not just first-Completed
+counts the way `/api/reports/summary` is). **Requires**: Admin or Super Admin.
+
+**Query params**: `storeId[]` (optional — omitting it returns every store in the caller's
+scope, same as `GET /api/tickets`), `status[]`, `dateFrom`, `dateTo` (required),
+`ticketId`, `customerName`, `customerPhone`, `machineModel` — the same filter set
+`GET /api/tickets` already offers. Unlike the board, every status is included by default
+(Cancelled too) — a report needs the whole picture, not the board's default working view.
+
+**Responses**:
+```json
+200 {
+  "tickets": [{
+    "id", "ticketNumber", "storeId", "storeName", "customerName", "customerPhone",
+    "machineModel", "issueDescription", "status", "createdAt", "estimatedPickupDate",
+    "technicianName": "string | null",
+    "subtotal": number, "taxAmount": number, "total": number
+  }]
+}
+```
+- `403` — Store Service Manager
+
+---
+
 ## `GET /api/reports/export`
 
 **Requires**: Admin or Super Admin.

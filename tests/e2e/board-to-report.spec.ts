@@ -28,7 +28,7 @@ test.describe("Board to report end-to-end (006-dashboard-reporting, US1-US5)", (
     await expect(page.getByText(partName)).toBeVisible();
 
     await page.goto("/tickets/new");
-    await page.getByLabel("Store").selectOption({ label: storeName });
+    await page.getByLabel("Store", { exact: true }).selectOption({ label: storeName });
     const customerName = `E2E Report Customer ${Date.now()}`;
     await page.getByLabel("Customer name").fill(customerName);
     await page.getByLabel("Customer phone").fill("+919999900003");
@@ -62,7 +62,7 @@ test.describe("Board to report end-to-end (006-dashboard-reporting, US1-US5)", (
     // Reports: the ticket, first-Completed today, must show up in today's summary and revenue.
     const today = new Date().toISOString().slice(0, 10);
     await page.goto("/reports");
-    await page.getByLabel("Store").selectOption({ label: storeName });
+    await page.getByLabel("Store", { exact: true }).selectOption({ label: storeName });
     await page.getByLabel("From", { exact: true }).fill(today);
     await page.getByLabel("To", { exact: true }).fill(today);
     await page.getByRole("button", { name: "Generate report" }).click();
