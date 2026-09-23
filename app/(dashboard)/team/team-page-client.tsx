@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import PasswordInput from "@/components/password-input";
 
 interface StaffUser {
   id: string;
@@ -171,13 +172,12 @@ export default function TeamPageClient({ callerRole }: { callerRole: "super_admi
             </div>
             <div>
               <label htmlFor="password">Password</label>
-              <input
+              <PasswordInput
                 id="password"
-                type="password"
                 autoComplete="new-password"
                 required
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={setPassword}
               />
               <small>{PASSWORD_HINT}</small>
             </div>
@@ -225,12 +225,11 @@ export default function TeamPageClient({ callerRole }: { callerRole: "super_admi
                 )}
                 <td>
                   <label htmlFor={`reset-password-${u.id}`}>New password</label>
-                  <input
+                  <PasswordInput
                     id={`reset-password-${u.id}`}
-                    type="password"
                     autoComplete="new-password"
                     value={resetPasswords[u.id] ?? ""}
-                    onChange={(e) => setResetPasswords((prev) => ({ ...prev, [u.id]: e.target.value }))}
+                    onChange={(value) => setResetPasswords((prev) => ({ ...prev, [u.id]: value }))}
                   />
                   <button
                     type="button"

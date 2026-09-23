@@ -16,7 +16,7 @@ test.describe("Drag-and-drop status updates on the board (006-dashboard-reportin
   test("moves a card via keyboard activation (WCAG 2.1 AA) to a valid next status", async ({ page }) => {
     await page.goto("/login");
     await page.getByLabel("Email").fill(process.env.E2E_SUPER_ADMIN_EMAIL ?? "admin@example.com");
-    await page.getByLabel("Password").fill(process.env.E2E_SUPER_ADMIN_PASSWORD ?? "SuperSecret123!");
+    await page.getByLabel("Password", { exact: true }).fill(process.env.E2E_SUPER_ADMIN_PASSWORD ?? "SuperSecret123!");
     await page.getByRole("button", { name: "Log in" }).click();
     await expect(page).toHaveURL(/\/board/);
 
@@ -44,7 +44,7 @@ test.describe("Drag-and-drop status updates on the board (006-dashboard-reportin
   test("prompts for a mandatory comment when dragging into a comment-required transition", async ({ page }) => {
     await page.goto("/login");
     await page.getByLabel("Email").fill(process.env.E2E_SUPER_ADMIN_EMAIL ?? "admin@example.com");
-    await page.getByLabel("Password").fill(process.env.E2E_SUPER_ADMIN_PASSWORD ?? "SuperSecret123!");
+    await page.getByLabel("Password", { exact: true }).fill(process.env.E2E_SUPER_ADMIN_PASSWORD ?? "SuperSecret123!");
     await page.getByRole("button", { name: "Log in" }).click();
     await expect(page).toHaveURL(/\/board/);
 
@@ -78,7 +78,7 @@ test.describe("Drag-and-drop status updates on the board (006-dashboard-reportin
   test("rejects an invalid transition and the card returns to its original column", async ({ page }) => {
     await page.goto("/login");
     await page.getByLabel("Email").fill(process.env.E2E_SUPER_ADMIN_EMAIL ?? "admin@example.com");
-    await page.getByLabel("Password").fill(process.env.E2E_SUPER_ADMIN_PASSWORD ?? "SuperSecret123!");
+    await page.getByLabel("Password", { exact: true }).fill(process.env.E2E_SUPER_ADMIN_PASSWORD ?? "SuperSecret123!");
     await page.getByRole("button", { name: "Log in" }).click();
     await expect(page).toHaveURL(/\/board/);
 

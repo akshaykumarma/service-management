@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import PasswordInput from "@/components/password-input";
 
 export default function ResetPasswordPage({ params }: { params: { token: string } }) {
   const router = useRouter();
@@ -35,15 +36,12 @@ export default function ResetPasswordPage({ params }: { params: { token: string 
       <form onSubmit={handleSubmit} noValidate>
         <div>
           <label htmlFor="newPassword">New password</label>
-          <input
+          <PasswordInput
             id="newPassword"
-            name="newPassword"
-            type="password"
             autoComplete="new-password"
-            minLength={8}
             required
             value={newPassword}
-            onChange={(e) => setNewPassword(e.target.value)}
+            onChange={setNewPassword}
           />
         </div>
         {error && (

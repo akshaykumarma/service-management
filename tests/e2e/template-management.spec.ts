@@ -4,7 +4,7 @@ test.describe("Message template management (005-customer-notifications, US6)", (
   test("Super Admin edits a template, sees it pending, and previews it before approval", async ({ page }) => {
     await page.goto("/login");
     await page.getByLabel("Email").fill(process.env.E2E_SUPER_ADMIN_EMAIL ?? "admin@example.com");
-    await page.getByLabel("Password").fill(process.env.E2E_SUPER_ADMIN_PASSWORD ?? "SuperSecret123!");
+    await page.getByLabel("Password", { exact: true }).fill(process.env.E2E_SUPER_ADMIN_PASSWORD ?? "SuperSecret123!");
     await page.getByRole("button", { name: "Log in" }).click();
     await expect(page).toHaveURL(/\/board/);
 

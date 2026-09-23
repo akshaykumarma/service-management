@@ -180,7 +180,7 @@ export default function NewTicketPage() {
           />
         </div>
         <div>
-          <label htmlFor="estimatedPickupDate">Estimated pickup date (optional)</label>
+          <label htmlFor="estimatedPickupDate">Estimated delivery date (optional)</label>
           <input
             id="estimatedPickupDate"
             type="date"

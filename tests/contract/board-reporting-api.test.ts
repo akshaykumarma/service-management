@@ -56,6 +56,18 @@ describe("GET /api/tickets filter query parameters", () => {
     expect(body.tickets.map((t: { id: string }) => t.id)).toEqual([matching.id]);
   });
 
+  it("filters by customerPhone", async () => {
+    const store = await createStore();
+    const sm = await createUser({ role: "service_manager", storeIds: [store.id], password: "Correct123!" });
+    const matching = await createTicket({ storeId: store.id, createdBy: sm.id, status: "open", customerPhone: "+919876543210" });
+    await createTicket({ storeId: store.id, createdBy: sm.id, status: "open", customerPhone: "+911111111111" });
+    const cookie = await loginAs(sm.email, "Correct123!");
+
+    const res = await ticketsGET(jsonRequest("/api/tickets?customerPhone=9876543210", { cookie }));
+    const body = await res.json();
+    expect(body.tickets.map((t: { id: string }) => t.id)).toEqual([matching.id]);
+  });
+
   it("restricts storeId[] to the caller's visible stores (FR-010)", async () => {
     const storeA = await createStore();
     const storeB = await createStore();

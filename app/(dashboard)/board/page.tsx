@@ -13,6 +13,7 @@ import {
   type DragEndEvent,
 } from "@dnd-kit/core";
 import { createBoardKeyboardCoordinateGetter } from "@/lib/board/keyboard-coordinates";
+import { formatDate } from "@/lib/format/date";
 
 interface TicketCard {
   id: string;
@@ -76,7 +77,7 @@ function TicketCardItem({ ticket }: { ticket: TicketCard }) {
       </a>
       <div>{ticket.customerName}</div>
       <div>{ticket.machineModel}</div>
-      <div>Created {new Date(ticket.createdAt).toLocaleDateString()}</div>
+      <div>Created {formatDate(ticket.createdAt)}</div>
       <div>{ticket.daysOpen} day(s) open</div>
     </li>
   );
@@ -125,6 +126,7 @@ export default function BoardPage() {
   const [dateTo, setDateTo] = useState("");
   const [ticketIdFilter, setTicketIdFilter] = useState("");
   const [customerNameFilter, setCustomerNameFilter] = useState("");
+  const [customerPhoneFilter, setCustomerPhoneFilter] = useState("");
   const [machineModelFilter, setMachineModelFilter] = useState("");
 
   useEffect(() => {
@@ -156,6 +158,7 @@ export default function BoardPage() {
     if (dateTo) params.set("dateTo", dateTo);
     if (ticketIdFilter) params.set("ticketId", ticketIdFilter);
     if (customerNameFilter) params.set("customerName", customerNameFilter);
+    if (customerPhoneFilter) params.set("customerPhone", customerPhoneFilter);
     if (machineModelFilter) params.set("machineModel", machineModelFilter);
 
     const res = await fetch(`/api/tickets?${params.toString()}`);
@@ -170,6 +173,7 @@ export default function BoardPage() {
     dateTo,
     ticketIdFilter,
     customerNameFilter,
+    customerPhoneFilter,
     machineModelFilter,
   ]);
 
@@ -275,6 +279,14 @@ export default function BoardPage() {
               id="customerNameFilter"
               value={customerNameFilter}
               onChange={(e) => setCustomerNameFilter(e.target.value)}
+            />
+          </div>
+          <div>
+            <label htmlFor="customerPhoneFilter">Customer mobile number</label>
+            <input
+              id="customerPhoneFilter"
+              value={customerPhoneFilter}
+              onChange={(e) => setCustomerPhoneFilter(e.target.value)}
             />
           </div>
           <div>

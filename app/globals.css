@@ -163,6 +163,23 @@ button[type="button"]:hover:not(:disabled) {
   background: var(--color-bg);
 }
 
+.password-input {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.password-input input {
+  flex: 1;
+  min-width: 0;
+}
+
+.password-input__toggle {
+  padding: 0 14px;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
 /* --- Alerts / status messages --- */
 
 p[role="alert"] {
@@ -321,9 +338,11 @@ dd {
 
 .board {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 16px;
   align-items: flex-start;
+  overflow-x: auto;
+  padding-bottom: 8px;
 }
 
 .board-column {

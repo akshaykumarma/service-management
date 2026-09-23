@@ -9,7 +9,7 @@ test.describe("Complete and deliver (005-customer-notifications, US1+US3)", () =
 
     await page.goto("/login");
     await page.getByLabel("Email").fill(process.env.E2E_SUPER_ADMIN_EMAIL ?? "admin@example.com");
-    await page.getByLabel("Password").fill(process.env.E2E_SUPER_ADMIN_PASSWORD ?? "SuperSecret123!");
+    await page.getByLabel("Password", { exact: true }).fill(process.env.E2E_SUPER_ADMIN_PASSWORD ?? "SuperSecret123!");
     await page.getByRole("button", { name: "Log in" }).click();
     await expect(page).toHaveURL(/\/board/);
 

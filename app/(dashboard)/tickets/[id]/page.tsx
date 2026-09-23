@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import { formatDate, formatDateTime } from "@/lib/format/date";
 
 interface TicketDetail {
   id: string;
@@ -691,7 +692,7 @@ export default function TicketDetailPage() {
           {statusHistory.map((entry, i) => (
             <li key={i}>
               {entry.fromStatus ? `${entry.fromStatus} → ${entry.toStatus}` : `Created (${entry.toStatus})`} by{" "}
-              {entry.actorName} at {new Date(entry.createdAt).toLocaleString()}
+              {entry.actorName} at {formatDateTime(entry.createdAt)}
               {entry.comment ? ` — "${entry.comment}"` : ""}
             </li>
           ))}
@@ -705,7 +706,7 @@ export default function TicketDetailPage() {
             {serviceHistory.entries.map((entry) => (
               <li key={entry.id}>
                 <a href={`/tickets/${entry.id}`}>{entry.ticketNumber}</a> — {entry.status} (
-                {new Date(entry.createdAt).toLocaleDateString()})
+                {formatDate(entry.createdAt)})
               </li>
             ))}
           </ul>
@@ -735,7 +736,7 @@ export default function TicketDetailPage() {
                   <td>{n.type}</td>
                   <td>{n.recipientPhone}</td>
                   <td>{n.status}</td>
-                  <td>{new Date(n.sentAt).toLocaleString()}</td>
+                  <td>{formatDateTime(n.sentAt)}</td>
                 </tr>
               ))}
             </tbody>
@@ -748,13 +749,13 @@ export default function TicketDetailPage() {
         {otpOutcome === null && <p>No delivery verification outcome recorded yet.</p>}
         {otpOutcome?.method === "otp" && (
           <p>
-            Verified by {otpOutcome.verifiedBy ?? "unknown"} at {new Date(otpOutcome.verifiedAt).toLocaleString()}.
+            Verified by {otpOutcome.verifiedBy ?? "unknown"} at {formatDateTime(otpOutcome.verifiedAt)}.
           </p>
         )}
         {otpOutcome?.method === "override" && (
           <p>
             Delivery overridden by {otpOutcome.overriddenBy ?? "unknown"} at{" "}
-            {new Date(otpOutcome.createdAt).toLocaleString()} — reason: &quot;{otpOutcome.reason}&quot;
+            {formatDateTime(otpOutcome.createdAt)} — reason: &quot;{otpOutcome.reason}&quot;
           </p>
         )}
       </section>
@@ -773,7 +774,7 @@ export default function TicketDetailPage() {
           <tbody>
             {auditTrail.map((entry, i) => (
               <tr key={i}>
-                <td>{new Date(entry.timestamp).toLocaleString()}</td>
+                <td>{formatDateTime(entry.timestamp)}</td>
                 <td>{entry.actor ?? "System"}</td>
                 <td>{entry.description}</td>
               </tr>

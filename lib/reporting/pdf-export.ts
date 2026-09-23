@@ -1,6 +1,7 @@
 import PDFDocument from "pdfkit";
 import type { TicketCard } from "@/lib/board/card-shape";
 import type { SummaryReport } from "@/lib/reporting/summary";
+import { formatDate } from "@/lib/format/date";
 
 /** `pdfkit`: programmatic, imperative PDF construction — no headless browser (research.md §5). */
 function collectPdf(build: (doc: PDFKit.PDFDocument) => void): Promise<Buffer> {
@@ -27,9 +28,9 @@ export function ticketListToPdf(tickets: TicketCard[]): Promise<Buffer> {
     }
     for (const t of tickets) {
       doc.text(
-        `${t.ticketNumber} — ${t.customerName} — ${t.machineModel} — ${t.status} — created ${t.createdAt
-          .toISOString()
-          .slice(0, 10)} — ${t.daysOpen} day(s) open`,
+        `${t.ticketNumber} — ${t.customerName} — ${t.machineModel} — ${t.status} — created ${formatDate(
+          t.createdAt,
+        )} — ${t.daysOpen} day(s) open`,
       );
     }
   });

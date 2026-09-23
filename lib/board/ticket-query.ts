@@ -12,6 +12,7 @@ export interface TicketFilters {
   dateTo?: string;
   ticketId?: string;
   customerName?: string;
+  customerPhone?: string;
   machineModel?: string;
   /** 003's own pre-existing default view (exclude Cancelled unless explicitly requested);
    * overridden by an explicit `statuses` filter that itself asks for "cancelled". */
@@ -72,6 +73,9 @@ export async function queryScopedTickets(
   }
   if (filters.customerName) {
     conditions.push(ilike(tickets.customerName, `%${filters.customerName}%`));
+  }
+  if (filters.customerPhone) {
+    conditions.push(ilike(tickets.customerPhone, `%${filters.customerPhone}%`));
   }
   if (filters.machineModel) {
     conditions.push(ilike(tickets.machineModel, `%${filters.machineModel}%`));

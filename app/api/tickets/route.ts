@@ -145,6 +145,7 @@ export async function GET(request: NextRequest) {
     dateTo: params.get("dateTo") ?? undefined,
     ticketId: params.get("ticketId") ?? undefined,
     customerName: params.get("customerName") ?? undefined,
+    customerPhone: params.get("customerPhone") ?? undefined,
     machineModel: params.get("machineModel") ?? undefined,
     includeCancelled: params.get("includeCancelled") === "true",
   });

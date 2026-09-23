@@ -4,7 +4,7 @@ test.describe("Apply parts to ticket", () => {
   test("adding a part to an in-progress ticket updates the live bill display", async ({ page }) => {
     await page.goto("/login");
     await page.getByLabel("Email").fill(process.env.E2E_SUPER_ADMIN_EMAIL ?? "admin@example.com");
-    await page.getByLabel("Password").fill(process.env.E2E_SUPER_ADMIN_PASSWORD ?? "SuperSecret123!");
+    await page.getByLabel("Password", { exact: true }).fill(process.env.E2E_SUPER_ADMIN_PASSWORD ?? "SuperSecret123!");
     await page.getByRole("button", { name: "Log in" }).click();
     await expect(page).toHaveURL(/\/board/);
 
