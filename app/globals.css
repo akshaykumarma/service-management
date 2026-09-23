@@ -337,6 +337,11 @@ dd {
   color: var(--color-text);
 }
 
+.app-header__nav a.active {
+  background: var(--color-primary-light);
+  color: var(--color-primary-dark);
+}
+
 .app-header__user {
   display: flex;
   align-items: center;
@@ -390,11 +395,13 @@ dd {
 .board-column ul {
   list-style: none;
   margin: 0;
-  padding: 0;
+  padding: 0 4px 0 0;
   display: flex;
   flex-direction: column;
   gap: 10px;
   min-height: 40px;
+  max-height: calc(100vh - 320px);
+  overflow-y: auto;
 }
 
 .board-column.status-open {
@@ -445,14 +452,222 @@ dd {
   margin-top: 2px;
 }
 
-.board-filters {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 12px 16px;
+/* --- Board filter toolbar --- */
+
+.board-toolbar {
+  padding: 12px 16px;
+  position: sticky;
+  top: 64px;
+  z-index: 5;
 }
 
-.board-filters > div {
+.board-toolbar__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px 14px;
+}
+
+.board-toolbar__heading {
+  margin: 0;
+  font-size: 0.95rem;
+  align-self: center;
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+}
+
+.board-toolbar__field {
+  min-width: 150px;
+}
+
+.board-toolbar__field label {
+  margin-bottom: 3px;
+}
+
+.board-toolbar__field input,
+.board-toolbar__field select {
+  padding: 7px 10px;
+  font-size: 0.88rem;
+}
+
+.board-toolbar__checkbox {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  white-space: nowrap;
   margin-bottom: 0;
+  padding-bottom: 8px;
+}
+
+.board-toolbar__spacer {
+  flex: 1 1 auto;
+}
+
+button.board-toolbar__more-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 7px 12px;
+}
+
+button.board-toolbar__more-toggle:hover {
+  background: var(--color-bg);
+}
+
+button.board-toolbar__more-toggle[aria-expanded="true"] {
+  background: var(--color-primary-light);
+  border-color: var(--color-primary);
+  color: var(--color-primary-dark);
+}
+
+.board-toolbar__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--color-primary);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+button.board-toolbar__clear {
+  background: transparent;
+  border: none;
+  color: var(--color-primary);
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 7px 4px;
+}
+
+button.board-toolbar__clear:hover {
+  text-decoration: underline;
+  background: transparent;
+}
+
+.board-toolbar__more {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border);
+}
+
+/* --- Multi-select dropdown (checkbox popover) --- */
+
+.multiselect {
+  position: relative;
+  min-width: 150px;
+}
+
+.multiselect__label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  margin-bottom: 3px;
+}
+
+button.multiselect__button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  font-weight: 500;
+  font-size: 0.88rem;
+  padding: 7px 10px;
+  text-align: left;
+}
+
+button.multiselect__button:hover {
+  background: var(--color-bg);
+}
+
+.multiselect__summary--empty {
+  color: var(--color-text-muted);
+  font-weight: 400;
+}
+
+.multiselect__chevron {
+  color: var(--color-text-muted);
+  font-size: 0.7rem;
+}
+
+.multiselect__panel {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 20;
+  min-width: 220px;
+  max-height: 260px;
+  overflow-y: auto;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  box-shadow: var(--shadow-md);
+  padding: 6px;
+}
+
+.multiselect__option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 4px;
+  font-size: 0.88rem;
+  font-weight: 400;
+  color: var(--color-text);
+  cursor: pointer;
+  margin-bottom: 0;
+}
+
+.multiselect__option:hover {
+  background: var(--color-bg);
+}
+
+.multiselect__option input {
+  width: auto;
+  margin: 0;
+}
+
+.multiselect__empty {
+  padding: 8px;
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+}
+
+button.multiselect__clear {
+  width: 100%;
+  margin-top: 4px;
+  background: transparent;
+  border: none;
+  border-top: 1px solid var(--color-border);
+  border-radius: 0;
+  color: var(--color-primary);
+  font-size: 0.82rem;
+  padding: 8px 8px 4px;
+}
+
+button.multiselect__clear:hover {
+  background: transparent;
+  text-decoration: underline;
 }
 
 /* --- Auth pages (login / forgot / reset password) --- */

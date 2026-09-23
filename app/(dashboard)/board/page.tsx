@@ -14,6 +14,7 @@ import {
 } from "@dnd-kit/core";
 import { createBoardKeyboardCoordinateGetter } from "@/lib/board/keyboard-coordinates";
 import { formatDate } from "@/lib/format/date";
+import MultiSelectDropdown from "@/components/multi-select-dropdown";
 
 interface TicketCard {
   id: string;
@@ -47,9 +48,14 @@ const CANCELLED_COLUMN = { status: "cancelled", label: "Cancelled" };
 
 const ALL_STATUSES = ["open", "in_progress", "on_hold", "completed", "delivered", "cancelled"];
 
-function selectedOptions(e: React.ChangeEvent<HTMLSelectElement>): string[] {
-  return Array.from(e.target.selectedOptions).map((o) => o.value);
-}
+const STATUS_LABELS: Record<string, string> = {
+  open: "Open",
+  in_progress: "In Progress",
+  on_hold: "On Hold",
+  completed: "Completed",
+  delivered: "Delivered",
+  cancelled: "Cancelled",
+};
 
 const TRANSITION_ERROR_MESSAGES: Record<string, string> = {
   invalid_transition: "That status change isn't allowed from the current status.",
@@ -135,6 +141,7 @@ export default function BoardPage() {
   const [customerPhoneFilter, setCustomerPhoneFilter] = useState("");
   const [machineModelFilter, setMachineModelFilter] = useState("");
   const [technicianFilter, setTechnicianFilter] = useState("");
+  const [moreFiltersOpen, setMoreFiltersOpen] = useState(false);
 
   useEffect(() => {
     fetch("/api/stores")
@@ -159,6 +166,28 @@ export default function BoardPage() {
 
   const columns = includeCancelled ? [...COLUMNS, CANCELLED_COLUMN] : COLUMNS;
   const columnOrder = columns.map((c) => c.status);
+
+  const moreFilterValues = [dateFrom, dateTo, ticketIdFilter, customerNameFilter, customerPhoneFilter, machineModelFilter];
+  const moreFiltersActiveCount = moreFilterValues.filter(Boolean).length;
+  const totalActiveFilterCount =
+    selectedStoreIds.length +
+    selectedStatuses.length +
+    (technicianFilter ? 1 : 0) +
+    moreFiltersActiveCount +
+    (includeCancelled ? 1 : 0);
+
+  function clearAllFilters() {
+    setSelectedStoreIds([]);
+    setSelectedStatuses([]);
+    setTechnicianFilter("");
+    setDateFrom("");
+    setDateTo("");
+    setTicketIdFilter("");
+    setCustomerNameFilter("");
+    setCustomerPhoneFilter("");
+    setMachineModelFilter("");
+    setIncludeCancelled(false);
+  }
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -252,76 +281,31 @@ export default function BoardPage() {
     <main>
       <h1>Board</h1>
 
-      <section aria-labelledby="filters-heading">
-        <h2 id="filters-heading">Filters</h2>
-        <div className="board-filters">
-          <div>
-            <label htmlFor="storeFilter">Store(s)</label>
-            <select
-              id="storeFilter"
-              multiple
-              value={selectedStoreIds}
-              onChange={(e) => setSelectedStoreIds(selectedOptions(e))}
-            >
-              {storeOptions.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label htmlFor="statusFilter">Status</label>
-            <select
-              id="statusFilter"
-              multiple
-              value={selectedStatuses}
-              onChange={(e) => setSelectedStatuses(selectedOptions(e))}
-            >
-              {ALL_STATUSES.map((s) => (
-                <option key={s} value={s}>
-                  {s.replace("_", " ")}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label htmlFor="dateFrom">Created from</label>
-            <input id="dateFrom" type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
-          </div>
-          <div>
-            <label htmlFor="dateTo">Created to</label>
-            <input id="dateTo" type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
-          </div>
-          <div>
-            <label htmlFor="ticketIdFilter">Ticket ID</label>
-            <input id="ticketIdFilter" value={ticketIdFilter} onChange={(e) => setTicketIdFilter(e.target.value)} />
-          </div>
-          <div>
-            <label htmlFor="customerNameFilter">Customer name</label>
-            <input
-              id="customerNameFilter"
-              value={customerNameFilter}
-              onChange={(e) => setCustomerNameFilter(e.target.value)}
-            />
-          </div>
-          <div>
-            <label htmlFor="customerPhoneFilter">Customer mobile number</label>
-            <input
-              id="customerPhoneFilter"
-              value={customerPhoneFilter}
-              onChange={(e) => setCustomerPhoneFilter(e.target.value)}
-            />
-          </div>
-          <div>
-            <label htmlFor="machineModelFilter">Machine model</label>
-            <input
-              id="machineModelFilter"
-              value={machineModelFilter}
-              onChange={(e) => setMachineModelFilter(e.target.value)}
-            />
-          </div>
-          <div>
+      <section aria-labelledby="filters-heading" className="board-toolbar">
+        <div className="board-toolbar__row">
+          <h2 id="filters-heading" className="board-toolbar__heading">
+            Filters
+          </h2>
+
+          <MultiSelectDropdown
+            id="storeFilter"
+            label="Store(s)"
+            placeholder="All stores"
+            options={storeOptions.map((s) => ({ id: s.id, label: s.name }))}
+            selected={selectedStoreIds}
+            onChange={setSelectedStoreIds}
+          />
+
+          <MultiSelectDropdown
+            id="statusFilter"
+            label="Status"
+            placeholder="All statuses"
+            options={ALL_STATUSES.map((s) => ({ id: s, label: STATUS_LABELS[s] }))}
+            selected={selectedStatuses}
+            onChange={setSelectedStatuses}
+          />
+
+          <div className="board-toolbar__field">
             <label htmlFor="technicianFilter">Technician</label>
             <select id="technicianFilter" value={technicianFilter} onChange={(e) => setTechnicianFilter(e.target.value)}>
               <option value="">All technicians</option>
@@ -332,20 +316,79 @@ export default function BoardPage() {
               ))}
             </select>
           </div>
-        </div>
-      </section>
 
-      <div>
-        <label htmlFor="includeCancelled">
-          <input
-            id="includeCancelled"
-            type="checkbox"
-            checked={includeCancelled}
-            onChange={(e) => setIncludeCancelled(e.target.checked)}
-          />
-          Include cancelled
-        </label>
-      </div>
+          <label className="board-toolbar__checkbox" htmlFor="includeCancelled">
+            <input
+              id="includeCancelled"
+              type="checkbox"
+              checked={includeCancelled}
+              onChange={(e) => setIncludeCancelled(e.target.checked)}
+            />
+            Include cancelled
+          </label>
+
+          <div className="board-toolbar__spacer" />
+
+          <button
+            type="button"
+            className="board-toolbar__more-toggle"
+            aria-expanded={moreFiltersOpen}
+            aria-controls="board-more-filters"
+            onClick={() => setMoreFiltersOpen((prev) => !prev)}
+          >
+            More filters
+            {moreFiltersActiveCount > 0 && <span className="board-toolbar__badge">{moreFiltersActiveCount}</span>}
+            <span aria-hidden="true">{moreFiltersOpen ? "▴" : "▾"}</span>
+          </button>
+
+          {totalActiveFilterCount > 0 && (
+            <button type="button" className="board-toolbar__clear" onClick={clearAllFilters}>
+              Clear filters
+            </button>
+          )}
+        </div>
+
+        {moreFiltersOpen && (
+          <div id="board-more-filters" className="board-toolbar__more">
+            <div className="board-toolbar__field">
+              <label htmlFor="dateFrom">Created from</label>
+              <input id="dateFrom" type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+            </div>
+            <div className="board-toolbar__field">
+              <label htmlFor="dateTo">Created to</label>
+              <input id="dateTo" type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+            </div>
+            <div className="board-toolbar__field">
+              <label htmlFor="ticketIdFilter">Ticket ID</label>
+              <input id="ticketIdFilter" value={ticketIdFilter} onChange={(e) => setTicketIdFilter(e.target.value)} />
+            </div>
+            <div className="board-toolbar__field">
+              <label htmlFor="customerNameFilter">Customer name</label>
+              <input
+                id="customerNameFilter"
+                value={customerNameFilter}
+                onChange={(e) => setCustomerNameFilter(e.target.value)}
+              />
+            </div>
+            <div className="board-toolbar__field">
+              <label htmlFor="customerPhoneFilter">Customer mobile number</label>
+              <input
+                id="customerPhoneFilter"
+                value={customerPhoneFilter}
+                onChange={(e) => setCustomerPhoneFilter(e.target.value)}
+              />
+            </div>
+            <div className="board-toolbar__field">
+              <label htmlFor="machineModelFilter">Machine model</label>
+              <input
+                id="machineModelFilter"
+                value={machineModelFilter}
+                onChange={(e) => setMachineModelFilter(e.target.value)}
+              />
+            </div>
+          </div>
+        )}
+      </section>
 
       {error && (
         <p role="alert" aria-live="assertive">
