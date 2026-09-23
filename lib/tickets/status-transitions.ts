@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { statusHistory, tickets } from "@/lib/db/schema";
 import { triggerCompletionNotification } from "@/lib/notifications/send-completion";
+import { triggerInvoiceNotification } from "@/lib/notifications/send-invoice";
 
 export type TicketStatus = "open" | "in_progress" | "on_hold" | "completed" | "delivered" | "cancelled";
 export type StaffRole = "super_admin" | "admin" | "service_manager" | "technician";
@@ -105,6 +106,13 @@ export async function applyStatusTransition(input: {
 
   if (toStatus === "completed") {
     await triggerCompletionNotification(ticket.id);
+  }
+
+  // post-005 product feedback: an invoice PDF + WhatsApp link at delivery, the same
+  // "hook the one write path" pattern as completion's notification above — covers both
+  // the OTP-verify and Admin-override routes into "delivered" without a second call site.
+  if (toStatus === "delivered") {
+    await triggerInvoiceNotification(ticket.id);
   }
 
   return { updatedTicket, historyEntry };

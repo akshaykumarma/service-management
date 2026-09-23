@@ -28,6 +28,40 @@ Initiates delivery verification. **Requires**: ticket status is "Completed"; no 
 - `400 { code: "code_expired" }` — FR-011
 - `423 { code: "locked" }` — 3rd failure just occurred, or already locked
 
+**Deviation** (post-v1, per direct product feedback): a successful `200` here (and
+equally `POST /api/tickets/:id/deliver/override`'s success path — both funnel through
+`applyStatusTransition`, `lib/tickets/status-transitions.ts`) also queues an "invoice"
+WhatsApp message to the customer, on the ticket's first delivery only (never again on a
+later re-delivery). See `GET /api/invoices/:token` and `GET /api/tickets/:id/invoice`
+below.
+
+---
+
+## `GET /api/invoices/:token`
+
+**Deviation** (post-v1, per direct product feedback): the invoice PDF a Delivered
+ticket's WhatsApp message links to. **Public — no session required**, since the
+recipient is the customer, not a staff member; `:token` is a stable, per-ticket,
+non-guessable value minted once at first delivery (`lib/billing/invoice.ts`), not tied
+to any account.
+
+**Responses**:
+- `200` — `Content-Type: application/pdf`, `Content-Disposition: inline` (opens directly
+  in a mobile browser's PDF viewer rather than forcing a download)
+- `404` — no such token
+
+---
+
+## `GET /api/tickets/:id/invoice`
+
+The same PDF, for staff who already have access to the ticket — an alternative to
+needing the customer's WhatsApp link. **Requires**: caller's scope includes this
+ticket's store (`assertTicketAccess`, same as every other ticket-scoped route).
+
+**Responses**:
+- `200` — `Content-Type: application/pdf`, `Content-Disposition: attachment`
+- `404` — no such ticket, or caller's scope excludes it
+
 ---
 
 ## `POST /api/tickets/:id/deliver/resend`

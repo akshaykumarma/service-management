@@ -274,7 +274,9 @@ export const ticketLineItems = pgTable("ticket_line_items", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
-export const notificationTypeEnum = pgEnum("notification_type", ["completion", "otp"]);
+// "invoice" (post-005 product feedback): the WhatsApp message sent at delivery with a
+// link to the invoice PDF — see lib/notifications/send-invoice.ts.
+export const notificationTypeEnum = pgEnum("notification_type", ["completion", "otp", "invoice"]);
 export const notificationStatusEnum = pgEnum("notification_status", ["sent", "delivered", "failed"]);
 
 export const notifications = pgTable("notifications", {
@@ -354,5 +356,30 @@ export const manualNotificationConfirmations = pgTable(
     notificationUnique: uniqueIndex("manual_notification_confirmations_notification_id_unique_idx").on(
       table.notificationId,
     ),
+  }),
+);
+
+/**
+ * One row per ticket (post-005 product feedback): the stable, unauthenticated token a
+ * Delivered ticket's invoice-download link (app/api/invoices/[token]/route.ts) is keyed
+ * by. Minted once (lib/billing/invoice.ts) and reused — the bill it points to is already
+ * locked by the time a ticket reaches Delivered, so there's never a reason to rotate it.
+ * Stored in plaintext, unlike password_reset_tokens: this token only grants read access
+ * to one ticket's own already-delivered invoice (the same data a store's staff can
+ * already see on the authenticated ticket detail page), not an account-takeover risk.
+ */
+export const ticketInvoices = pgTable(
+  "ticket_invoices",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    ticketId: uuid("ticket_id")
+      .notNull()
+      .references(() => tickets.id, { onDelete: "cascade" }),
+    token: text("token").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    ticketUnique: uniqueIndex("ticket_invoices_ticket_id_unique_idx").on(table.ticketId),
+    tokenUnique: uniqueIndex("ticket_invoices_token_unique_idx").on(table.token),
   }),
 );

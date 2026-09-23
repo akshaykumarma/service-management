@@ -7,7 +7,7 @@ export const SEND_WHATSAPP_MESSAGE_QUEUE = "send-whatsapp-message";
 
 export interface SendWhatsAppMessageJobData {
   ticketId: string | null;
-  type: "completion" | "otp";
+  type: "completion" | "otp" | "invoice";
   recipientPhone: string;
   /** The real per-message values (e.g. the actual OTP code) substituted into Meta's
    * pre-approved template for the actual send — never persisted as-is. */

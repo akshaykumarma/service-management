@@ -10,7 +10,8 @@ Copy `.env.example` to `.env` and fill in:
 - `SESSION_IDLE_TIMEOUT_HOURS` — defaults to 8 if unset
 - `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASSWORD` / `SMTP_FROM` — any
   SMTP-compatible provider for password-reset email delivery
-- `APP_BASE_URL` — used to build password-reset links (e.g. `https://your-domain.example`
+- `APP_BASE_URL` — used to build password-reset links, and (post-005 product feedback)
+  the invoice-download link sent by WhatsApp at delivery (e.g. `https://your-domain.example`
   in production, behind the Nginx/TLS termination the constitution's deployment target
   describes)
 

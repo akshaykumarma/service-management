@@ -540,6 +540,11 @@ export default function TicketDetailPage() {
           <dt>Status</dt>
           <dd>{ticket.status}</dd>
         </dl>
+        {ticket.status === "delivered" && (
+          <p>
+            <a href={`/api/tickets/${ticket.id}/invoice`}>Download invoice</a>
+          </p>
+        )}
       </section>
 
       <section aria-labelledby="technician-heading">
