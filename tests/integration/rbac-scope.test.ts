@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { resetDb } from "../helpers/db";
-import { createStore, createUser } from "../helpers/factories";
+import { createStore, createTicket, createUser } from "../helpers/factories";
 import { jsonRequest, extractSessionCookie } from "../helpers/http";
 import { POST as loginPOST } from "@/app/api/auth/login/route";
 import { GET as sessionGET } from "@/app/api/auth/session/route";
-import { assertAccess, requireSuperAdmin, AccessDeniedError } from "@/lib/auth/rbac";
+import { assertAccess, assertTicketAccess, requireSuperAdmin, AccessDeniedError } from "@/lib/auth/rbac";
 
 describe("RBAC scoping (User Story 2)", () => {
   beforeEach(resetDb);
@@ -85,5 +85,41 @@ describe("RBAC scoping (User Story 2)", () => {
     const smSessionRes = await sessionGET(jsonRequest("/api/auth/session", { cookie: smCookie }));
     const smBody = await smSessionRes.json();
     expect(smBody.user.storeIds).toEqual([storeA.id]);
+  });
+
+  it("assertTicketAccess additionally restricts a Technician to only their assigned ticket, while every other role only needs store scope", async () => {
+    const store = await createStore();
+    const sm = await createUser({ role: "service_manager", storeIds: [store.id] });
+    const technician = await createUser({ role: "technician", storeIds: [store.id] });
+    const otherTechnician = await createUser({ role: "technician", storeIds: [store.id] });
+    await createTicket({ storeId: store.id, createdBy: sm.id, assignedTechnicianId: technician.id });
+
+    const technicianSession = {
+      id: technician.id,
+      name: "x",
+      email: technician.email,
+      role: "technician" as const,
+      active: true,
+    };
+    const otherTechnicianSession = {
+      id: otherTechnician.id,
+      name: "x",
+      email: otherTechnician.email,
+      role: "technician" as const,
+      active: true,
+    };
+    const smSession = { id: sm.id, name: "x", email: sm.email, role: "service_manager" as const, active: true };
+
+    await expect(
+      assertTicketAccess(technicianSession, { storeId: store.id, assignedTechnicianId: technician.id }),
+    ).resolves.toBeUndefined();
+    await expect(
+      assertTicketAccess(otherTechnicianSession, { storeId: store.id, assignedTechnicianId: technician.id }),
+    ).rejects.toBeInstanceOf(AccessDeniedError);
+    // Store scope alone is still sufficient for every other role — the ticket's
+    // assignment is a Technician-only restriction.
+    await expect(
+      assertTicketAccess(smSession, { storeId: store.id, assignedTechnicianId: technician.id }),
+    ).resolves.toBeUndefined();
   });
 });

@@ -4,7 +4,7 @@ import { db } from "@/lib/db/client";
 import { tickets } from "@/lib/db/schema";
 import { requireAuthenticatedSession } from "@/lib/auth/require-session";
 import { requireSameOrigin } from "@/lib/auth/csrf";
-import { assertAccess, AccessDeniedError, requireAdminOrAbove } from "@/lib/auth/rbac";
+import { assertTicketAccess, AccessDeniedError, requireAdminOrAbove } from "@/lib/auth/rbac";
 import { hasActiveOtpAttempt, issueOtp } from "@/lib/delivery/otp";
 import { enqueueOtpSend } from "@/lib/delivery/send-otp-message";
 
@@ -28,7 +28,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
   }
 
   try {
-    await assertAccess(caller, ticket.storeId);
+    await assertTicketAccess(caller, ticket);
   } catch (err) {
     if (err instanceof AccessDeniedError) {
       return NextResponse.json({ error: { code: "not_found", message: "No such ticket." } }, { status: 404 });

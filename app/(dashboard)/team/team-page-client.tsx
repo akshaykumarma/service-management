@@ -8,7 +8,7 @@ interface StaffUser {
   name: string;
   email: string;
   username: string | null;
-  role: "super_admin" | "admin" | "service_manager";
+  role: "super_admin" | "admin" | "service_manager" | "technician";
   active: boolean;
   storeIds: string[];
 }
@@ -27,7 +27,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   invalid_username: "Username must be 3-32 characters: letters, digits, dots, underscores, or hyphens only.",
   username_already_registered: "That username is already taken.",
   store_assignment_required: "At least one store is required.",
-  invalid_store_count: "A Service Manager must have exactly one store.",
+  invalid_store_count: "A Service Manager or Technician must have exactly one store.",
   invalid_store_id: "One or more selected stores no longer exist.",
   email_already_registered: "That email is already registered.",
   not_found: "That account is outside what you can manage.",
@@ -40,7 +40,7 @@ export default function TeamPageClient({ callerRole }: { callerRole: "super_admi
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
-  const [role, setRole] = useState<"admin" | "service_manager">("service_manager");
+  const [role, setRole] = useState<"admin" | "service_manager" | "technician">("service_manager");
   const [storeIds, setStoreIds] = useState<string[]>([]);
   const [password, setPassword] = useState("");
   const [createError, setCreateError] = useState<string | null>(null);
@@ -158,12 +158,16 @@ export default function TeamPageClient({ callerRole }: { callerRole: "super_admi
               <select id="role" value={role} onChange={(e) => setRole(e.target.value as typeof role)}>
                 <option value="admin">Admin</option>
                 <option value="service_manager">Store Service Manager</option>
+                <option value="technician">Technician</option>
               </select>
             </div>
             <div>
               <label htmlFor="storeIds">
                 Store{role === "admin" ? "s" : ""} (
-                {role === "service_manager" ? "select exactly one" : "ctrl/cmd-click to select more than one"})
+                {role === "service_manager" || role === "technician"
+                  ? "select exactly one"
+                  : "ctrl/cmd-click to select more than one"}
+                )
               </label>
               <select
                 id="storeIds"
@@ -203,7 +207,7 @@ export default function TeamPageClient({ callerRole }: { callerRole: "super_admi
 
       <section aria-labelledby="user-list-heading">
         <h2 id="user-list-heading">
-          {callerRole === "super_admin" ? "All staff accounts" : "Store Service Managers in your stores"}
+          {callerRole === "super_admin" ? "All staff accounts" : "Service Managers and Technicians in your stores"}
         </h2>
         <table>
           <thead>

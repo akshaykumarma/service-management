@@ -10,10 +10,10 @@ export default async function TeamPage() {
   if (!session) {
     redirect("/login");
   }
-  // Store Service Managers have no staff to manage; Admin and Super Admin both land
-  // here, but see different slices — enforced server-side by GET/POST /api/auth/users
-  // and the reset-password route, not just hidden client-side.
-  if (session.user.role === "service_manager") {
+  // Store Service Managers and Technicians have no staff to manage; Admin and Super
+  // Admin both land here, but see different slices — enforced server-side by
+  // GET/POST /api/auth/users and the reset-password route, not just hidden client-side.
+  if (session.user.role === "service_manager" || session.user.role === "technician") {
     redirect("/board");
   }
 

@@ -94,9 +94,16 @@ Lists staff accounts. **Requires**: `super_admin` or `admin` role (FR-011).
 **Deviation from the original design**: originally Super-Admin-only; broadened (post-v1,
 per direct product feedback enabling Admin-initiated password resets below) so an Admin
 can list Store Service Managers within their own store(s) — a Super Admin still sees every
-account. An Admin caller only ever sees `service_manager`-role accounts whose store
-assignment overlaps their own; they never see other Admins, Super Admins, or
-out-of-scope Service Managers.
+account. An Admin caller only ever sees `service_manager`- and `technician`-role accounts
+whose store assignment overlaps their own; they never see other Admins, Super Admins, or
+out-of-scope Service Managers/Technicians.
+
+**Deviation** (post-v1, per direct product feedback): a new `technician` role — a staff
+member assigned to exactly one store, whose ticket access is restricted further than a
+Service Manager's, to only the tickets a Service Manager has assigned them
+(`lib/auth/rbac.ts`'s `assertTicketAccess`; see `specs/003-ticket-lifecycle/contracts/tickets-api.md`
+for the assignment endpoints). Otherwise created, listed, and password-reset the same way as
+a Service Manager.
 
 **Responses**: `200 { "users": [{ "id", "name", "email", "role", "active", "storeIds" }] }`
 
@@ -108,7 +115,7 @@ Creates a staff account. **Requires**: `super_admin` role (FR-011).
 
 **Request**:
 ```json
-{ "name": "string", "email": "string", "username": "string (optional)", "role": "admin | service_manager", "storeIds": ["uuid", "..."], "password": "string" }
+{ "name": "string", "email": "string", "username": "string (optional)", "role": "admin | service_manager | technician", "storeIds": ["uuid", "..."], "password": "string" }
 ```
 (`role: "super_admin"` is not creatable via this endpoint in v1 — no spec'd flow for
 creating a second Super Admin; only one is assumed to exist per deployment, seeded outside
@@ -133,7 +140,7 @@ lowercase letter, and a special character). The response no longer carries a
 - `400 { code: "invalid_password" }` — `password` fails the complexity rule
 - `400 { code: "invalid_username" }` — `username` given but not 3-32 chars of letters/digits/`.`/`_`/`-`
 - `400 { code: "store_assignment_required" }` — `storeIds` empty for `admin`/`service_manager` (FR-017)
-- `400 { code: "invalid_store_count" }` — `service_manager` with `storeIds.length !== 1` (FR-002)
+- `400 { code: "invalid_store_count" }` — `service_manager`/`technician` with `storeIds.length !== 1` (FR-002)
 - `400 { code: "invalid_store_id" }` — a `storeIds` entry doesn't exist
 - `409 { code: "email_already_registered" }`
 - `409 { code: "username_already_registered" }`

@@ -3,7 +3,7 @@ import { asc, desc, eq } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { deliveryOverrides, notifications, otpVerifications, statusHistory, tickets, ticketPhotos, ticketLineItems, users } from "@/lib/db/schema";
 import { requireAuthenticatedSession } from "@/lib/auth/require-session";
-import { assertAccess, AccessDeniedError } from "@/lib/auth/rbac";
+import { assertTicketAccess, AccessDeniedError } from "@/lib/auth/rbac";
 import { calculateBill } from "@/lib/billing/bill-calculation";
 import { hasUnconfirmedFailedNotification, needsOtpOverride } from "@/lib/notifications/alerts";
 import { hasActiveOtpAttempt } from "@/lib/delivery/otp";
@@ -24,7 +24,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   }
 
   try {
-    await assertAccess(caller, ticket.storeId);
+    await assertTicketAccess(caller, ticket);
   } catch (err) {
     if (err instanceof AccessDeniedError) {
       return NextResponse.json({ error: { code: "not_found", message: "No such ticket." } }, { status: 404 });
@@ -107,8 +107,12 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     }
   }
 
+  const technicianRows = ticket.assignedTechnicianId
+    ? await db.select({ name: users.name }).from(users).where(eq(users.id, ticket.assignedTechnicianId)).limit(1)
+    : [];
+
   return NextResponse.json({
-    ticket,
+    ticket: { ...ticket, assignedTechnicianName: technicianRows[0]?.name ?? null },
     statusHistory: historyRows,
     photos: photoRows.map((p) => ({ objectKey: p.objectKey })),
     lineItems: lineItemRows.map((li) => ({

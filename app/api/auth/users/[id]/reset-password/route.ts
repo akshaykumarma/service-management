@@ -17,7 +17,7 @@ async function getStoreIds(userId: string): Promise<string[]> {
 
 /**
  * Lets a Super Admin reset any staff account's password, and an Admin reset a Store
- * Service Manager's password within their own store(s) — the same visibility boundary
+ * Service Manager's or Technician's password within their own store(s) — the same visibility boundary
  * GET /api/auth/users already enforces for Admins. An out-of-scope or wrong-role target
  * 404s rather than 403s, consistent with this app's "can't act on what you can't see"
  * convention elsewhere (e.g. the audit-trail route), rather than confirming the id exists.
@@ -47,7 +47,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     const targetStoreIds = await getStoreIds(target.id);
     const callerScope = await getScopedStoreIds(caller);
     const inScope =
-      target.role === "service_manager" &&
+      (target.role === "service_manager" || target.role === "technician") &&
       callerScope !== "all" &&
       targetStoreIds.some((id) => callerScope.includes(id));
     if (!inScope) {

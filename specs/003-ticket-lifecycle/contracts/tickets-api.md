@@ -70,12 +70,47 @@ spec's contract, not repeated here.
 ## `GET /api/tickets/:id`
 
 Ticket detail, including its `status_history`. **Requires**: caller's scope includes this
-ticket's store.
+ticket's store (`assertAccess`), **and**, for a `technician` caller only, that they are
+this ticket's `assignedTechnicianId` (`assertTicketAccess` — see the Technician deviation
+below). Every other role needs only the store check.
 
 **Responses**:
-- `200 { "ticket": {...full fields...}, "statusHistory": [{ "fromStatus", "toStatus", "actorId", "actorName", "comment", "createdAt" }], "photos": [{ "objectKey", "url" }] }`
-- `404` — no such ticket, or caller's scope excludes it (same response either way — no
-  existence leak to an out-of-scope caller)
+- `200 { "ticket": {...full fields..., "assignedTechnicianId", "assignedTechnicianName" }, "statusHistory": [{ "fromStatus", "toStatus", "actorId", "actorName", "comment", "createdAt" }], "photos": [{ "objectKey", "url" }] }`
+- `404` — no such ticket, caller's scope excludes it, or (for a `technician`) the ticket
+  isn't assigned to them — the same response in every case, no existence leak
+
+---
+
+## `GET /api/tickets/:id/technicians`
+
+**Deviation** (post-v1, per direct product feedback introducing the `technician` role):
+lists the active Technicians assigned to this ticket's own store, for the Service
+Manager's assign-technician picker. **Requires**: caller's scope includes this ticket's
+store (store scope alone — this is a read used to choose who to assign, not an action
+gated by an assignment that doesn't exist yet).
+
+**Responses**:
+- `200 { "technicians": [{ "id", "name" }] }`
+- `404` — no such ticket, or caller's scope excludes it
+
+---
+
+## `PATCH /api/tickets/:id/assign-technician`
+
+**Deviation** (post-v1, per direct product feedback): sets, or clears with
+`technicianId: null`, the one Technician assigned to this ticket — the Service Manager's
+own action, so a Technician may not assign themselves or anyone else even though they're
+in scope for the store. **Requires**: caller's scope includes this ticket's store, and
+caller's role is not `technician`.
+
+**Request**: `{ "technicianId": "uuid | null" }`
+
+**Responses**:
+- `200 { "ticket": {...updated..., "assignedTechnicianId" } }`
+- `400 { code: "invalid_technician" }` — `technicianId` isn't an active Technician
+  assigned to this ticket's store
+- `403 { code: "forbidden" }` — caller's role is `technician`
+- `404` — no such ticket, or caller's scope excludes it
 
 ---
 
@@ -96,4 +131,6 @@ FR-017, FR-018 (see `data-model.md`'s State Transitions).
 - `400 { code: "invalid_transition" }` — not a transition this status sequence allows (e.g.,
   Cancelled → anything)
 - `403 { code: "role_not_permitted" }` — e.g., Store Service Manager attempting Cancelled
-  (FR-014) or a backward transition out of Delivered (FR-018)
+  (FR-014) or a backward transition out of Delivered (FR-018). **Deviation** (post-v1):
+  Technician is restricted the same way as Service Manager for both of these — it's the
+  more junior of the two.

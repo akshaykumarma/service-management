@@ -4,13 +4,14 @@ import { useRouter } from "next/navigation";
 
 interface NavHeaderProps {
   name: string;
-  role: "super_admin" | "admin" | "service_manager";
+  role: "super_admin" | "admin" | "service_manager" | "technician";
 }
 
 const ROLE_LABELS: Record<NavHeaderProps["role"], string> = {
   super_admin: "Super Admin",
   admin: "Admin",
   service_manager: "Store Service Manager",
+  technician: "Technician",
 };
 
 export default function NavHeader({ name, role }: NavHeaderProps) {

@@ -38,6 +38,24 @@ export async function assertAccess(user: SessionUser, storeId: string): Promise<
   throw new AccessDeniedError(`User ${user.id} does not have access to store ${storeId}`);
 }
 
+/**
+ * Extends assertAccess with the Technician role's additional restriction (post-007
+ * product feedback): a Technician gets the same access as any other store-scoped staff
+ * member, but only for the one ticket a Service Manager has actually assigned them to —
+ * every other role passes through unchanged. Centralized here, not duplicated per route
+ * (research.md §2's "one scope-check function" principle), so every ticket-scoped route
+ * enforces the assignment restriction the same way.
+ */
+export async function assertTicketAccess(
+  user: SessionUser,
+  ticket: { storeId: string; assignedTechnicianId: string | null },
+): Promise<void> {
+  await assertAccess(user, ticket.storeId);
+  if (user.role === "technician" && ticket.assignedTechnicianId !== user.id) {
+    throw new AccessDeniedError(`Technician ${user.id} is not assigned to ticket in store ${ticket.storeId}`);
+  }
+}
+
 /** Guards routes/screens restricted to the Super Admin role (e.g., user management, FR-011). */
 export function requireSuperAdmin(user: SessionUser): void {
   if (user.role !== "super_admin") {

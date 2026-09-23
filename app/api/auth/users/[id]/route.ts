@@ -40,17 +40,26 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     return NextResponse.json({ error: { code: "not_found", message: "No such user." } }, { status: 404 });
   }
 
-  const patch: { name?: string; role?: "admin" | "service_manager"; active?: boolean; storeIds?: string[] } =
-    await request.json();
+  const patch: {
+    name?: string;
+    role?: "admin" | "service_manager" | "technician";
+    active?: boolean;
+    storeIds?: string[];
+  } = await request.json();
 
   const resultingRole = patch.role ?? target.role;
   const resultingActive = patch.active ?? target.active;
   const currentStoreIds = await getStoreIds(target.id);
   const resultingStoreIds = patch.storeIds ?? currentStoreIds;
 
-  if (resultingRole === "service_manager" && resultingStoreIds.length !== 1) {
+  if ((resultingRole === "service_manager" || resultingRole === "technician") && resultingStoreIds.length !== 1) {
     return NextResponse.json(
-      { error: { code: "invalid_store_count", message: "A Service Manager must have exactly one store." } },
+      {
+        error: {
+          code: "invalid_store_count",
+          message: "A Service Manager or Technician must have exactly one store.",
+        },
+      },
       { status: 400 },
     );
   }

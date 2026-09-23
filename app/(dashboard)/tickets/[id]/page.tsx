@@ -14,6 +14,13 @@ interface TicketDetail {
   issueDescription: string;
   createdAt: string;
   taxRate: string;
+  assignedTechnicianId: string | null;
+  assignedTechnicianName: string | null;
+}
+
+interface TechnicianOption {
+  id: string;
+  name: string;
 }
 
 interface HistoryEntryRow {
@@ -169,6 +176,11 @@ export default function TicketDetailPage() {
   const [taxRateError, setTaxRateError] = useState<string | null>(null);
   const [savingTaxRate, setSavingTaxRate] = useState(false);
 
+  const [technicianOptions, setTechnicianOptions] = useState<TechnicianOption[]>([]);
+  const [technicianSelection, setTechnicianSelection] = useState("");
+  const [assignTechnicianError, setAssignTechnicianError] = useState<string | null>(null);
+  const [assigningTechnician, setAssigningTechnician] = useState(false);
+
   const [serviceHistory, setServiceHistory] = useState<ServiceHistory | null>(null);
   const [notificationLog, setNotificationLog] = useState<NotificationLogEntry[]>([]);
   const [otpOutcome, setOtpOutcome] = useState<OtpOutcome>(null);
@@ -183,6 +195,7 @@ export default function TicketDetailPage() {
     const body = await res.json();
     setTicket(body.ticket);
     setTaxRateInput(Number(body.ticket.taxRate).toString());
+    setTechnicianSelection(body.ticket.assignedTechnicianId ?? "");
     setStatusHistory(body.statusHistory);
     setLineItems(body.lineItems);
     setBill(body.bill);
@@ -218,6 +231,40 @@ export default function TicketDetailPage() {
   }, []);
 
   const isAdminOrAbove = role === "admin" || role === "super_admin";
+  // Assignment is the Service Manager's own action (post-007 product feedback) — a
+  // Technician sees who's assigned but never gets the picker to assign themselves or
+  // anyone else.
+  const canAssignTechnician = role === "service_manager" || isAdminOrAbove;
+
+  useEffect(() => {
+    if (!canAssignTechnician) return;
+    fetch(`/api/tickets/${params.id}/technicians`)
+      .then((res) => (res.ok ? res.json() : { technicians: [] }))
+      .then((body) => setTechnicianOptions(body.technicians));
+  }, [canAssignTechnician, params.id]);
+
+  async function handleAssignTechnician(e: React.FormEvent) {
+    e.preventDefault();
+    setAssignTechnicianError(null);
+    setAssigningTechnician(true);
+    try {
+      const res = await fetch(`/api/tickets/${params.id}/assign-technician`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ technicianId: technicianSelection || null }),
+      });
+      if (res.ok) {
+        await load();
+        return;
+      }
+      const body = await res.json();
+      setAssignTechnicianError(
+        body.error.code === "invalid_technician" ? "Not an active technician in this store." : "Could not update assignment.",
+      );
+    } finally {
+      setAssigningTechnician(false);
+    }
+  }
 
   async function handleConfirmNotification() {
     setConfirmingNotification(true);
@@ -493,6 +540,39 @@ export default function TicketDetailPage() {
           <dt>Status</dt>
           <dd>{ticket.status}</dd>
         </dl>
+      </section>
+
+      <section aria-labelledby="technician-heading">
+        <h2 id="technician-heading">Assigned technician</h2>
+        {canAssignTechnician ? (
+          <form onSubmit={handleAssignTechnician} noValidate>
+            <div>
+              <label htmlFor="technicianSelection">Technician</label>
+              <select
+                id="technicianSelection"
+                value={technicianSelection}
+                onChange={(e) => setTechnicianSelection(e.target.value)}
+              >
+                <option value="">Unassigned</option>
+                {technicianOptions.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {assignTechnicianError && (
+              <p role="alert" aria-live="assertive">
+                {assignTechnicianError}
+              </p>
+            )}
+            <button type="submit" disabled={assigningTechnician}>
+              Save assignment
+            </button>
+          </form>
+        ) : (
+          <p>{ticket.assignedTechnicianName ?? "Unassigned"}</p>
+        )}
       </section>
 
       {notificationAlert?.failed && (

@@ -1,4 +1,4 @@
-import { and, desc, gte, ilike, inArray, lte, ne } from "drizzle-orm";
+import { and, desc, eq, gte, ilike, inArray, lte, ne } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { tickets } from "@/lib/db/schema";
 import { getScopedStoreIds } from "@/lib/auth/rbac";
@@ -43,6 +43,14 @@ export async function queryScopedTickets(
     conditions.push(inArray(tickets.storeId, requestedWithinScope));
   } else if (filters.storeIds && filters.storeIds.length > 0) {
     conditions.push(inArray(tickets.storeId, filters.storeIds));
+  }
+
+  // Technician (post-007 product feedback): store scope alone isn't enough — narrow
+  // further to only the tickets a Service Manager actually assigned to this technician.
+  // Mirrors lib/auth/rbac.ts's assertTicketAccess for the single-ticket routes, so board
+  // visibility and per-ticket access never drift apart.
+  if (caller.role === "technician") {
+    conditions.push(eq(tickets.assignedTechnicianId, caller.id));
   }
 
   if (filters.statuses && filters.statuses.length > 0) {

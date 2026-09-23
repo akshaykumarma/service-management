@@ -4,7 +4,7 @@ import { statusHistory, tickets } from "@/lib/db/schema";
 import { triggerCompletionNotification } from "@/lib/notifications/send-completion";
 
 export type TicketStatus = "open" | "in_progress" | "on_hold" | "completed" | "delivered" | "cancelled";
-export type StaffRole = "super_admin" | "admin" | "service_manager";
+export type StaffRole = "super_admin" | "admin" | "service_manager" | "technician";
 export type TransitionError = "invalid_transition" | "comment_required" | "role_not_permitted";
 
 // Linear order for the non-terminal-branch statuses (data-model.md's State Transitions
@@ -25,7 +25,8 @@ export interface TransitionCheckInput {
  * moves along the top row skip the comment requirement (except entering On Hold, which
  * always needs one); every backward move needs a comment; Cancelled is Admin/Super-Admin
  * only from a non-terminal status; leaving Delivered backward is additionally
- * Admin/Super-Admin only.
+ * Admin/Super-Admin only. Technician (post-007 product feedback) is restricted the same
+ * way as Service Manager for both of those — it's the more junior of the two.
  */
 export function checkTransition(input: TransitionCheckInput): TransitionError | null {
   const { role, fromStatus, toStatus, comment } = input;
@@ -35,7 +36,7 @@ export function checkTransition(input: TransitionCheckInput): TransitionError | 
 
   if (toStatus === "cancelled") {
     if (fromStatus === "completed" || fromStatus === "delivered") return "invalid_transition";
-    if (role === "service_manager") return "role_not_permitted";
+    if (role === "service_manager" || role === "technician") return "role_not_permitted";
     if (!comment) return "comment_required";
     return null;
   }
@@ -59,7 +60,7 @@ export function checkTransition(input: TransitionCheckInput): TransitionError | 
 
   const isBackward = toIdx < fromIdx;
 
-  if (isBackward && fromStatus === "delivered" && role === "service_manager") {
+  if (isBackward && fromStatus === "delivered" && (role === "service_manager" || role === "technician")) {
     return "role_not_permitted";
   }
 

@@ -71,6 +71,13 @@
       "when": 1790178350573,
       "tag": "0009_dusty_psynapse",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1790179106389,
+      "tag": "0010_awesome_scarlet_witch",
+      "breakpoints": true
     }
   ]
 }

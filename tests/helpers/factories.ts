@@ -35,7 +35,7 @@ export async function createUser(opts: {
   username?: string;
   password?: string;
   name?: string;
-  role?: "super_admin" | "admin" | "service_manager";
+  role?: "super_admin" | "admin" | "service_manager" | "technician";
   active?: boolean;
   storeIds?: string[];
 }): Promise<{ id: string; email: string; username: string | null; password: string }> {
@@ -71,6 +71,7 @@ export async function createTicket(opts: {
   customerName?: string;
   customerPhone?: string;
   status?: "open" | "in_progress" | "on_hold" | "completed" | "delivered" | "cancelled";
+  assignedTechnicianId?: string;
 }): Promise<{ id: string; ticketNumber: string }> {
   counter += 1;
   const phone = opts.customerPhone ?? `+91900000${String(counter).padStart(4, "0")}`;
@@ -97,6 +98,7 @@ export async function createTicket(opts: {
       issueDescription: "Test issue",
       status: opts.status ?? "open",
       createdBy: opts.createdBy,
+      assignedTechnicianId: opts.assignedTechnicianId ?? null,
     })
     .returning();
 

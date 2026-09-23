@@ -4,7 +4,7 @@ import { db } from "@/lib/db/client";
 import { tickets } from "@/lib/db/schema";
 import { requireAuthenticatedSession } from "@/lib/auth/require-session";
 import { requireSameOrigin } from "@/lib/auth/csrf";
-import { assertAccess, AccessDeniedError } from "@/lib/auth/rbac";
+import { assertTicketAccess, AccessDeniedError } from "@/lib/auth/rbac";
 import { applyStatusTransition, checkTransition } from "@/lib/tickets/status-transitions";
 
 const STATUS_CODE_FOR_ERROR = {
@@ -28,7 +28,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   }
 
   try {
-    await assertAccess(caller, ticket.storeId);
+    await assertTicketAccess(caller, ticket);
   } catch (err) {
     if (err instanceof AccessDeniedError) {
       return NextResponse.json({ error: { code: "not_found", message: "No such ticket." } }, { status: 404 });

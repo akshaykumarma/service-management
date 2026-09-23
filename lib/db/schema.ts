@@ -15,7 +15,7 @@ import {
   index,
 } from "drizzle-orm/pg-core";
 
-export const roleEnum = pgEnum("role", ["super_admin", "admin", "service_manager"]);
+export const roleEnum = pgEnum("role", ["super_admin", "admin", "service_manager", "technician"]);
 export const ticketStatusEnum = pgEnum("ticket_status", [
   "open",
   "in_progress",
@@ -169,6 +169,12 @@ export const tickets = pgTable("tickets", {
   // for billing.
   taxRate: numeric("tax_rate", { precision: 5, scale: 2 }).notNull().default("0"),
   status: ticketStatusEnum("status").notNull().default("open"),
+  // New Technician role (post-007 product feedback): set by a Service Manager, typically
+  // once the ticket moves to In Progress. Nullable — most tickets are never assigned to a
+  // named technician. Grants that one technician full access to this one ticket
+  // (lib/auth/rbac.ts's assertTicketAccess), on top of (not instead of) the normal
+  // store-scope check every other role already goes through.
+  assignedTechnicianId: uuid("assigned_technician_id").references(() => users.id),
   createdBy: uuid("created_by")
     .notNull()
     .references(() => users.id),

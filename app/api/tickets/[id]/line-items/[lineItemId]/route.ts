@@ -4,7 +4,7 @@ import { db } from "@/lib/db/client";
 import { tickets } from "@/lib/db/schema";
 import { requireAuthenticatedSession } from "@/lib/auth/require-session";
 import { requireSameOrigin } from "@/lib/auth/csrf";
-import { assertAccess, AccessDeniedError } from "@/lib/auth/rbac";
+import { assertTicketAccess, AccessDeniedError } from "@/lib/auth/rbac";
 import { updateLineItem, removeLineItem } from "@/lib/billing/line-items";
 
 const STATUS_CODE_FOR_ERROR: Record<string, number> = {
@@ -27,7 +27,7 @@ async function loadTicketAndAssertAccess(request: NextRequest, ticketId: string)
   }
 
   try {
-    await assertAccess(sessionOrResponse.user, ticket.storeId);
+    await assertTicketAccess(sessionOrResponse.user, ticket);
   } catch (err) {
     if (err instanceof AccessDeniedError) {
       return NextResponse.json({ error: { code: "not_found", message: "No such ticket." } }, { status: 404 });

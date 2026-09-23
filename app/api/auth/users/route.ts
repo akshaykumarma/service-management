@@ -31,12 +31,12 @@ export async function GET(request: NextRequest) {
     storeIdsByUser.set(a.userId, [...(storeIdsByUser.get(a.userId) ?? []), a.storeId]);
   }
 
-  // An Admin only manages Service Managers within their own stores (password-reset scope
-  // below enforces the same boundary) — a Super Admin sees everyone.
+  // An Admin only manages Service Managers and Technicians within their own stores
+  // (password-reset scope below enforces the same boundary) — a Super Admin sees everyone.
   const scope = caller.role === "super_admin" ? "all" : await getScopedStoreIds(caller);
   const visible = rows.filter((u) => {
     if (scope === "all") return true;
-    if (u.role !== "service_manager") return false;
+    if (u.role !== "service_manager" && u.role !== "technician") return false;
     return (storeIdsByUser.get(u.id) ?? []).some((id) => scope.includes(id));
   });
 
@@ -71,9 +71,9 @@ export async function POST(request: NextRequest) {
 
   const { name, email, username, role, storeIds, password } = await request.json();
 
-  if (role !== "admin" && role !== "service_manager") {
+  if (role !== "admin" && role !== "service_manager" && role !== "technician") {
     return NextResponse.json(
-      { error: { code: "invalid_role", message: "role must be admin or service_manager." } },
+      { error: { code: "invalid_role", message: "role must be admin, service_manager, or technician." } },
       { status: 400 },
     );
   }
@@ -124,9 +124,14 @@ export async function POST(request: NextRequest) {
       { status: 400 },
     );
   }
-  if (role === "service_manager" && ids.length !== 1) {
+  if ((role === "service_manager" || role === "technician") && ids.length !== 1) {
     return NextResponse.json(
-      { error: { code: "invalid_store_count", message: "A Service Manager must have exactly one store." } },
+      {
+        error: {
+          code: "invalid_store_count",
+          message: "A Service Manager or Technician must have exactly one store.",
+        },
+      },
       { status: 400 },
     );
   }

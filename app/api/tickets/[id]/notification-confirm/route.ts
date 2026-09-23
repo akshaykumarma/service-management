@@ -4,12 +4,12 @@ import { db } from "@/lib/db/client";
 import { manualNotificationConfirmations, notifications, tickets } from "@/lib/db/schema";
 import { requireAuthenticatedSession } from "@/lib/auth/require-session";
 import { requireSameOrigin } from "@/lib/auth/csrf";
-import { assertAccess, AccessDeniedError } from "@/lib/auth/rbac";
+import { assertTicketAccess, AccessDeniedError } from "@/lib/auth/rbac";
 
 /**
  * FR-005: "the responsible Service Manager" is read here as store-scoped access, not a
  * single named individual (research.md's reassignment-edge-case reading) — same
- * assertAccess check as every other ticket-scoped endpoint, not a narrower one.
+ * assertTicketAccess check as every other ticket-scoped endpoint, not a narrower one.
  */
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
   const csrfResponse = requireSameOrigin(request);
@@ -26,7 +26,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
   }
 
   try {
-    await assertAccess(caller, ticket.storeId);
+    await assertTicketAccess(caller, ticket);
   } catch (err) {
     if (err instanceof AccessDeniedError) {
       return NextResponse.json({ error: { code: "not_found", message: "No such ticket." } }, { status: 404 });

@@ -20,7 +20,7 @@ export interface SessionUser {
   id: string;
   name: string;
   email: string;
-  role: "super_admin" | "admin" | "service_manager";
+  role: "super_admin" | "admin" | "service_manager" | "technician";
   active: boolean;
 }
 
