@@ -59,21 +59,16 @@ test.describe("Board to report end-to-end (006-dashboard-reporting, US1-US5)", (
     await page.getByRole("button", { name: "Update status" }).click();
     await expect(page.locator('dt:has-text("Status") + dd')).toContainText("completed");
 
-    // Reports: the ticket, first-Completed today, must show up in today's summary and revenue.
+    // Reports: the ticket must show up in the ticket-details table for today's range.
     const today = new Date().toISOString().slice(0, 10);
     await page.goto("/reports");
-    await page.getByLabel("Store", { exact: true }).selectOption({ label: storeName });
-    await page.getByLabel("From", { exact: true }).fill(today);
-    await page.getByLabel("To", { exact: true }).fill(today);
-    await page.getByRole("button", { name: "Generate report" }).click();
+    await page.getByLabel("Filter by store").selectOption({ label: storeName });
+    await page.getByLabel("Filter from date").fill(today);
+    await page.getByLabel("Filter to date (defaults to today)").fill(today);
+    await page.getByRole("button", { name: "Apply filters" }).click();
 
-    await expect(page.locator("dt:has-text('Total tickets') + dd")).toHaveText("1");
-    await expect(page.locator("dt:has-text('Parts revenue') + dd")).toHaveText("300.00");
-
-    const [download] = await Promise.all([
-      page.waitForEvent("download"),
-      page.getByRole("link", { name: "Summary as CSV" }).click(),
-    ]);
-    expect(download.suggestedFilename()).toBe("summary-report.csv");
+    const row = page.locator("tbody tr", { hasText: customerName });
+    await expect(row).toBeVisible();
+    await expect(row).toContainText("300.00");
   });
 });

@@ -13,14 +13,6 @@ interface TechnicianOption {
   name: string;
 }
 
-interface SummaryReport {
-  totalTickets: number;
-  byStatus: Record<string, number>;
-  avgResolutionTimeHours: number;
-  partsRevenue: number;
-  servicesRevenue: number;
-}
-
 interface TicketDetailRow {
   id: string;
   ticketNumber: string;
@@ -48,21 +40,19 @@ const STATUS_LABELS: Record<string, string> = {
   cancelled: "Cancelled",
 };
 
+function todayIsoDate(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
 export default function ReportsPage() {
   const [storeOptions, setStoreOptions] = useState<StoreOption[]>([]);
   const [technicianOptions, setTechnicianOptions] = useState<TechnicianOption[]>([]);
-  const [storeId, setStoreId] = useState("");
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
-  const [summary, setSummary] = useState<SummaryReport | null>(null);
-  const [error, setError] = useState<string | null>(null);
 
-  // The table view (post-006 product feedback): its own filters, since it isn't
-  // restricted to a single store or to first-Completed-only counts the way the summary
-  // above is.
   const [tableStoreId, setTableStoreId] = useState("");
   const [tableDateFrom, setTableDateFrom] = useState("");
-  const [tableDateTo, setTableDateTo] = useState("");
+  // Defaults to today (per product feedback) — an unselected end date means "up to now",
+  // not an error the user has to fix.
+  const [tableDateTo, setTableDateTo] = useState(todayIsoDate());
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
   const [tableCustomerName, setTableCustomerName] = useState("");
   const [tableCustomerPhone, setTableCustomerPhone] = useState("");
@@ -84,39 +74,20 @@ export default function ReportsPage() {
       .then((body) => setTechnicianOptions(body.technicians));
   }, []);
 
-  async function handleGenerate(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-    setSummary(null);
-    if (!storeId || !dateFrom || !dateTo) {
-      setError("Store, start date, and end date are all required.");
-      return;
-    }
-    const res = await fetch(`/api/reports/summary?storeId=${storeId}&dateFrom=${dateFrom}&dateTo=${dateTo}`);
-    if (res.status === 403) {
-      setError("Your role doesn't permit viewing reports.");
-      return;
-    }
-    if (!res.ok) {
-      setError("Could not generate the report.");
-      return;
-    }
-    setSummary(await res.json());
-  }
-
   async function handleApplyTableFilters(e: React.FormEvent) {
     e.preventDefault();
     setTableError(null);
     setTicketRows(null);
-    if (!tableDateFrom || !tableDateTo) {
-      setTableError("Start date and end date are required.");
+    if (!tableDateFrom) {
+      setTableError("Start date is required.");
       return;
     }
+    const effectiveDateTo = tableDateTo || todayIsoDate();
 
     const params = new URLSearchParams();
     if (tableStoreId) params.set("storeId", tableStoreId);
     params.set("dateFrom", tableDateFrom);
-    params.set("dateTo", tableDateTo);
+    params.set("dateTo", effectiveDateTo);
     for (const status of statusFilter) params.append("status", status);
     if (tableCustomerName) params.set("customerName", tableCustomerName);
     if (tableCustomerPhone) params.set("customerPhone", tableCustomerPhone);
@@ -141,81 +112,9 @@ export default function ReportsPage() {
     setStatusFilter((prev) => (prev.includes(status) ? prev.filter((s) => s !== status) : [...prev, status]));
   }
 
-  const summaryExportParams = `storeId=${storeId}&dateFrom=${dateFrom}&dateTo=${dateTo}&type=summary`;
-  const listExportParams = `storeId=${storeId}&dateFrom=${dateFrom}&dateTo=${dateTo}`;
-
   return (
     <main>
       <h1>Reports</h1>
-
-      <form onSubmit={handleGenerate} noValidate>
-        <div>
-          <label htmlFor="reportStore">Store</label>
-          <select id="reportStore" required value={storeId} onChange={(e) => setStoreId(e.target.value)}>
-            <option value="">Select a store</option>
-            {storeOptions.map((store) => (
-              <option key={store.id} value={store.id}>
-                {store.name}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label htmlFor="reportDateFrom">From</label>
-          <input id="reportDateFrom" type="date" required value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
-        </div>
-        <div>
-          <label htmlFor="reportDateTo">To</label>
-          <input id="reportDateTo" type="date" required value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
-        </div>
-        {error && (
-          <p role="alert" aria-live="assertive">
-            {error}
-          </p>
-        )}
-        <button type="submit">Generate report</button>
-      </form>
-
-      {summary && (
-        <section aria-labelledby="summary-heading">
-          <h2 id="summary-heading">Summary</h2>
-          <dl>
-            <dt>Total tickets (first Completed in this period)</dt>
-            <dd>{summary.totalTickets}</dd>
-            <dt>Average resolution time (hours)</dt>
-            <dd>{summary.avgResolutionTimeHours.toFixed(1)}</dd>
-            <dt>Parts revenue</dt>
-            <dd>{summary.partsRevenue.toFixed(2)}</dd>
-            <dt>Services revenue</dt>
-            <dd>{summary.servicesRevenue.toFixed(2)}</dd>
-          </dl>
-
-          <h3>Current status breakdown</h3>
-          <ul>
-            {Object.entries(summary.byStatus).map(([status, count]) => (
-              <li key={status}>
-                {STATUS_LABELS[status] ?? status}: {count}
-              </li>
-            ))}
-          </ul>
-
-          <h3>Export</h3>
-          <ul>
-            <li>
-              <a href={`/api/reports/export?format=csv&${summaryExportParams}`}>Summary as CSV</a>
-            </li>
-            <li>
-              <a href={`/api/reports/export?format=pdf&${summaryExportParams}`}>Summary as PDF</a>
-            </li>
-            <li>
-              <a href={`/api/reports/export?format=csv&${listExportParams}`}>Matching ticket list as CSV</a>
-            </li>
-            <li>
-              <a href={`/api/reports/export?format=pdf&${listExportParams}`}>Matching ticket list as PDF</a>
-            </li>
-          </ul>
-        </section>
-      )}
 
       <section aria-labelledby="ticket-table-heading">
         <h2 id="ticket-table-heading">Ticket details</h2>
@@ -242,8 +141,8 @@ export default function ReportsPage() {
             />
           </div>
           <div>
-            <label htmlFor="tableDateTo">Filter to date</label>
-            <input id="tableDateTo" type="date" required value={tableDateTo} onChange={(e) => setTableDateTo(e.target.value)} />
+            <label htmlFor="tableDateTo">Filter to date (defaults to today)</label>
+            <input id="tableDateTo" type="date" value={tableDateTo} onChange={(e) => setTableDateTo(e.target.value)} />
           </div>
           <fieldset>
             <legend>Status (all shown if none selected)</legend>
@@ -311,49 +210,51 @@ export default function ReportsPage() {
         </form>
 
         {ticketRows && (
-          <table>
-            <thead>
-              <tr>
-                <th scope="col">Ticket #</th>
-                <th scope="col">Store</th>
-                <th scope="col">Customer</th>
-                <th scope="col">Phone</th>
-                <th scope="col">Machine model</th>
-                <th scope="col">Status</th>
-                <th scope="col">Created</th>
-                <th scope="col">Est. delivery date</th>
-                <th scope="col">Technician</th>
-                <th scope="col">Subtotal</th>
-                <th scope="col">Tax</th>
-                <th scope="col">Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {ticketRows.map((t) => (
-                <tr key={t.id}>
-                  <td>
-                    <a href={`/tickets/${t.id}`}>{t.ticketNumber}</a>
-                  </td>
-                  <td>{t.storeName}</td>
-                  <td>{t.customerName}</td>
-                  <td>{t.customerPhone}</td>
-                  <td>{t.machineModel}</td>
-                  <td>{STATUS_LABELS[t.status] ?? t.status}</td>
-                  <td>{formatDate(t.createdAt)}</td>
-                  <td>{t.estimatedPickupDate ? formatDate(t.estimatedPickupDate) : "—"}</td>
-                  <td>{t.technicianName ?? "—"}</td>
-                  <td>{t.subtotal.toFixed(2)}</td>
-                  <td>{t.taxAmount.toFixed(2)}</td>
-                  <td>{t.total.toFixed(2)}</td>
-                </tr>
-              ))}
-              {ticketRows.length === 0 && (
+          <div className="table-scroll">
+            <table>
+              <thead>
                 <tr>
-                  <td colSpan={12}>No tickets match these filters.</td>
+                  <th scope="col">Ticket #</th>
+                  <th scope="col">Store</th>
+                  <th scope="col">Customer</th>
+                  <th scope="col">Phone</th>
+                  <th scope="col">Machine model</th>
+                  <th scope="col">Status</th>
+                  <th scope="col">Created</th>
+                  <th scope="col">Est. delivery date</th>
+                  <th scope="col">Technician</th>
+                  <th scope="col">Subtotal</th>
+                  <th scope="col">Tax</th>
+                  <th scope="col">Total</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {ticketRows.map((t) => (
+                  <tr key={t.id}>
+                    <td>
+                      <a href={`/tickets/${t.id}`}>{t.ticketNumber}</a>
+                    </td>
+                    <td>{t.storeName}</td>
+                    <td>{t.customerName}</td>
+                    <td>{t.customerPhone}</td>
+                    <td>{t.machineModel}</td>
+                    <td>{STATUS_LABELS[t.status] ?? t.status}</td>
+                    <td>{formatDate(t.createdAt)}</td>
+                    <td>{t.estimatedPickupDate ? formatDate(t.estimatedPickupDate) : "—"}</td>
+                    <td>{t.technicianName ?? "—"}</td>
+                    <td>{t.subtotal.toFixed(2)}</td>
+                    <td>{t.taxAmount.toFixed(2)}</td>
+                    <td>{t.total.toFixed(2)}</td>
+                  </tr>
+                ))}
+                {ticketRows.length === 0 && (
+                  <tr>
+                    <td colSpan={12}>No tickets match these filters.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         )}
       </section>
     </main>

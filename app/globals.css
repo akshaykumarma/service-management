@@ -225,10 +225,22 @@ main > section h2:first-child {
 
 /* --- Tables --- */
 
+/* Wraps a wide table (e.g. the Reports ticket-details table) so it scrolls
+   horizontally within its own box instead of overflowing the page and clipping the
+   last column(s) off-screen. */
+.table-scroll {
+  overflow-x: auto;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.9rem;
+}
+
+.table-scroll table {
+  width: max-content;
+  min-width: 100%;
 }
 
 th,
