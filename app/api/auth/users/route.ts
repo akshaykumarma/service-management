@@ -3,6 +3,7 @@ import { eq, inArray } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { stores, users, userStores } from "@/lib/db/schema";
 import { hashPassword } from "@/lib/auth/auth.config";
+import { isValidEmail } from "@/lib/auth/email-validation";
 import { isValidPassword } from "@/lib/auth/password-policy";
 import { requireAuthenticatedSession } from "@/lib/auth/require-session";
 import { AccessDeniedError, getScopedStoreIds, requireAdminOrAbove, requireSuperAdmin } from "@/lib/auth/rbac";
@@ -71,6 +72,13 @@ export async function POST(request: NextRequest) {
   if (role !== "admin" && role !== "service_manager") {
     return NextResponse.json(
       { error: { code: "invalid_role", message: "role must be admin or service_manager." } },
+      { status: 400 },
+    );
+  }
+
+  if (!isValidEmail(email)) {
+    return NextResponse.json(
+      { error: { code: "invalid_email", message: "Enter a valid email address." } },
       { status: 400 },
     );
   }

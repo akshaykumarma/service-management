@@ -21,6 +21,7 @@ const PASSWORD_HINT =
 
 const ERROR_MESSAGES: Record<string, string> = {
   invalid_password: PASSWORD_HINT,
+  invalid_email: "Enter a valid email address.",
   store_assignment_required: "At least one store is required.",
   invalid_store_count: "A Service Manager must have exactly one store.",
   invalid_store_id: "One or more selected stores no longer exist.",

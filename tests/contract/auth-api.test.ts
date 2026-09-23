@@ -192,6 +192,28 @@ describe("POST /api/auth/users", () => {
     expect((await res.json()).error.code).toBe("invalid_password");
   });
 
+  it("400s with invalid_email for a malformed email address", async () => {
+    const superAdmin = await createUser({ role: "super_admin", password: "Correct123!" });
+    const store = await createStore();
+    const cookie = await loginAs(superAdmin.email, "Correct123!");
+
+    const res = await usersPOST(
+      jsonRequest("/api/auth/users", {
+        method: "POST",
+        cookie,
+        body: {
+          name: "New SM",
+          email: "not-an-email",
+          role: "service_manager",
+          storeIds: [store.id],
+          password: "ValidPass1!",
+        },
+      }),
+    );
+    expect(res.status).toBe(400);
+    expect((await res.json()).error.code).toBe("invalid_email");
+  });
+
   it("400s with store_assignment_required when storeIds is empty", async () => {
     const superAdmin = await createUser({ role: "super_admin", password: "Correct123!" });
     const cookie = await loginAs(superAdmin.email, "Correct123!");
