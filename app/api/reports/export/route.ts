@@ -75,6 +75,7 @@ export async function GET(request: NextRequest) {
     customerName: params.get("customerName") ?? undefined,
     customerPhone: params.get("customerPhone") ?? undefined,
     machineModel: params.get("machineModel") ?? undefined,
+    technicianId: params.get("technicianId") ?? undefined,
     includeCancelled: params.get("includeCancelled") === "true",
   });
   const cards = rows.map(toTicketCard);

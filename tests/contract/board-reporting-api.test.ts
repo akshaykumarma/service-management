@@ -3,6 +3,7 @@ import { resetDb } from "../helpers/db";
 import { createStore, createTicket, createUser } from "../helpers/factories";
 import { jsonRequest, loginAs } from "../helpers/http";
 import { GET as ticketsGET } from "@/app/api/tickets/route";
+import { GET as techniciansGET } from "@/app/api/technicians/route";
 import { GET as auditTrailGET } from "@/app/api/tickets/[id]/audit-trail/route";
 import { PATCH as statusPATCH } from "@/app/api/tickets/[id]/status/route";
 import { GET as summaryGET } from "@/app/api/reports/summary/route";
@@ -89,6 +90,31 @@ describe("GET /api/tickets filter query parameters", () => {
     expect(bodyOwn.tickets.map((t: { id: string }) => t.id)).toEqual([ticketA.id]);
   });
 
+  it("filters by technicianId", async () => {
+    const store = await createStore();
+    const sm = await createUser({ role: "service_manager", storeIds: [store.id], password: "Correct123!" });
+    const technician = await createUser({ role: "technician", storeIds: [store.id] });
+    const otherTechnician = await createUser({ role: "technician", storeIds: [store.id] });
+    const matching = await createTicket({
+      storeId: store.id,
+      createdBy: sm.id,
+      status: "in_progress",
+      assignedTechnicianId: technician.id,
+    });
+    await createTicket({
+      storeId: store.id,
+      createdBy: sm.id,
+      status: "in_progress",
+      assignedTechnicianId: otherTechnician.id,
+    });
+    await createTicket({ storeId: store.id, createdBy: sm.id, status: "in_progress" });
+    const cookie = await loginAs(sm.email, "Correct123!");
+
+    const res = await ticketsGET(jsonRequest(`/api/tickets?technicianId=${technician.id}`, { cookie }));
+    const body = await res.json();
+    expect(body.tickets.map((t: { id: string }) => t.id)).toEqual([matching.id]);
+  });
+
   it("filters by a creation date range", async () => {
     const store = await createStore();
     const sm = await createUser({ role: "service_manager", storeIds: [store.id], password: "Correct123!" });
@@ -104,6 +130,39 @@ describe("GET /api/tickets filter query parameters", () => {
     const resPast = await ticketsGET(jsonRequest(`/api/tickets?dateFrom=${past}&dateTo=${past}`, { cookie }));
     const bodyPast = await resPast.json();
     expect(bodyPast.tickets).toEqual([]);
+  });
+});
+
+describe("GET /api/technicians (post-Technician-role product feedback: filter picker)", () => {
+  beforeEach(resetDb);
+
+  it("lists only active technicians within the caller's visible store scope", async () => {
+    const storeA = await createStore();
+    const storeB = await createStore();
+    const sm = await createUser({ role: "service_manager", storeIds: [storeA.id], password: "Correct123!" });
+    const technicianA = await createUser({ role: "technician", storeIds: [storeA.id], name: "Tech A" });
+    const inactiveTechnicianA = await createUser({ role: "technician", storeIds: [storeA.id], active: false, name: "Tech Inactive" });
+    await createUser({ role: "technician", storeIds: [storeB.id], name: "Tech B" });
+    const cookie = await loginAs(sm.email, "Correct123!");
+
+    const res = await techniciansGET(jsonRequest("/api/technicians", { cookie }));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.technicians.map((t: { id: string }) => t.id)).toEqual([technicianA.id]);
+    expect(body.technicians.map((t: { id: string }) => t.id)).not.toContain(inactiveTechnicianA.id);
+  });
+
+  it("lists every store's technicians for a Super Admin", async () => {
+    const storeA = await createStore();
+    const storeB = await createStore();
+    const superAdmin = await createUser({ role: "super_admin", password: "Correct123!" });
+    const technicianA = await createUser({ role: "technician", storeIds: [storeA.id] });
+    const technicianB = await createUser({ role: "technician", storeIds: [storeB.id] });
+    const cookie = await loginAs(superAdmin.email, "Correct123!");
+
+    const res = await techniciansGET(jsonRequest("/api/technicians", { cookie }));
+    const body = await res.json();
+    expect(body.technicians.map((t: { id: string }) => t.id).sort()).toEqual([technicianA.id, technicianB.id].sort());
   });
 });
 
@@ -318,5 +377,23 @@ describe("GET /api/reports/tickets (post-006 product feedback: table view)", () 
     const res = await reportTicketsGET(jsonRequest("/api/reports/tickets?status=open", { cookie }));
     const body = await res.json();
     expect(body.tickets.map((t: { id: string }) => t.id)).toEqual([openTicket.id]);
+  });
+
+  it("applies technicianId", async () => {
+    const store = await createStore();
+    const admin = await createUser({ role: "admin", storeIds: [store.id], password: "Correct123!" });
+    const cookie = await loginAs(admin.email, "Correct123!");
+    const technician = await createUser({ role: "technician", storeIds: [store.id] });
+    const assignedTicket = await createTicket({
+      storeId: store.id,
+      createdBy: admin.id,
+      status: "in_progress",
+      assignedTechnicianId: technician.id,
+    });
+    await createTicket({ storeId: store.id, createdBy: admin.id, status: "in_progress" });
+
+    const res = await reportTicketsGET(jsonRequest(`/api/reports/tickets?technicianId=${technician.id}`, { cookie }));
+    const body = await res.json();
+    expect(body.tickets.map((t: { id: string }) => t.id)).toEqual([assignedTicket.id]);
   });
 });

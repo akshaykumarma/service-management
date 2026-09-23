@@ -15,9 +15,26 @@ available values are restricted to the caller's visible stores (FR-010); omittin
 returns tickets across all stores the caller can see (not "no filter" in the sense of
 bypassing scope).
 
+**Deviation** (post-v1, per direct product feedback): `technicianId` — an additional
+optional filter narrowing to one Technician's assigned tickets, on top of (not instead
+of) everything above. For a `technician` caller this is redundant with their own forced
+filter (`lib/board/ticket-query.ts`); it's meant for a Service Manager/Admin/Super Admin
+picking a technician from `GET /api/technicians` below.
+
 **Responses**:
 - `200 { "tickets": [{ "id", "ticketNumber", "customerName", "machineModel", "status", "createdAt", "daysOpen" }] }`
   — empty array (not an error) when nothing matches (FR-016)
+
+---
+
+## `GET /api/technicians`
+
+**Deviation** (post-v1, per direct product feedback): active Technicians within the
+caller's visible store scope — populates the "filter by technician" picker on the board
+and the Reports table (both pass the selected id as `technicianId` to the endpoints
+above). Any authenticated role, scope-only, same pattern as `GET /api/stores`.
+
+**Responses**: `200 { "technicians": [{ "id", "name" }] }`
 
 ---
 
@@ -56,9 +73,10 @@ counts the way `/api/reports/summary` is). **Requires**: Admin or Super Admin.
 
 **Query params**: `storeId[]` (optional — omitting it returns every store in the caller's
 scope, same as `GET /api/tickets`), `status[]`, `dateFrom`, `dateTo` (required),
-`ticketId`, `customerName`, `customerPhone`, `machineModel` — the same filter set
-`GET /api/tickets` already offers. Unlike the board, every status is included by default
-(Cancelled too) — a report needs the whole picture, not the board's default working view.
+`ticketId`, `customerName`, `customerPhone`, `machineModel`, `technicianId` — the same
+filter set `GET /api/tickets` already offers. Unlike the board, every status is included
+by default (Cancelled too) — a report needs the whole picture, not the board's default
+working view.
 
 **Responses**:
 ```json

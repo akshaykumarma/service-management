@@ -14,6 +14,7 @@ export interface TicketFilters {
   customerName?: string;
   customerPhone?: string;
   machineModel?: string;
+  technicianId?: string;
   /** 003's own pre-existing default view (exclude Cancelled unless explicitly requested);
    * overridden by an explicit `statuses` filter that itself asks for "cancelled". */
   includeCancelled?: boolean;
@@ -87,6 +88,12 @@ export async function queryScopedTickets(
   }
   if (filters.machineModel) {
     conditions.push(ilike(tickets.machineModel, `%${filters.machineModel}%`));
+  }
+  // Explicit technicianId filter (board/reports UI): lets a Service Manager/Admin narrow
+  // to one technician's tickets — additive on top of, not instead of, the Technician
+  // role's own forced filter above.
+  if (filters.technicianId) {
+    conditions.push(eq(tickets.assignedTechnicianId, filters.technicianId));
   }
 
   return db

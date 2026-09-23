@@ -30,6 +30,11 @@ interface StoreOption {
   name: string;
 }
 
+interface TechnicianOption {
+  id: string;
+  name: string;
+}
+
 const COLUMNS: { status: string; label: string }[] = [
   { status: "open", label: "Open" },
   { status: "in_progress", label: "In Progress" },
@@ -120,6 +125,7 @@ export default function BoardPage() {
   const [error, setError] = useState<string | null>(null);
 
   const [storeOptions, setStoreOptions] = useState<StoreOption[]>([]);
+  const [technicianOptions, setTechnicianOptions] = useState<TechnicianOption[]>([]);
   const [selectedStoreIds, setSelectedStoreIds] = useState<string[]>([]);
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
   const [dateFrom, setDateFrom] = useState("");
@@ -128,11 +134,18 @@ export default function BoardPage() {
   const [customerNameFilter, setCustomerNameFilter] = useState("");
   const [customerPhoneFilter, setCustomerPhoneFilter] = useState("");
   const [machineModelFilter, setMachineModelFilter] = useState("");
+  const [technicianFilter, setTechnicianFilter] = useState("");
 
   useEffect(() => {
     fetch("/api/stores")
       .then((res) => res.json())
       .then((body) => setStoreOptions(body.stores));
+  }, []);
+
+  useEffect(() => {
+    fetch("/api/technicians")
+      .then((res) => res.json())
+      .then((body) => setTechnicianOptions(body.technicians));
   }, []);
 
   const columns = includeCancelled ? [...COLUMNS, CANCELLED_COLUMN] : COLUMNS;
@@ -160,6 +173,7 @@ export default function BoardPage() {
     if (customerNameFilter) params.set("customerName", customerNameFilter);
     if (customerPhoneFilter) params.set("customerPhone", customerPhoneFilter);
     if (machineModelFilter) params.set("machineModel", machineModelFilter);
+    if (technicianFilter) params.set("technicianId", technicianFilter);
 
     const res = await fetch(`/api/tickets?${params.toString()}`);
     const body = await res.json();
@@ -175,6 +189,7 @@ export default function BoardPage() {
     customerNameFilter,
     customerPhoneFilter,
     machineModelFilter,
+    technicianFilter,
   ]);
 
   useEffect(() => {
@@ -296,6 +311,17 @@ export default function BoardPage() {
               value={machineModelFilter}
               onChange={(e) => setMachineModelFilter(e.target.value)}
             />
+          </div>
+          <div>
+            <label htmlFor="technicianFilter">Technician</label>
+            <select id="technicianFilter" value={technicianFilter} onChange={(e) => setTechnicianFilter(e.target.value)}>
+              <option value="">All technicians</option>
+              {technicianOptions.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
       </section>

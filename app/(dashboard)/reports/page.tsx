@@ -8,6 +8,11 @@ interface StoreOption {
   name: string;
 }
 
+interface TechnicianOption {
+  id: string;
+  name: string;
+}
+
 interface SummaryReport {
   totalTickets: number;
   byStatus: Record<string, number>;
@@ -45,6 +50,7 @@ const STATUS_LABELS: Record<string, string> = {
 
 export default function ReportsPage() {
   const [storeOptions, setStoreOptions] = useState<StoreOption[]>([]);
+  const [technicianOptions, setTechnicianOptions] = useState<TechnicianOption[]>([]);
   const [storeId, setStoreId] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -62,6 +68,7 @@ export default function ReportsPage() {
   const [tableCustomerPhone, setTableCustomerPhone] = useState("");
   const [tableMachineModel, setTableMachineModel] = useState("");
   const [tableTicketId, setTableTicketId] = useState("");
+  const [tableTechnicianId, setTableTechnicianId] = useState("");
   const [ticketRows, setTicketRows] = useState<TicketDetailRow[] | null>(null);
   const [tableError, setTableError] = useState<string | null>(null);
 
@@ -69,6 +76,12 @@ export default function ReportsPage() {
     fetch("/api/stores")
       .then((res) => res.json())
       .then((body) => setStoreOptions(body.stores));
+  }, []);
+
+  useEffect(() => {
+    fetch("/api/technicians")
+      .then((res) => res.json())
+      .then((body) => setTechnicianOptions(body.technicians));
   }, []);
 
   async function handleGenerate(e: React.FormEvent) {
@@ -109,6 +122,7 @@ export default function ReportsPage() {
     if (tableCustomerPhone) params.set("customerPhone", tableCustomerPhone);
     if (tableMachineModel) params.set("machineModel", tableMachineModel);
     if (tableTicketId) params.set("ticketId", tableTicketId);
+    if (tableTechnicianId) params.set("technicianId", tableTechnicianId);
 
     const res = await fetch(`/api/reports/tickets?${params.toString()}`);
     if (res.status === 403) {
@@ -272,6 +286,21 @@ export default function ReportsPage() {
           <div>
             <label htmlFor="tableTicketId">Ticket number</label>
             <input id="tableTicketId" value={tableTicketId} onChange={(e) => setTableTicketId(e.target.value)} />
+          </div>
+          <div>
+            <label htmlFor="tableTechnicianId">Filter by technician</label>
+            <select
+              id="tableTechnicianId"
+              value={tableTechnicianId}
+              onChange={(e) => setTableTechnicianId(e.target.value)}
+            >
+              <option value="">All technicians</option>
+              {technicianOptions.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </select>
           </div>
           {tableError && (
             <p role="alert" aria-live="assertive">
