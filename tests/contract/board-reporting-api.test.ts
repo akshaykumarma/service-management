@@ -164,6 +164,31 @@ describe("GET /api/technicians (post-Technician-role product feedback: filter pi
     const body = await res.json();
     expect(body.technicians.map((t: { id: string }) => t.id).sort()).toEqual([technicianA.id, technicianB.id].sort());
   });
+
+  it("narrows to storeId[] when the caller passes it, intersected with their own scope", async () => {
+    const storeA = await createStore();
+    const storeB = await createStore();
+    const superAdmin = await createUser({ role: "super_admin", password: "Correct123!" });
+    const technicianA = await createUser({ role: "technician", storeIds: [storeA.id] });
+    await createUser({ role: "technician", storeIds: [storeB.id] });
+    const cookie = await loginAs(superAdmin.email, "Correct123!");
+
+    const res = await techniciansGET(jsonRequest(`/api/technicians?storeId=${storeA.id}`, { cookie }));
+    const body = await res.json();
+    expect(body.technicians.map((t: { id: string }) => t.id)).toEqual([technicianA.id]);
+  });
+
+  it("never lets a requested storeId escape the caller's own scope", async () => {
+    const storeA = await createStore();
+    const storeB = await createStore();
+    const sm = await createUser({ role: "service_manager", storeIds: [storeA.id], password: "Correct123!" });
+    await createUser({ role: "technician", storeIds: [storeB.id] });
+    const cookie = await loginAs(sm.email, "Correct123!");
+
+    const res = await techniciansGET(jsonRequest(`/api/technicians?storeId=${storeB.id}`, { cookie }));
+    const body = await res.json();
+    expect(body.technicians).toEqual([]);
+  });
 });
 
 describe("GET /api/tickets/:id/audit-trail", () => {

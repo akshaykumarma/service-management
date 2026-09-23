@@ -34,6 +34,12 @@ caller's visible store scope — populates the "filter by technician" picker on 
 and the Reports table (both pass the selected id as `technicianId` to the endpoints
 above). Any authenticated role, scope-only, same pattern as `GET /api/stores`.
 
+**Query params**: `storeId[]` (optional) — narrows the list to those store(s), e.g. the
+board's own Store filter, so the technician picker never offers someone outside the
+currently-filtered store(s). Intersected with the caller's own scope, same
+never-escape-scope rule `GET /api/tickets`'s own `storeId[]` uses; omitting it returns
+every technician in the caller's scope, same as before.
+
 **Responses**: `200 { "technicians": [{ "id", "name" }] }`
 
 ---

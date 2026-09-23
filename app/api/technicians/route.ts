@@ -11,6 +11,10 @@ import { getScopedStoreIds } from "@/lib/auth/rbac";
  * technicianId filter needs a caller-wide list, not just one ticket's own store the way
  * GET /api/tickets/:id/technicians is scoped). Same "any authenticated role, scope-only"
  * pattern as GET /api/stores.
+ *
+ * Deviation (post-post-007 product feedback): an optional `storeId[]` narrows the list
+ * to those store(s) — e.g. the board's own Store filter — same
+ * intersect-never-escape-scope rule GET /api/tickets's own storeId[] already uses.
  */
 export async function GET(request: NextRequest) {
   const sessionOrResponse = await requireAuthenticatedSession(request);
@@ -21,6 +25,12 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ technicians: [] });
   }
 
+  const requestedStoreIds = request.nextUrl.searchParams.getAll("storeId");
+  let effectiveStoreIds: string[] | "all" = scope;
+  if (requestedStoreIds.length > 0) {
+    effectiveStoreIds = scope === "all" ? requestedStoreIds : requestedStoreIds.filter((id) => scope.includes(id));
+  }
+
   const rows = await db
     .select({ id: users.id, name: users.name })
     .from(users)
@@ -29,7 +39,7 @@ export async function GET(request: NextRequest) {
       and(
         eq(users.role, "technician"),
         eq(users.active, true),
-        scope === "all" ? undefined : inArray(userStores.storeId, scope),
+        effectiveStoreIds === "all" ? undefined : inArray(userStores.storeId, effectiveStoreIds),
       ),
     );
 

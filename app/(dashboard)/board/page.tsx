@@ -142,11 +142,20 @@ export default function BoardPage() {
       .then((body) => setStoreOptions(body.stores));
   }, []);
 
+  // Narrows to the selected store(s) (post-technician-filter product feedback), so the
+  // picker never offers a technician who isn't actually in the store(s) currently
+  // filtered on. Clears an out-of-scope selection rather than silently keeping an
+  // invisible filter applied.
   useEffect(() => {
-    fetch("/api/technicians")
+    const params = new URLSearchParams();
+    for (const storeId of selectedStoreIds) params.append("storeId", storeId);
+    fetch(`/api/technicians?${params.toString()}`)
       .then((res) => res.json())
-      .then((body) => setTechnicianOptions(body.technicians));
-  }, []);
+      .then((body) => {
+        setTechnicianOptions(body.technicians);
+        setTechnicianFilter((prev) => (prev && !body.technicians.some((t: TechnicianOption) => t.id === prev) ? "" : prev));
+      });
+  }, [selectedStoreIds]);
 
   const columns = includeCancelled ? [...COLUMNS, CANCELLED_COLUMN] : COLUMNS;
   const columnOrder = columns.map((c) => c.status);
