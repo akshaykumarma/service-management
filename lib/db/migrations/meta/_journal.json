@@ -85,6 +85,13 @@
       "when": 1790180550152,
       "tag": "0011_aberrant_phil_sheldon",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1790181277735,
+      "tag": "0012_backfill_username_from_email",
+      "breakpoints": true
     }
   ]
 }
