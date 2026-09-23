@@ -250,6 +250,75 @@ describe("PATCH/DELETE /api/tickets/:ticketId/line-items/:lineItemId", () => {
     expect(body.lineItem.lineTotal).toBe(300); // 3 * 100 (original snapshot), not 3 * 999
   });
 
+  it("lets a Service Manager override the unit cost directly on the ticket, without touching the catalogue item", async () => {
+    const store = await createStore();
+    const superAdmin = await createUser({ role: "super_admin", password: "Correct123!" });
+    const superAdminCookie = await loginAs(superAdmin.email, "Correct123!");
+    const partRes = await partsPOST(
+      jsonRequest("/api/catalogue/parts", { method: "POST", cookie: superAdminCookie, body: { name: "Belt", unitCost: 100 } }),
+    );
+    const part = (await partRes.json()).part;
+
+    const sm = await createUser({ role: "service_manager", storeIds: [store.id], password: "Correct123!" });
+    const ticket = await createTicket({ storeId: store.id, createdBy: sm.id, status: "in_progress" });
+    const cookie = await loginAs(sm.email, "Correct123!");
+
+    const addRes = await lineItemsPOST(
+      jsonRequest(`/api/tickets/${ticket.id}/line-items`, {
+        method: "POST",
+        cookie,
+        body: { itemType: "part", itemId: part.id, quantity: 2 },
+      }),
+      { params: { id: ticket.id } },
+    );
+    const lineItem = (await addRes.json()).lineItem;
+
+    const patchRes = await lineItemPATCH(
+      jsonRequest(`/api/tickets/${ticket.id}/line-items/${lineItem.id}`, { method: "PATCH", cookie, body: { unitCost: 80 } }),
+      { params: { id: ticket.id, lineItemId: lineItem.id } },
+    );
+    expect(patchRes.status).toBe(200);
+    const body = await patchRes.json();
+    expect(body.lineItem.unitCostSnapshot).toBe(80);
+    expect(body.lineItem.lineTotal).toBe(160); // 2 * 80, the overridden price
+
+    // The catalogue item itself is untouched.
+    const catalogueRes = await partsGET(jsonRequest("/api/catalogue/parts", { cookie: superAdminCookie }));
+    const catalogueBelt = (await catalogueRes.json()).parts.find((p: { id: string }) => p.id === part.id);
+    expect(catalogueBelt.unitCost).toBe(100);
+  });
+
+  it("400s with invalid_unit_cost for a negative price", async () => {
+    const store = await createStore();
+    const superAdmin = await createUser({ role: "super_admin", password: "Correct123!" });
+    const superAdminCookie = await loginAs(superAdmin.email, "Correct123!");
+    const partRes = await partsPOST(
+      jsonRequest("/api/catalogue/parts", { method: "POST", cookie: superAdminCookie, body: { name: "Belt", unitCost: 100 } }),
+    );
+    const part = (await partRes.json()).part;
+
+    const sm = await createUser({ role: "service_manager", storeIds: [store.id], password: "Correct123!" });
+    const ticket = await createTicket({ storeId: store.id, createdBy: sm.id, status: "in_progress" });
+    const cookie = await loginAs(sm.email, "Correct123!");
+
+    const addRes = await lineItemsPOST(
+      jsonRequest(`/api/tickets/${ticket.id}/line-items`, {
+        method: "POST",
+        cookie,
+        body: { itemType: "part", itemId: part.id, quantity: 1 },
+      }),
+      { params: { id: ticket.id } },
+    );
+    const lineItem = (await addRes.json()).lineItem;
+
+    const patchRes = await lineItemPATCH(
+      jsonRequest(`/api/tickets/${ticket.id}/line-items/${lineItem.id}`, { method: "PATCH", cookie, body: { unitCost: -5 } }),
+      { params: { id: ticket.id, lineItemId: lineItem.id } },
+    );
+    expect(patchRes.status).toBe(400);
+    expect((await patchRes.json()).error.code).toBe("invalid_unit_cost");
+  });
+
   it("removes a line item and returns the recalculated bill", async () => {
     const store = await createStore();
     const superAdmin = await createUser({ role: "super_admin", password: "Correct123!" });
@@ -279,5 +348,78 @@ describe("PATCH/DELETE /api/tickets/:ticketId/line-items/:lineItemId", () => {
     );
     expect(res.status).toBe(200);
     expect((await res.json()).bill.subtotal).toBe(0);
+  });
+});
+
+import { PATCH as taxRatePATCH } from "@/app/api/tickets/[id]/tax-rate/route";
+
+describe("PATCH /api/tickets/:ticketId/tax-rate", () => {
+  beforeEach(resetDb);
+
+  it("defaults a new ticket to 0% tax, and lets a Service Manager set it, re-pricing the bill", async () => {
+    const store = await createStore();
+    const superAdmin = await createUser({ role: "super_admin", password: "Correct123!" });
+    const superAdminCookie = await loginAs(superAdmin.email, "Correct123!");
+    const partRes = await partsPOST(
+      jsonRequest("/api/catalogue/parts", { method: "POST", cookie: superAdminCookie, body: { name: "Belt", unitCost: 100 } }),
+    );
+    const part = (await partRes.json()).part;
+
+    const sm = await createUser({ role: "service_manager", storeIds: [store.id], password: "Correct123!" });
+    const ticket = await createTicket({ storeId: store.id, createdBy: sm.id, status: "in_progress" });
+    const cookie = await loginAs(sm.email, "Correct123!");
+
+    await lineItemsPOST(
+      jsonRequest(`/api/tickets/${ticket.id}/line-items`, {
+        method: "POST",
+        cookie,
+        body: { itemType: "part", itemId: part.id, quantity: 1 },
+      }),
+      { params: { id: ticket.id } },
+    );
+
+    const res = await taxRatePATCH(
+      jsonRequest(`/api/tickets/${ticket.id}/tax-rate`, { method: "PATCH", cookie, body: { taxRate: 18 } }),
+      { params: { id: ticket.id } },
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.taxRate).toBe(18);
+    expect(body.bill.taxAmount).toBe(18); // 18% of 100
+    expect(body.bill.total).toBe(118);
+  });
+
+  it("400s with invalid_tax_rate outside [0, 100]", async () => {
+    const store = await createStore();
+    const sm = await createUser({ role: "service_manager", storeIds: [store.id], password: "Correct123!" });
+    const ticket = await createTicket({ storeId: store.id, createdBy: sm.id, status: "in_progress" });
+    const cookie = await loginAs(sm.email, "Correct123!");
+
+    const res = await taxRatePATCH(
+      jsonRequest(`/api/tickets/${ticket.id}/tax-rate`, { method: "PATCH", cookie, body: { taxRate: 150 } }),
+      { params: { id: ticket.id } },
+    );
+    expect(res.status).toBe(400);
+    expect((await res.json()).error.code).toBe("invalid_tax_rate");
+  });
+
+  it("409s with bill_locked once the ticket has reached Completed", async () => {
+    const store = await createStore();
+    const sm = await createUser({ role: "service_manager", storeIds: [store.id], password: "Correct123!" });
+    const ticket = await createTicket({ storeId: store.id, createdBy: sm.id, status: "in_progress" });
+    const cookie = await loginAs(sm.email, "Correct123!");
+
+    const { PATCH: statusPATCH } = await import("@/app/api/tickets/[id]/status/route");
+    await statusPATCH(
+      jsonRequest(`/api/tickets/${ticket.id}/status`, { method: "PATCH", cookie, body: { toStatus: "completed" } }),
+      { params: { id: ticket.id } },
+    );
+
+    const res = await taxRatePATCH(
+      jsonRequest(`/api/tickets/${ticket.id}/tax-rate`, { method: "PATCH", cookie, body: { taxRate: 10 } }),
+      { params: { id: ticket.id } },
+    );
+    expect(res.status).toBe(409);
+    expect((await res.json()).error.code).toBe("bill_locked");
   });
 });

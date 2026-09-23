@@ -67,7 +67,10 @@ export async function POST(request: NextRequest) {
     address: payload.address,
     primaryContact: payload.primaryContact,
     whatsappNumber: payload.whatsappNumber,
-    taxRate: payload.taxRate,
+    // Optional (per direct product feedback): tax is now set and edited per-ticket
+    // (tickets.tax_rate, defaulting to 0%), not fixed at the store level, so this is no
+    // longer a mandatory setup step.
+    taxRate: payload.taxRate ?? 0,
   });
 
   if ("error" in result) {

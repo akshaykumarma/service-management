@@ -13,6 +13,7 @@ interface TicketDetail {
   machineModel: string;
   issueDescription: string;
   createdAt: string;
+  taxRate: string;
 }
 
 interface HistoryEntryRow {
@@ -114,8 +115,15 @@ const ALL_STATUSES = ["open", "in_progress", "on_hold", "completed", "delivered"
 
 const LINE_ITEM_ERROR_MESSAGES: Record<string, string> = {
   invalid_quantity: "Quantity must be a positive whole number.",
+  invalid_unit_cost: "Price must be zero or a positive number.",
   item_inactive: "That catalogue item is no longer active.",
   ticket_status_invalid: "Parts/services can only be added while the ticket is In Progress or On Hold.",
+  bill_locked: "This ticket's bill is locked — it has already reached Completed.",
+};
+
+const TAX_RATE_ERROR_MESSAGES: Record<string, string> = {
+  invalid_tax_rate: "Tax rate must be between 0 and 100.",
+  ticket_status_invalid: "The tax rate can only be changed while the ticket is In Progress or On Hold.",
   bill_locked: "This ticket's bill is locked — it has already reached Completed.",
 };
 
@@ -156,6 +164,10 @@ export default function TicketDetailPage() {
   const [itemId, setItemId] = useState("");
   const [quantity, setQuantity] = useState("1");
   const [lineItemError, setLineItemError] = useState<string | null>(null);
+  const [priceEdits, setPriceEdits] = useState<Record<string, string>>({});
+  const [taxRateInput, setTaxRateInput] = useState("0");
+  const [taxRateError, setTaxRateError] = useState<string | null>(null);
+  const [savingTaxRate, setSavingTaxRate] = useState(false);
 
   const [serviceHistory, setServiceHistory] = useState<ServiceHistory | null>(null);
   const [notificationLog, setNotificationLog] = useState<NotificationLogEntry[]>([]);
@@ -170,6 +182,7 @@ export default function TicketDetailPage() {
     }
     const body = await res.json();
     setTicket(body.ticket);
+    setTaxRateInput(Number(body.ticket.taxRate).toString());
     setStatusHistory(body.statusHistory);
     setLineItems(body.lineItems);
     setBill(body.bill);
@@ -377,6 +390,44 @@ export default function TicketDetailPage() {
   async function handleRemoveLineItem(lineItemId: string) {
     await fetch(`/api/tickets/${params.id}/line-items/${lineItemId}`, { method: "DELETE" });
     await load();
+  }
+
+  async function handleUpdatePrice(lineItemId: string) {
+    setLineItemError(null);
+    const unitCost = Number(priceEdits[lineItemId]);
+    const res = await fetch(`/api/tickets/${params.id}/line-items/${lineItemId}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ unitCost }),
+    });
+    if (res.ok) {
+      setPriceEdits((prev) => ({ ...prev, [lineItemId]: "" }));
+      await load();
+      return;
+    }
+    const body = await res.json();
+    setLineItemError(LINE_ITEM_ERROR_MESSAGES[body.error.code] ?? "Could not update price.");
+  }
+
+  async function handleUpdateTaxRate(e: React.FormEvent) {
+    e.preventDefault();
+    setTaxRateError(null);
+    setSavingTaxRate(true);
+    try {
+      const res = await fetch(`/api/tickets/${params.id}/tax-rate`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ taxRate: Number(taxRateInput) }),
+      });
+      if (res.ok) {
+        await load();
+        return;
+      }
+      const body = await res.json();
+      setTaxRateError(TAX_RATE_ERROR_MESSAGES[body.error.code] ?? "Could not update tax rate.");
+    } finally {
+      setSavingTaxRate(false);
+    }
   }
 
   const catalogueOptions = itemType === "part" ? parts : services;
@@ -654,6 +705,7 @@ export default function TicketDetailPage() {
               <th scope="col">Quantity</th>
               <th scope="col">Unit cost</th>
               <th scope="col">Line total</th>
+              <th scope="col">Edit price</th>
               <th scope="col">Action</th>
             </tr>
           </thead>
@@ -665,6 +717,24 @@ export default function TicketDetailPage() {
                 <td>{li.unitCostSnapshot.toFixed(2)}</td>
                 <td>{li.lineTotal.toFixed(2)}</td>
                 <td>
+                  <label htmlFor={`price-${li.id}`}>New unit cost</label>
+                  <input
+                    id={`price-${li.id}`}
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={priceEdits[li.id] ?? ""}
+                    onChange={(e) => setPriceEdits((prev) => ({ ...prev, [li.id]: e.target.value }))}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleUpdatePrice(li.id)}
+                    disabled={!(priceEdits[li.id] ?? "")}
+                  >
+                    Update price
+                  </button>
+                </td>
+                <td>
                   <button type="button" onClick={() => handleRemoveLineItem(li.id)}>
                     Remove
                   </button>
@@ -673,6 +743,29 @@ export default function TicketDetailPage() {
             ))}
           </tbody>
         </table>
+
+        <form onSubmit={handleUpdateTaxRate} noValidate>
+          <div>
+            <label htmlFor="taxRateInput">Tax rate (%)</label>
+            <input
+              id="taxRateInput"
+              type="number"
+              min="0"
+              max="100"
+              step="0.01"
+              value={taxRateInput}
+              onChange={(e) => setTaxRateInput(e.target.value)}
+            />
+          </div>
+          {taxRateError && (
+            <p role="alert" aria-live="assertive">
+              {taxRateError}
+            </p>
+          )}
+          <button type="submit" disabled={savingTaxRate}>
+            Update tax rate
+          </button>
+        </form>
 
         {bill && (
           <dl aria-label="Bill summary">

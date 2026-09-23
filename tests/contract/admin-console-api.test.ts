@@ -120,6 +120,25 @@ describe("POST/PATCH /api/admin/stores", () => {
     expect(body.store.active).toBe(false);
   });
 
+  it("201s creating a store with no taxRate at all, defaulting to 0 (tax is now set per-ticket)", async () => {
+    const cookie = await superAdminCookie();
+    const res = await storesPOST(
+      jsonRequest("/api/admin/stores", {
+        method: "POST",
+        cookie,
+        body: {
+          name: "No Tax Store",
+          address: "123 Main St",
+          primaryContact: "Ravi",
+          whatsappNumber: "+919876543210",
+        },
+      }),
+    );
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.store.taxRate).toBe(0);
+  });
+
   it("400s invalid_tax_rate outside [0, 100]", async () => {
     const cookie = await superAdminCookie();
     const res = await storesPOST(

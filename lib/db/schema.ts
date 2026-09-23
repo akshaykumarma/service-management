@@ -162,6 +162,12 @@ export const tickets = pgTable("tickets", {
   machineModel: text("machine_model").notNull(),
   issueDescription: text("issue_description").notNull(),
   estimatedPickupDate: date("estimated_pickup_date"),
+  // Per-ticket, Service-Manager-editable (post-007-admin-console product feedback) —
+  // replaces the store-wide fixed rate calculateBill() used to read live; defaults to 0%
+  // rather than inheriting the store's rate, per the exact request. stores.taxRate is
+  // kept in the schema (existing rows, no destructive migration) but no longer consulted
+  // for billing.
+  taxRate: numeric("tax_rate", { precision: 5, scale: 2 }).notNull().default("0"),
   status: ticketStatusEnum("status").notNull().default("open"),
   createdBy: uuid("created_by")
     .notNull()

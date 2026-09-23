@@ -5,10 +5,11 @@ import { tickets } from "@/lib/db/schema";
 import { requireAuthenticatedSession } from "@/lib/auth/require-session";
 import { requireSameOrigin } from "@/lib/auth/csrf";
 import { assertAccess, AccessDeniedError } from "@/lib/auth/rbac";
-import { updateLineItemQuantity, removeLineItem } from "@/lib/billing/line-items";
+import { updateLineItem, removeLineItem } from "@/lib/billing/line-items";
 
 const STATUS_CODE_FOR_ERROR: Record<string, number> = {
   invalid_quantity: 400,
+  invalid_unit_cost: 400,
   item_inactive: 400,
   ticket_status_invalid: 409,
   bill_locked: 409,
@@ -47,8 +48,8 @@ export async function PATCH(
   const sessionOrResponse = await loadTicketAndAssertAccess(request, params.id);
   if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
 
-  const { quantity } = await request.json();
-  const result = await updateLineItemQuantity(params.id, params.lineItemId, quantity);
+  const { quantity, unitCost } = await request.json();
+  const result = await updateLineItem(params.id, params.lineItemId, { quantity, unitCost });
 
   if ("error" in result) {
     return NextResponse.json({ error: { code: result.error } }, { status: STATUS_CODE_FOR_ERROR[result.error] });

@@ -13,7 +13,7 @@ import { PATCH as statusPATCH } from "@/app/api/tickets/[id]/status/route";
 describe("Store setup flowing into billing (User Story 2)", () => {
   beforeEach(resetDb);
 
-  it("uses a store's currently configured tax rate for bills, propagates a rate change to new tickets, and excludes an inactive store from ticket creation", async () => {
+  it("no longer uses the store's tax rate for bills (tickets default to 0%, independent of the store's rate), and excludes an inactive store from ticket creation", async () => {
     const superAdmin = await createUser({ role: "super_admin", password: "Correct123!" });
     const cookie = await loginAs(superAdmin.email, "Correct123!");
 
@@ -69,9 +69,12 @@ describe("Store setup flowing into billing (User Story 2)", () => {
       { params: { id: ticket.id } },
     );
     const addLineItemBody = await addLineItemRes.json();
-    expect(addLineItemBody.bill.taxAmount).toBeCloseTo(180, 2); // 1000 * 0.18
+    // Deviation from bill-calculation.ts's original design: tax is now per-ticket, so the
+    // store's 18% rate isn't consulted at all — every ticket starts at 0%.
+    expect(addLineItemBody.bill.taxAmount).toBe(0);
 
-    // Rate change propagates to a subsequent ticket, without needing to touch the earlier one.
+    // A store-level rate change (still editable, still shown in the admin console) has no
+    // effect on any ticket's bill, past or future.
     await storePATCH(
       jsonRequest(`/api/admin/stores/${store.id}`, { method: "PATCH", cookie, body: { taxRate: 12 } }),
       { params: { id: store.id } },
@@ -100,7 +103,7 @@ describe("Store setup flowing into billing (User Story 2)", () => {
       { params: { id: ticket2.id } },
     );
     const addLineItem2Body = await addLineItem2Res.json();
-    expect(addLineItem2Body.bill.taxAmount).toBeCloseTo(120, 2); // 1000 * 0.12
+    expect(addLineItem2Body.bill.taxAmount).toBe(0); // still 0% — the store's 12% is never consulted
 
     // Deactivate: no longer selectable, no longer usable for new tickets.
     await storePATCH(jsonRequest(`/api/admin/stores/${store.id}`, { method: "PATCH", cookie, body: { active: false } }), {

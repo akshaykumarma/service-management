@@ -3,8 +3,16 @@ import { db } from "@/lib/db/client";
 import { tickets, parts, services, ticketLineItems } from "@/lib/db/schema";
 import { isBillLocked } from "@/lib/billing/completed-lock";
 import { calculateBill, type Bill } from "@/lib/billing/bill-calculation";
+import { isValidTaxRate } from "@/lib/admin/stores";
 
-export type LineItemError = "invalid_quantity" | "item_inactive" | "ticket_status_invalid" | "bill_locked" | "not_found";
+export type LineItemError =
+  | "invalid_quantity"
+  | "invalid_unit_cost"
+  | "invalid_tax_rate"
+  | "item_inactive"
+  | "ticket_status_invalid"
+  | "bill_locked"
+  | "not_found";
 
 const EDITABLE_STATUSES = ["in_progress", "on_hold"] as const;
 
@@ -59,16 +67,27 @@ export async function addLineItem(
   return { lineItem, bill };
 }
 
-export async function updateLineItemQuantity(
+/**
+ * `quantity` and/or `unitCost` — at least one. `unitCost` lets the Service Manager
+ * override the catalogue-snapshotted price directly on this ticket (post-004 product
+ * feedback); it never re-reads or changes the catalogue item itself, so
+ * price-snapshot.test.ts's guarantee (a later catalogue price change doesn't retroactively
+ * affect an existing ticket) still holds — this is an explicit, per-ticket override, not a
+ * re-sync.
+ */
+export async function updateLineItem(
   ticketId: string,
   lineItemId: string,
-  quantity: number,
+  input: { quantity?: number; unitCost?: number },
 ): Promise<{ error: LineItemError } | { lineItem: typeof ticketLineItems.$inferSelect; bill: Bill }> {
   const writable = await checkTicketWritable(ticketId);
   if ("error" in writable) return writable;
 
-  if (!Number.isInteger(quantity) || quantity <= 0) {
+  if (input.quantity !== undefined && (!Number.isInteger(input.quantity) || input.quantity <= 0)) {
     return { error: "invalid_quantity" };
+  }
+  if (input.unitCost !== undefined && !(Number.isFinite(input.unitCost) && input.unitCost >= 0)) {
+    return { error: "invalid_unit_cost" };
   }
 
   const existingRows = await db
@@ -79,17 +98,35 @@ export async function updateLineItemQuantity(
   const existing = existingRows[0];
   if (!existing || existing.ticketId !== ticketId) return { error: "not_found" };
 
-  // Never re-reads the catalogue — recomputes from the existing unitCostSnapshot only.
-  const lineTotal = (Number(existing.unitCostSnapshot) * quantity).toFixed(2);
+  const quantity = input.quantity ?? existing.quantity;
+  const unitCost = input.unitCost ?? Number(existing.unitCostSnapshot);
+  const lineTotal = (unitCost * quantity).toFixed(2);
 
   const [lineItem] = await db
     .update(ticketLineItems)
-    .set({ quantity, lineTotal })
+    .set({ quantity, unitCostSnapshot: unitCost.toFixed(2), lineTotal })
     .where(eq(ticketLineItems.id, lineItemId))
     .returning();
 
   const bill = await calculateBill(ticketId);
   return { lineItem, bill };
+}
+
+export async function updateTicketTaxRate(
+  ticketId: string,
+  taxRate: number,
+): Promise<{ error: LineItemError } | { taxRate: number; bill: Bill }> {
+  const writable = await checkTicketWritable(ticketId);
+  if ("error" in writable) return writable;
+
+  if (!isValidTaxRate(taxRate)) {
+    return { error: "invalid_tax_rate" };
+  }
+
+  await db.update(tickets).set({ taxRate: taxRate.toFixed(2) }).where(eq(tickets.id, ticketId));
+
+  const bill = await calculateBill(ticketId);
+  return { taxRate, bill };
 }
 
 export async function removeLineItem(

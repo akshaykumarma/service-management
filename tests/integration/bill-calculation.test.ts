@@ -6,14 +6,17 @@ import { jsonRequest, loginAs } from "../helpers/http";
 import { POST as partsPOST } from "@/app/api/catalogue/parts/route";
 import { POST as servicesPOST } from "@/app/api/catalogue/services/route";
 import { POST as lineItemsPOST } from "@/app/api/tickets/[id]/line-items/route";
+import { PATCH as taxRatePATCH } from "@/app/api/tickets/[id]/tax-rate/route";
 import { db } from "@/lib/db/client";
 import { stores } from "@/lib/db/schema";
 
 describe("Automatic bill calculation with tax (User Story 1)", () => {
   beforeEach(resetDb);
 
-  it("computes subtotal, tax, and total correctly across a part and a service", async () => {
+  it("computes subtotal and total from the ticket's own tax rate (default 0%, ignoring the store's rate), and re-prices once the Service Manager sets it", async () => {
     const store = await createStore();
+    // A deliberately non-zero store rate, to prove it's no longer consulted for billing —
+    // tax is now per-ticket (see lib/billing/bill-calculation.ts's own deviation note).
     await db.update(stores).set({ taxRate: "18.00" }).where(eq(stores.id, store.id));
 
     const superAdmin = await createUser({ role: "super_admin", password: "Correct123!" });
@@ -53,8 +56,17 @@ describe("Automatic bill calculation with tax (User Story 1)", () => {
     );
     const afterService = await addServiceRes.json();
     expect(afterService.bill.subtotal).toBe(1050);
-    expect(afterService.bill.taxAmount).toBe(189); // 1050 * 0.18
-    expect(afterService.bill.total).toBe(1239);
+    expect(afterService.bill.taxAmount).toBe(0); // ticket defaults to 0%, store's 18% ignored
+    expect(afterService.bill.total).toBe(1050);
+
+    const taxRes = await taxRatePATCH(
+      jsonRequest(`/api/tickets/${ticket.id}/tax-rate`, { method: "PATCH", cookie, body: { taxRate: 18 } }),
+      { params: { id: ticket.id } },
+    );
+    expect(taxRes.status).toBe(200);
+    const afterTax = await taxRes.json();
+    expect(afterTax.bill.taxAmount).toBe(189); // 1050 * 0.18, once the SM sets it
+    expect(afterTax.bill.total).toBe(1239);
   });
 
   it("rejects adding a line item to a ticket that is still Open", async () => {

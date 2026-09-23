@@ -135,14 +135,13 @@ export default function StoresPage() {
             <small>International format, e.g. +919876543210 — country code with +, no spaces or dashes.</small>
           </div>
           <div>
-            <label htmlFor="storeTaxRate">Tax rate (%)</label>
+            <label htmlFor="storeTaxRate">Tax rate (%) (optional — tax is now set per-ticket)</label>
             <input
               id="storeTaxRate"
               type="number"
               step="0.01"
               min="0"
               max="100"
-              required
               value={taxRate}
               onChange={(e) => setTaxRate(e.target.value)}
             />
