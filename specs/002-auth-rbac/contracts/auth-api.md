@@ -26,6 +26,13 @@ provider under the hood).
 { "email": "string", "password": "string" }
 ```
 
+**Deviation** (post-v1, per direct product feedback): the `email` field doubles as
+"email or username" — an account may optionally have a `username` set (`POST
+/api/auth/users`), and this field is checked against both `users.email` and
+`users.username`. No second request field was added for this, since a username can never
+collide with a valid email format (the `@` character isn't allowed in a username), so
+there's no ambiguity in accepting either through the one field.
+
 **Responses**:
 - `200` — session cookie set (HttpOnly, Secure); body: `{ "user": { "id", "name", "email", "role" } }`
 - `401 { code: "invalid_credentials" }` — wrong email/password (generic message, doesn't
@@ -101,11 +108,16 @@ Creates a staff account. **Requires**: `super_admin` role (FR-011).
 
 **Request**:
 ```json
-{ "name": "string", "email": "string", "role": "admin | service_manager", "storeIds": ["uuid", "..."], "password": "string" }
+{ "name": "string", "email": "string", "username": "string (optional)", "role": "admin | service_manager", "storeIds": ["uuid", "..."], "password": "string" }
 ```
 (`role: "super_admin"` is not creatable via this endpoint in v1 — no spec'd flow for
 creating a second Super Admin; only one is assumed to exist per deployment, seeded outside
 this API.)
+
+**Deviation** (post-v1, per direct product feedback): `username` — 3-32 characters,
+letters/digits/`.`/`_`/`-` only — is optional at creation and, when set, usable in place of
+email at `POST /api/auth/login`. Unique when set (a Postgres unique index allows any number
+of `NULL`s, so accounts without one don't collide with each other).
 
 **Deviation from the original design** (documented here rather than silently changed): v1
 of this contract had the system generate a one-time temporary password, returned once for
@@ -117,12 +129,14 @@ lowercase letter, and a special character). The response no longer carries a
 `temporaryPassword`.
 
 **Responses**:
-- `201 { "user": { "id", "name", "email", "role", "active": true, "storeIds" } }`
+- `201 { "user": { "id", "name", "email", "username", "role", "active": true, "storeIds" } }`
 - `400 { code: "invalid_password" }` — `password` fails the complexity rule
+- `400 { code: "invalid_username" }` — `username` given but not 3-32 chars of letters/digits/`.`/`_`/`-`
 - `400 { code: "store_assignment_required" }` — `storeIds` empty for `admin`/`service_manager` (FR-017)
 - `400 { code: "invalid_store_count" }` — `service_manager` with `storeIds.length !== 1` (FR-002)
 - `400 { code: "invalid_store_id" }` — a `storeIds` entry doesn't exist
 - `409 { code: "email_already_registered" }`
+- `409 { code: "username_already_registered" }`
 
 ---
 

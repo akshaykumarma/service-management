@@ -57,6 +57,13 @@
       "when": 1789927246329,
       "tag": "0007_legal_wallow",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1790177873933,
+      "tag": "0008_futuristic_king_bedlam",
+      "breakpoints": true
     }
   ]
 }

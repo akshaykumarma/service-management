@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
+import { eq, or } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { users } from "@/lib/db/schema";
 import { verifyPassword } from "@/lib/auth/auth.config";
@@ -29,10 +29,14 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // The request body's `email` field doubles as "email or username" (an accepted
+  // deviation, documented in specs/002-auth-rbac/contracts/auth-api.md, so the API
+  // contract doesn't grow a second, largely-redundant field for this).
+  const identifier = email.trim().toLowerCase();
   const rows = await db
     .select()
     .from(users)
-    .where(eq(users.email, email.trim().toLowerCase()))
+    .where(or(eq(users.email, identifier), eq(users.username, identifier)))
     .limit(1);
   const user = rows[0];
 

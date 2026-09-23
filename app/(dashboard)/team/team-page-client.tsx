@@ -7,6 +7,7 @@ interface StaffUser {
   id: string;
   name: string;
   email: string;
+  username: string | null;
   role: "super_admin" | "admin" | "service_manager";
   active: boolean;
   storeIds: string[];
@@ -23,6 +24,8 @@ const PASSWORD_HINT =
 const ERROR_MESSAGES: Record<string, string> = {
   invalid_password: PASSWORD_HINT,
   invalid_email: "Enter a valid email address.",
+  invalid_username: "Username must be 3-32 characters: letters, digits, dots, underscores, or hyphens only.",
+  username_already_registered: "That username is already taken.",
   store_assignment_required: "At least one store is required.",
   invalid_store_count: "A Service Manager must have exactly one store.",
   invalid_store_id: "One or more selected stores no longer exist.",
@@ -36,6 +39,7 @@ export default function TeamPageClient({ callerRole }: { callerRole: "super_admi
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [role, setRole] = useState<"admin" | "service_manager">("service_manager");
   const [storeIds, setStoreIds] = useState<string[]>([]);
   const [password, setPassword] = useState("");
@@ -75,13 +79,14 @@ export default function TeamPageClient({ callerRole }: { callerRole: "super_admi
     const res = await fetch("/api/auth/users", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name, email, role, storeIds, password }),
+      body: JSON.stringify({ name, email, username: username || undefined, role, storeIds, password }),
     });
 
     if (res.ok) {
       setCreatedMessage(`${name}'s account was created.`);
       setName("");
       setEmail("");
+      setUsername("");
       setStoreIds([]);
       setPassword("");
       loadUsers();
@@ -145,6 +150,10 @@ export default function TeamPageClient({ callerRole }: { callerRole: "super_admi
               />
             </div>
             <div>
+              <label htmlFor="username">Username (optional — can log in with either)</label>
+              <input id="username" value={username} onChange={(e) => setUsername(e.target.value)} />
+            </div>
+            <div>
               <label htmlFor="role">Role</label>
               <select id="role" value={role} onChange={(e) => setRole(e.target.value as typeof role)}>
                 <option value="admin">Admin</option>
@@ -201,6 +210,7 @@ export default function TeamPageClient({ callerRole }: { callerRole: "super_admi
             <tr>
               <th scope="col">Name</th>
               <th scope="col">Email</th>
+              <th scope="col">Username</th>
               <th scope="col">Role</th>
               <th scope="col">Status</th>
               <th scope="col">Stores</th>
@@ -213,6 +223,7 @@ export default function TeamPageClient({ callerRole }: { callerRole: "super_admi
               <tr key={u.id}>
                 <td>{u.name}</td>
                 <td>{u.email}</td>
+                <td>{u.username ?? "—"}</td>
                 <td>{u.role}</td>
                 <td>{u.active ? "Active" : "Deactivated"}</td>
                 <td>{storeNames(u.storeIds)}</td>

@@ -31,6 +31,19 @@ describe("POST /api/auth/login", () => {
     expect(body.user).toMatchObject({ email: user.email });
   });
 
+  it("200s logging in with a username instead of email, when the account has one", async () => {
+    const user = await createUser({ email: "hasuser@example.com", username: "hasuser", password: "Correct123!" });
+    const res = await loginPOST(
+      jsonRequest("/api/auth/login", {
+        method: "POST",
+        body: { email: "hasuser", password: "Correct123!" },
+      }),
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.user).toMatchObject({ email: user.email });
+  });
+
   it("401s with invalid_credentials for a wrong password", async () => {
     const user = await createUser({ email: "b@example.com", password: "Correct123!" });
     const res = await loginPOST(
@@ -212,6 +225,80 @@ describe("POST /api/auth/users", () => {
     );
     expect(res.status).toBe(400);
     expect((await res.json()).error.code).toBe("invalid_email");
+  });
+
+  it("creates a staff account with an optional username, usable to log in instead of email", async () => {
+    const superAdmin = await createUser({ role: "super_admin", password: "Correct123!" });
+    const store = await createStore();
+    const cookie = await loginAs(superAdmin.email, "Correct123!");
+
+    const res = await usersPOST(
+      jsonRequest("/api/auth/users", {
+        method: "POST",
+        cookie,
+        body: {
+          name: "New SM",
+          email: "withusername@example.com",
+          username: "new.sm-01",
+          role: "service_manager",
+          storeIds: [store.id],
+          password: "ValidPass1!",
+        },
+      }),
+    );
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.user.username).toBe("new.sm-01");
+
+    const smCookie = await loginAs("new.sm-01", "ValidPass1!");
+    expect(smCookie).toBeTruthy();
+  });
+
+  it("400s with invalid_username for a malformed username", async () => {
+    const superAdmin = await createUser({ role: "super_admin", password: "Correct123!" });
+    const store = await createStore();
+    const cookie = await loginAs(superAdmin.email, "Correct123!");
+
+    const res = await usersPOST(
+      jsonRequest("/api/auth/users", {
+        method: "POST",
+        cookie,
+        body: {
+          name: "New SM",
+          email: "badusername@example.com",
+          username: "a b", // spaces aren't allowed
+          role: "service_manager",
+          storeIds: [store.id],
+          password: "ValidPass1!",
+        },
+      }),
+    );
+    expect(res.status).toBe(400);
+    expect((await res.json()).error.code).toBe("invalid_username");
+  });
+
+  it("409s with username_already_registered for a duplicate username", async () => {
+    const superAdmin = await createUser({ role: "super_admin", password: "Correct123!" });
+    const store = await createStore();
+    await createUser({ username: "taken" });
+    const cookie = await loginAs(superAdmin.email, "Correct123!");
+
+    const res = await usersPOST(
+      jsonRequest("/api/auth/users", {
+        method: "POST",
+        cookie,
+        body: {
+          name: "New SM",
+          email: "dupusername@example.com",
+          username: "taken",
+          role: "service_manager",
+          storeIds: [store.id],
+          password: "ValidPass1!",
+        },
+      }),
+    );
+    expect(res.status).toBe(409);
+    expect((await res.json()).error.code).toBe("username_already_registered");
   });
 
   it("400s with store_assignment_required when storeIds is empty", async () => {

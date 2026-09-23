@@ -5,6 +5,7 @@ import { stores, users, userStores } from "@/lib/db/schema";
 import { hashPassword } from "@/lib/auth/auth.config";
 import { isValidEmail } from "@/lib/auth/email-validation";
 import { isValidPassword } from "@/lib/auth/password-policy";
+import { isValidUsername } from "@/lib/auth/username-validation";
 import { requireAuthenticatedSession } from "@/lib/auth/require-session";
 import { AccessDeniedError, getScopedStoreIds, requireAdminOrAbove, requireSuperAdmin } from "@/lib/auth/rbac";
 import { requireSameOrigin } from "@/lib/auth/csrf";
@@ -44,6 +45,7 @@ export async function GET(request: NextRequest) {
       id: u.id,
       name: u.name,
       email: u.email,
+      username: u.username,
       role: u.role,
       active: u.active,
       storeIds: storeIdsByUser.get(u.id) ?? [],
@@ -67,7 +69,7 @@ export async function POST(request: NextRequest) {
     throw err;
   }
 
-  const { name, email, role, storeIds, password } = await request.json();
+  const { name, email, username, role, storeIds, password } = await request.json();
 
   if (role !== "admin" && role !== "service_manager") {
     return NextResponse.json(
@@ -79,6 +81,22 @@ export async function POST(request: NextRequest) {
   if (!isValidEmail(email)) {
     return NextResponse.json(
       { error: { code: "invalid_email", message: "Enter a valid email address." } },
+      { status: 400 },
+    );
+  }
+
+  // Optional: login accepts either email or username (post-002-auth-rbac product
+  // feedback), but not every account needs one.
+  const normalizedUsername =
+    username === undefined || username === null || username === "" ? null : String(username).trim().toLowerCase();
+  if (normalizedUsername !== null && !isValidUsername(normalizedUsername)) {
+    return NextResponse.json(
+      {
+        error: {
+          code: "invalid_username",
+          message: "Username must be 3-32 characters: letters, digits, dots, underscores, or hyphens only.",
+        },
+      },
       { status: 400 },
     );
   }
@@ -122,6 +140,16 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  if (normalizedUsername !== null) {
+    const existingUsername = await db.select().from(users).where(eq(users.username, normalizedUsername)).limit(1);
+    if (existingUsername.length > 0) {
+      return NextResponse.json(
+        { error: { code: "username_already_registered", message: "That username is already taken." } },
+        { status: 409 },
+      );
+    }
+  }
+
   const matchingStores = await db.select({ id: stores.id }).from(stores).where(inArray(stores.id, ids));
   if (matchingStores.length !== ids.length) {
     return NextResponse.json(
@@ -135,7 +163,7 @@ export async function POST(request: NextRequest) {
   const created = await db.transaction(async (tx) => {
     const [user] = await tx
       .insert(users)
-      .values({ name, email: normalizedEmail, passwordHash, role, active: true })
+      .values({ name, email: normalizedEmail, username: normalizedUsername, passwordHash, role, active: true })
       .returning();
 
     for (const storeId of ids) {
@@ -151,6 +179,7 @@ export async function POST(request: NextRequest) {
         id: created.id,
         name: created.name,
         email: created.email,
+        username: created.username,
         role: created.role,
         active: created.active,
         storeIds: ids,

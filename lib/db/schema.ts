@@ -72,6 +72,11 @@ export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
   email: text("email").notNull(),
+  // Optional (nullable) — a Super Admin may set one at account creation, or leave it
+  // unset; a Postgres unique index allows any number of NULLs, so this stays enforceable
+  // without every pre-existing account needing a backfilled value. Login accepts either
+  // this or email, per direct product feedback (post-002-auth-rbac).
+  username: text("username"),
   passwordHash: text("password_hash").notNull(),
   role: roleEnum("role").notNull(),
   active: boolean("active").notNull().default(true),
@@ -79,6 +84,7 @@ export const users = pgTable("users", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => ({
   emailUnique: uniqueIndex("users_email_unique_idx").on(table.email),
+  usernameUnique: uniqueIndex("users_username_unique_idx").on(table.username),
 }));
 
 export const userStores = pgTable(

@@ -52,11 +52,11 @@ export default function LoginPage() {
       <h1>Log in</h1>
       <form onSubmit={handleSubmit} noValidate>
         <div>
-          <label htmlFor="email">Email</label>
+          <label htmlFor="email">Email or Username</label>
           <input
             id="email"
             name="email"
-            type="email"
+            type="text"
             autoComplete="username"
             required
             value={email}

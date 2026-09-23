@@ -32,14 +32,16 @@ export async function createStore(
 
 export async function createUser(opts: {
   email?: string;
+  username?: string;
   password?: string;
   name?: string;
   role?: "super_admin" | "admin" | "service_manager";
   active?: boolean;
   storeIds?: string[];
-}): Promise<{ id: string; email: string; password: string }> {
+}): Promise<{ id: string; email: string; username: string | null; password: string }> {
   counter += 1;
   const email = opts.email ?? `user${counter}@example.com`;
+  const username = opts.username ?? null;
   const password = opts.password ?? "CorrectHorseBattery1!";
   const passwordHash = await hashPassword(password);
 
@@ -48,6 +50,7 @@ export async function createUser(opts: {
     .values({
       name: opts.name ?? `Test User ${counter}`,
       email,
+      username,
       passwordHash,
       role: opts.role ?? "service_manager",
       active: opts.active ?? true,
@@ -58,7 +61,7 @@ export async function createUser(opts: {
     await db.insert(userStores).values({ userId: user.id, storeId });
   }
 
-  return { id: user.id, email, password };
+  return { id: user.id, email, username, password };
 }
 
 export async function createTicket(opts: {
