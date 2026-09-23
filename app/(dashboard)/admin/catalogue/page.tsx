@@ -124,7 +124,9 @@ export default function CataloguePage() {
         <h2 id="parts-heading">Parts</h2>
         <form onSubmit={handleCreatePart} noValidate>
           <div>
-            <label htmlFor="partName">Name</label>
+            <label htmlFor="partName" className="required">
+              Name
+            </label>
             <input id="partName" required value={partName} onChange={(e) => setPartName(e.target.value)} />
           </div>
           <div>
@@ -132,7 +134,9 @@ export default function CataloguePage() {
             <input id="partSku" value={partSku} onChange={(e) => setPartSku(e.target.value)} />
           </div>
           <div>
-            <label htmlFor="partUnitCost">Unit cost</label>
+            <label htmlFor="partUnitCost" className="required">
+              Unit cost
+            </label>
             <input
               id="partUnitCost"
               type="number"
@@ -197,7 +201,9 @@ export default function CataloguePage() {
         <h2 id="services-heading">Services</h2>
         <form onSubmit={handleCreateService} noValidate>
           <div>
-            <label htmlFor="serviceName">Name</label>
+            <label htmlFor="serviceName" className="required">
+              Name
+            </label>
             <input id="serviceName" required value={serviceName} onChange={(e) => setServiceName(e.target.value)} />
           </div>
           <div>
@@ -205,7 +211,9 @@ export default function CataloguePage() {
             <input id="serviceDescription" value={serviceDescription} onChange={(e) => setServiceDescription(e.target.value)} />
           </div>
           <div>
-            <label htmlFor="serviceUnitCost">Unit cost</label>
+            <label htmlFor="serviceUnitCost" className="required">
+              Unit cost
+            </label>
             <input
               id="serviceUnitCost"
               type="number"

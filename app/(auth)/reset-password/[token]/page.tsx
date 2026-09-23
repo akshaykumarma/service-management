@@ -35,7 +35,9 @@ export default function ResetPasswordPage({ params }: { params: { token: string 
       <h1>Choose a new password</h1>
       <form onSubmit={handleSubmit} noValidate>
         <div>
-          <label htmlFor="newPassword">New password</label>
+          <label htmlFor="newPassword" className="required">
+            New password
+          </label>
           <PasswordInput
             id="newPassword"
             autoComplete="new-password"

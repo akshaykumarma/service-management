@@ -98,6 +98,11 @@ label {
   margin-bottom: 4px;
 }
 
+label.required::after {
+  content: " *";
+  color: var(--color-danger);
+}
+
 input,
 select,
 textarea {

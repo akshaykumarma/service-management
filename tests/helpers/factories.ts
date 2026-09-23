@@ -72,6 +72,7 @@ export async function createTicket(opts: {
   customerPhone?: string;
   status?: "open" | "in_progress" | "on_hold" | "completed" | "delivered" | "cancelled";
   assignedTechnicianId?: string;
+  serialNumber?: string;
 }): Promise<{ id: string; ticketNumber: string }> {
   counter += 1;
   const phone = opts.customerPhone ?? `+91900000${String(counter).padStart(4, "0")}`;
@@ -95,6 +96,7 @@ export async function createTicket(opts: {
       customerPhone: phone,
       customerId: customer.id,
       machineModel: opts.machineModel ?? `Model-${counter}`,
+      serialNumber: opts.serialNumber ?? null,
       issueDescription: "Test issue",
       status: opts.status ?? "open",
       createdBy: opts.createdBy,

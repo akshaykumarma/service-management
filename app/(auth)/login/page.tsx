@@ -52,7 +52,9 @@ export default function LoginPage() {
       <h1>Log in</h1>
       <form onSubmit={handleSubmit} noValidate>
         <div>
-          <label htmlFor="email">Email or Username</label>
+          <label htmlFor="email" className="required">
+            Email or Username
+          </label>
           <input
             id="email"
             name="email"
@@ -64,7 +66,9 @@ export default function LoginPage() {
           />
         </div>
         <div>
-          <label htmlFor="password">Password</label>
+          <label htmlFor="password" className="required">
+            Password
+          </label>
           <PasswordInput
             id="password"
             autoComplete="current-password"

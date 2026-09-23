@@ -160,6 +160,10 @@ export const tickets = pgTable("tickets", {
     .notNull()
     .references(() => customers.id),
   machineModel: text("machine_model").notNull(),
+  // Optional (post-003 product feedback) — a manufacturer serial number, distinct from
+  // the free-text machineModel field; no format validation, since serial number schemes
+  // vary by manufacturer.
+  serialNumber: text("serial_number"),
   issueDescription: text("issue_description").notNull(),
   estimatedPickupDate: date("estimated_pickup_date"),
   // Per-ticket, Service-Manager-editable (post-007-admin-console product feedback) —

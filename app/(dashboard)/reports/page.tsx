@@ -131,7 +131,9 @@ export default function ReportsPage() {
             </select>
           </div>
           <div>
-            <label htmlFor="tableDateFrom">Filter from date</label>
+            <label htmlFor="tableDateFrom" className="required">
+              Filter from date
+            </label>
             <input
               id="tableDateFrom"
               type="date"

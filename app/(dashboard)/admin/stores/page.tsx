@@ -110,19 +110,27 @@ export default function StoresPage() {
         <h2 id="create-store-heading">Add a store</h2>
         <form onSubmit={handleCreate} noValidate>
           <div>
-            <label htmlFor="storeName">Name</label>
+            <label htmlFor="storeName" className="required">
+              Name
+            </label>
             <input id="storeName" required value={name} onChange={(e) => setName(e.target.value)} />
           </div>
           <div>
-            <label htmlFor="storeAddress">Address</label>
+            <label htmlFor="storeAddress" className="required">
+              Address
+            </label>
             <input id="storeAddress" required value={address} onChange={(e) => setAddress(e.target.value)} />
           </div>
           <div>
-            <label htmlFor="storePrimaryContact">Primary contact</label>
+            <label htmlFor="storePrimaryContact" className="required">
+              Primary contact
+            </label>
             <input id="storePrimaryContact" required value={primaryContact} onChange={(e) => setPrimaryContact(e.target.value)} />
           </div>
           <div>
-            <label htmlFor="storeWhatsapp">WhatsApp number</label>
+            <label htmlFor="storeWhatsapp" className="required">
+              WhatsApp number
+            </label>
             <input
               id="storeWhatsapp"
               required

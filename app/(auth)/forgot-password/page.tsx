@@ -28,7 +28,9 @@ export default function ForgotPasswordPage() {
       <h1>Forgot your password?</h1>
       <form onSubmit={handleSubmit} noValidate>
         <div>
-          <label htmlFor="email">Email</label>
+          <label htmlFor="email" className="required">
+            Email
+          </label>
           <input
             id="email"
             name="email"

@@ -33,6 +33,7 @@ export default function NewTicketPage() {
   const [customerPhone, setCustomerPhone] = useState("");
   const [customerAltPhone, setCustomerAltPhone] = useState("");
   const [machineModel, setMachineModel] = useState("");
+  const [serialNumber, setSerialNumber] = useState("");
   const [issueDescription, setIssueDescription] = useState("");
   const [estimatedPickupDate, setEstimatedPickupDate] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -65,6 +66,7 @@ export default function NewTicketPage() {
           customerPhone,
           customerAltPhone: customerAltPhone || null,
           machineModel,
+          serialNumber: serialNumber || null,
           issueDescription,
           estimatedPickupDate: estimatedPickupDate || null,
         }),
@@ -116,7 +118,9 @@ export default function NewTicketPage() {
       <h1>New ticket</h1>
       <form onSubmit={handleSubmit} noValidate>
         <div>
-          <label htmlFor="storeId">Store</label>
+          <label htmlFor="storeId" className="required">
+            Store
+          </label>
           <select id="storeId" required value={storeId} onChange={(e) => setStoreId(e.target.value)}>
             <option value="">Select a store</option>
             {stores.map((s) => (
@@ -127,7 +131,9 @@ export default function NewTicketPage() {
           </select>
         </div>
         <div>
-          <label htmlFor="customerName">Customer name</label>
+          <label htmlFor="customerName" className="required">
+            Customer name
+          </label>
           <input
             id="customerName"
             required
@@ -136,7 +142,9 @@ export default function NewTicketPage() {
           />
         </div>
         <div>
-          <label htmlFor="customerPhone">Customer phone</label>
+          <label htmlFor="customerPhone" className="required">
+            Customer phone
+          </label>
           <input
             id="customerPhone"
             required
@@ -153,7 +161,9 @@ export default function NewTicketPage() {
           />
         </div>
         <div>
-          <label htmlFor="machineModel">Machine model</label>
+          <label htmlFor="machineModel" className="required">
+            Machine model
+          </label>
           <input
             id="machineModel"
             required
@@ -171,7 +181,13 @@ export default function NewTicketPage() {
           </datalist>
         </div>
         <div>
-          <label htmlFor="issueDescription">Issue description</label>
+          <label htmlFor="serialNumber">Serial number (optional)</label>
+          <input id="serialNumber" value={serialNumber} onChange={(e) => setSerialNumber(e.target.value)} />
+        </div>
+        <div>
+          <label htmlFor="issueDescription" className="required">
+            Issue description
+          </label>
           <textarea
             id="issueDescription"
             required

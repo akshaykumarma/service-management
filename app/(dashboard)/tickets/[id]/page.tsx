@@ -11,6 +11,7 @@ interface TicketDetail {
   customerName: string;
   customerPhone: string;
   machineModel: string;
+  serialNumber: string | null;
   issueDescription: string;
   createdAt: string;
   taxRate: string;
@@ -535,6 +536,8 @@ export default function TicketDetailPage() {
           <dd>{ticket.customerPhone}</dd>
           <dt>Machine model</dt>
           <dd>{ticket.machineModel}</dd>
+          <dt>Serial number</dt>
+          <dd>{ticket.serialNumber ?? "—"}</dd>
           <dt>Issue</dt>
           <dd>{ticket.issueDescription}</dd>
           <dt>Status</dt>
@@ -594,7 +597,9 @@ export default function TicketDetailPage() {
         <h2 id="status-change-heading">Change status</h2>
         <form onSubmit={handleStatusChange} noValidate>
           <div>
-            <label htmlFor="toStatus">New status</label>
+            <label htmlFor="toStatus" className="required">
+              New status
+            </label>
             <select id="toStatus" required value={toStatus} onChange={(e) => setToStatus(e.target.value)}>
               <option value="">Select a status</option>
               {ALL_STATUSES.filter((s) => s !== ticket.status).map((s) => (
@@ -653,7 +658,9 @@ export default function TicketDetailPage() {
             <>
               <form onSubmit={handleVerifyCode} noValidate>
                 <div>
-                  <label htmlFor="otpCode">One-time code</label>
+                  <label htmlFor="otpCode" className="required">
+                    One-time code
+                  </label>
                   <input
                     id="otpCode"
                     inputMode="numeric"
@@ -684,7 +691,9 @@ export default function TicketDetailPage() {
               <p>The one-time code could not be sent to the customer&apos;s phone. Correct the number and retry.</p>
               <form onSubmit={handleCorrectPhone} noValidate>
                 <div>
-                  <label htmlFor="correctedPhone">Corrected phone number</label>
+                  <label htmlFor="correctedPhone" className="required">
+                    Corrected phone number
+                  </label>
                   <input
                     id="correctedPhone"
                     required
@@ -710,7 +719,9 @@ export default function TicketDetailPage() {
               <p>The corrected number also failed to receive the code. Override with a recorded reason instead.</p>
               <form onSubmit={handleOverride} noValidate>
                 <div>
-                  <label htmlFor="overrideReason">Reason</label>
+                  <label htmlFor="overrideReason" className="required">
+                    Reason
+                  </label>
                   <textarea
                     id="overrideReason"
                     required
@@ -750,7 +761,9 @@ export default function TicketDetailPage() {
             </select>
           </div>
           <div>
-            <label htmlFor="itemId">Catalogue item</label>
+            <label htmlFor="itemId" className="required">
+              Catalogue item
+            </label>
             <select id="itemId" required value={itemId} onChange={(e) => setItemId(e.target.value)}>
               <option value="">Select an item</option>
               {catalogueOptions.map((item) => (
@@ -761,7 +774,9 @@ export default function TicketDetailPage() {
             </select>
           </div>
           <div>
-            <label htmlFor="quantity">Quantity</label>
+            <label htmlFor="quantity" className="required">
+              Quantity
+            </label>
             <input
               id="quantity"
               type="number"

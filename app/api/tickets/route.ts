@@ -83,6 +83,7 @@ export async function POST(request: NextRequest) {
         customerAltPhone: payload.customerAltPhone ?? null,
         customerId: customer.id,
         machineModel: payload.machineModel,
+        serialNumber: payload.serialNumber || null,
         issueDescription: payload.issueDescription,
         estimatedPickupDate: payload.estimatedPickupDate ?? null,
         status: "open",

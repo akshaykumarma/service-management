@@ -136,11 +136,15 @@ export default function TeamPageClient({ callerRole }: { callerRole: "super_admi
           <h2 id="create-user-heading">Add a staff account</h2>
           <form onSubmit={handleCreate} noValidate>
             <div>
-              <label htmlFor="name">Name</label>
+              <label htmlFor="name" className="required">
+                Name
+              </label>
               <input id="name" required value={name} onChange={(e) => setName(e.target.value)} />
             </div>
             <div>
-              <label htmlFor="email">Email</label>
+              <label htmlFor="email" className="required">
+                Email
+              </label>
               <input
                 id="email"
                 type="email"
@@ -162,7 +166,7 @@ export default function TeamPageClient({ callerRole }: { callerRole: "super_admi
               </select>
             </div>
             <div>
-              <label htmlFor="storeIds">
+              <label htmlFor="storeIds" className="required">
                 Store{role === "admin" ? "s" : ""} (
                 {role === "service_manager" || role === "technician"
                   ? "select exactly one"
@@ -184,7 +188,9 @@ export default function TeamPageClient({ callerRole }: { callerRole: "super_admi
               </select>
             </div>
             <div>
-              <label htmlFor="password">Password</label>
+              <label htmlFor="password" className="required">
+                Password
+              </label>
               <PasswordInput
                 id="password"
                 autoComplete="new-password"

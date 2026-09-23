@@ -73,11 +73,15 @@ export default function MachineModelsPage() {
         <h2 id="machine-models-heading">Add a machine model</h2>
         <form onSubmit={handleCreate} noValidate>
           <div>
-            <label htmlFor="name">Model name</label>
+            <label htmlFor="name" className="required">
+              Model name
+            </label>
             <input id="name" required value={name} onChange={(e) => setName(e.target.value)} />
           </div>
           <div>
-            <label htmlFor="manufacturer">Manufacturer</label>
+            <label htmlFor="manufacturer" className="required">
+              Manufacturer
+            </label>
             <input id="manufacturer" required value={manufacturer} onChange={(e) => setManufacturer(e.target.value)} />
           </div>
           <div>
