@@ -18,13 +18,13 @@ test.describe("Configure a new store end-to-end (007-admin-console, US2)", () =>
     await page.getByLabel("Tax rate (%)").fill("18");
     await page.getByRole("button", { name: "Create store" }).click();
 
-    const storeArticle = page.locator("article", { has: page.getByRole("heading", { name: new RegExp(storeName) }) });
-    await expect(storeArticle).toBeVisible();
-    await expect(storeArticle).toContainText("Inactive");
+    const storeRow = page.locator("tbody tr", { hasText: storeName });
+    await expect(storeRow).toBeVisible();
+    await expect(storeRow).toContainText("Inactive");
 
-    await storeArticle.getByRole("button", { name: "Activate" }).click();
-    await expect(storeArticle).toContainText("Active");
-    await expect(storeArticle).not.toContainText("Inactive");
+    await storeRow.getByRole("button", { name: "Activate" }).click();
+    await expect(storeRow).toContainText("Active");
+    await expect(storeRow).not.toContainText("Inactive");
 
     // Now usable at intake.
     await page.goto("/tickets/new");

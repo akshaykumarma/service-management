@@ -195,64 +195,75 @@ export default function StoresPage() {
 
         {filteredStores.length === 0 && <p className="list-toolbar__empty">No stores match your search.</p>}
 
-        {filteredStores.map((store) => {
-          const assignedAdmins = users.filter((u) => u.role === "admin" && u.storeIds.includes(store.id));
-          return (
-            <article key={store.id} aria-labelledby={`store-${store.id}-heading`}>
-              <h3 id={`store-${store.id}-heading`}>
-                {store.name} — {store.active ? "Active" : "Inactive"}
-              </h3>
-              <dl>
-                <dt>Address</dt>
-                <dd>{store.address}</dd>
-                <dt>Primary contact</dt>
-                <dd>{store.primaryContact}</dd>
-                <dt>WhatsApp number</dt>
-                <dd>{store.whatsappNumber ?? "—"}</dd>
-                <dt>Tax rate</dt>
-                <dd>{store.taxRate}%</dd>
-              </dl>
-              <div className="article-actions">
-                <button type="button" onClick={() => openEditModal(store)}>
-                  Edit
-                </button>
-                <button type="button" onClick={() => patchStore(store.id, { active: !store.active })}>
-                  {store.active ? "Deactivate" : "Activate"}
-                </button>
-              </div>
-
-              <div aria-labelledby={`store-${store.id}-admins-heading`}>
-                <h4 id={`store-${store.id}-admins-heading`}>Assigned Admins</h4>
-                <ul>
-                  {assignedAdmins.map((admin) => (
-                    <li key={admin.id}>
-                      {admin.name}{" "}
-                      <button type="button" onClick={() => removeAdmin(store.id, admin.id)}>
-                        Remove
+        <div className="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Name</th>
+                <th scope="col">Address</th>
+                <th scope="col">Primary contact</th>
+                <th scope="col">WhatsApp number</th>
+                <th scope="col">Tax rate</th>
+                <th scope="col">Status</th>
+                <th scope="col">Assigned Admins</th>
+                <th scope="col">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredStores.map((store) => {
+                const assignedAdmins = users.filter((u) => u.role === "admin" && u.storeIds.includes(store.id));
+                return (
+                  <tr key={store.id} aria-label={store.name}>
+                    <td>{store.name}</td>
+                    <td>{store.address}</td>
+                    <td>{store.primaryContact}</td>
+                    <td>{store.whatsappNumber ?? "—"}</td>
+                    <td>{store.taxRate}%</td>
+                    <td>{store.active ? "Active" : "Inactive"}</td>
+                    <td className="store-admins-cell">
+                      <ul>
+                        {assignedAdmins.map((admin) => (
+                          <li key={admin.id}>
+                            {admin.name}{" "}
+                            <button type="button" onClick={() => removeAdmin(store.id, admin.id)}>
+                              Remove
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                      <label htmlFor={`assign-admin-${store.id}`}>Assign an Admin</label>
+                      <select
+                        id={`assign-admin-${store.id}`}
+                        value={selectedAdmin[store.id] ?? ""}
+                        onChange={(e) => setSelectedAdmin((prev) => ({ ...prev, [store.id]: e.target.value }))}
+                      >
+                        <option value="">Select an Admin</option>
+                        {admins.map((admin) => (
+                          <option key={admin.id} value={admin.id}>
+                            {admin.name}
+                          </option>
+                        ))}
+                      </select>
+                      <button type="button" onClick={() => assignAdmin(store.id)} disabled={!selectedAdmin[store.id]}>
+                        Assign
                       </button>
-                    </li>
-                  ))}
-                </ul>
-                <label htmlFor={`assign-admin-${store.id}`}>Assign an Admin</label>
-                <select
-                  id={`assign-admin-${store.id}`}
-                  value={selectedAdmin[store.id] ?? ""}
-                  onChange={(e) => setSelectedAdmin((prev) => ({ ...prev, [store.id]: e.target.value }))}
-                >
-                  <option value="">Select an Admin</option>
-                  {admins.map((admin) => (
-                    <option key={admin.id} value={admin.id}>
-                      {admin.name}
-                    </option>
-                  ))}
-                </select>
-                <button type="button" onClick={() => assignAdmin(store.id)} disabled={!selectedAdmin[store.id]}>
-                  Assign
-                </button>
-              </div>
-            </article>
-          );
-        })}
+                    </td>
+                    <td>
+                      <div className="article-actions">
+                        <button type="button" onClick={() => openEditModal(store)}>
+                          Edit
+                        </button>
+                        <button type="button" onClick={() => patchStore(store.id, { active: !store.active })}>
+                          {store.active ? "Deactivate" : "Activate"}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </section>
 
       <Modal open={modalOpen} title={editingStore ? "Edit store" : "Add a store"} onClose={() => setModalOpen(false)}>

@@ -336,6 +336,31 @@ tbody tr:hover {
   min-width: 140px;
 }
 
+/* --- Stores page: per-row assigned-admins control --- */
+
+.store-admins-cell {
+  min-width: 220px;
+  vertical-align: top;
+}
+
+.store-admins-cell ul {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+}
+
+.store-admins-cell li {
+  margin-bottom: 4px;
+}
+
+.store-admins-cell label {
+  margin-bottom: 3px;
+}
+
+.store-admins-cell select {
+  margin-bottom: 6px;
+}
+
 /* --- Definition lists (detail views, bill summaries) --- */
 
 dl {

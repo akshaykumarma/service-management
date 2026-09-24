@@ -17,9 +17,9 @@ test.describe("Board to report end-to-end (006-dashboard-reporting, US1-US5)", (
     await page.getByLabel("WhatsApp number").fill("+919876500001");
     await page.getByLabel("Tax rate (%)").fill("18");
     await page.getByRole("button", { name: "Create store" }).click();
-    const storeArticle = page.locator("article", { has: page.getByRole("heading", { name: new RegExp(storeName) }) });
-    await storeArticle.getByRole("button", { name: "Activate" }).click();
-    await expect(storeArticle).toContainText("Active");
+    const storeRow = page.locator("tbody tr", { hasText: storeName });
+    await storeRow.getByRole("button", { name: "Activate" }).click();
+    await expect(storeRow).toContainText("Active");
 
     const partName = `E2E Report Part ${Date.now()}`;
     await page.goto("/admin/catalogue");
