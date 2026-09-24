@@ -38,6 +38,9 @@ export default function StoresPage() {
   const [error, setError] = useState<string | null>(null);
   const [selectedAdmin, setSelectedAdmin] = useState<Record<string, string>>({});
 
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+
   const load = useCallback(async () => {
     const [storesRes, usersRes] = await Promise.all([fetch("/api/admin/stores"), fetch("/api/auth/users")]);
     setStores((await storesRes.json()).stores);
@@ -102,6 +105,17 @@ export default function StoresPage() {
 
   const admins = users.filter((u) => u.role === "admin");
 
+  const filteredStores = stores.filter((store) => {
+    const q = search.trim().toLowerCase();
+    const matchesSearch =
+      !q ||
+      store.name.toLowerCase().includes(q) ||
+      (store.address ?? "").toLowerCase().includes(q) ||
+      (store.primaryContact ?? "").toLowerCase().includes(q);
+    const matchesStatus = !statusFilter || (statusFilter === "active" ? store.active : !store.active);
+    return matchesSearch && matchesStatus;
+  });
+
   return (
     <main>
       <h1>Stores</h1>
@@ -165,7 +179,30 @@ export default function StoresPage() {
 
       <section aria-labelledby="stores-list-heading">
         <h2 id="stores-list-heading">All stores</h2>
-        {stores.map((store) => {
+
+        <div className="list-toolbar">
+          <div className="list-toolbar__field">
+            <label htmlFor="storeSearch">Search stores</label>
+            <input
+              id="storeSearch"
+              placeholder="Name, address, or contact"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          <div className="list-toolbar__field">
+            <label htmlFor="storeStatusFilter">Filter by status</label>
+            <select id="storeStatusFilter" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+              <option value="">All statuses</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+          </div>
+        </div>
+
+        {filteredStores.length === 0 && <p className="list-toolbar__empty">No stores match your search.</p>}
+
+        {filteredStores.map((store) => {
           const assignedAdmins = users.filter((u) => u.role === "admin" && u.storeIds.includes(store.id));
           return (
             <article key={store.id} aria-labelledby={`store-${store.id}-heading`}>

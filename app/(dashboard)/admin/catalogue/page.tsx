@@ -32,6 +32,10 @@ export default function CataloguePage() {
   const [error, setError] = useState<string | null>(null);
   const [importResult, setImportResult] = useState<{ imported: number; failed: { row: number; reason: string }[] } | null>(null);
 
+  const [partSearch, setPartSearch] = useState("");
+  const [partCategoryFilter, setPartCategoryFilter] = useState("");
+  const [serviceSearch, setServiceSearch] = useState("");
+
   const load = useCallback(async () => {
     const [partsRes, servicesRes] = await Promise.all([
       fetch("/api/catalogue/parts"),
@@ -116,6 +120,23 @@ export default function CataloguePage() {
     e.target.value = "";
   }
 
+  const partCategories = Array.from(new Set(parts.map((p) => p.category).filter((c): c is string => !!c))).sort();
+  const filteredParts = parts.filter((p) => {
+    const q = partSearch.trim().toLowerCase();
+    const matchesSearch =
+      !q ||
+      p.name.toLowerCase().includes(q) ||
+      (p.sku ?? "").toLowerCase().includes(q) ||
+      (p.category ?? "").toLowerCase().includes(q);
+    const matchesCategory = !partCategoryFilter || p.category === partCategoryFilter;
+    return matchesSearch && matchesCategory;
+  });
+
+  const filteredServices = services.filter((s) => {
+    const q = serviceSearch.trim().toLowerCase();
+    return !q || s.name.toLowerCase().includes(q) || (s.description ?? "").toLowerCase().includes(q);
+  });
+
   return (
     <main>
       <h1>Parts &amp; services catalogue</h1>
@@ -168,6 +189,31 @@ export default function CataloguePage() {
           </p>
         )}
 
+        <div className="list-toolbar">
+          <div className="list-toolbar__field">
+            <label htmlFor="partSearch">Search parts</label>
+            <input
+              id="partSearch"
+              placeholder="Name, SKU, or category"
+              value={partSearch}
+              onChange={(e) => setPartSearch(e.target.value)}
+            />
+          </div>
+          <div className="list-toolbar__field">
+            <label htmlFor="partCategoryFilter">Filter by category</label>
+            <select id="partCategoryFilter" value={partCategoryFilter} onChange={(e) => setPartCategoryFilter(e.target.value)}>
+              <option value="">All categories</option>
+              {partCategories.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {filteredParts.length === 0 && <p className="list-toolbar__empty">No parts match your search.</p>}
+
         <table>
           <caption>Active parts</caption>
           <thead>
@@ -180,7 +226,7 @@ export default function CataloguePage() {
             </tr>
           </thead>
           <tbody>
-            {parts.map((p) => (
+            {filteredParts.map((p) => (
               <tr key={p.id}>
                 <td>{p.name}</td>
                 <td>{p.sku ?? "—"}</td>
@@ -233,6 +279,20 @@ export default function CataloguePage() {
           </p>
         )}
 
+        <div className="list-toolbar">
+          <div className="list-toolbar__field">
+            <label htmlFor="serviceSearch">Search services</label>
+            <input
+              id="serviceSearch"
+              placeholder="Name or description"
+              value={serviceSearch}
+              onChange={(e) => setServiceSearch(e.target.value)}
+            />
+          </div>
+        </div>
+
+        {filteredServices.length === 0 && <p className="list-toolbar__empty">No services match your search.</p>}
+
         <table>
           <caption>Active services</caption>
           <thead>
@@ -244,7 +304,7 @@ export default function CataloguePage() {
             </tr>
           </thead>
           <tbody>
-            {services.map((s) => (
+            {filteredServices.map((s) => (
               <tr key={s.id}>
                 <td>{s.name}</td>
                 <td>{s.description ?? "—"}</td>

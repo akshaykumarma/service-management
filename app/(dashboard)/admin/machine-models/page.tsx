@@ -18,6 +18,9 @@ export default function MachineModelsPage() {
   const [error, setError] = useState<string | null>(null);
   const [importResult, setImportResult] = useState<{ imported: number; failed: { row: number; reason: string }[] } | null>(null);
 
+  const [search, setSearch] = useState("");
+  const [manufacturerFilter, setManufacturerFilter] = useState("");
+
   const load = useCallback(async () => {
     const res = await fetch("/api/admin/machine-models");
     setMachineModels((await res.json()).machineModels);
@@ -65,6 +68,15 @@ export default function MachineModelsPage() {
     e.target.value = "";
   }
 
+  const manufacturers = Array.from(new Set(machineModels.map((m) => m.manufacturer))).sort();
+  const filteredMachineModels = machineModels.filter((m) => {
+    const q = search.trim().toLowerCase();
+    const matchesSearch =
+      !q || m.name.toLowerCase().includes(q) || (m.category ?? "").toLowerCase().includes(q);
+    const matchesManufacturer = !manufacturerFilter || m.manufacturer === manufacturerFilter;
+    return matchesSearch && matchesManufacturer;
+  });
+
   return (
     <main>
       <h1>Machine models</h1>
@@ -110,6 +122,37 @@ export default function MachineModelsPage() {
           </p>
         )}
 
+        <div className="list-toolbar">
+          <div className="list-toolbar__field">
+            <label htmlFor="machineModelSearch">Search machine models</label>
+            <input
+              id="machineModelSearch"
+              placeholder="Name or category"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          <div className="list-toolbar__field">
+            <label htmlFor="machineModelManufacturerFilter">Filter by manufacturer</label>
+            <select
+              id="machineModelManufacturerFilter"
+              value={manufacturerFilter}
+              onChange={(e) => setManufacturerFilter(e.target.value)}
+            >
+              <option value="">All manufacturers</option>
+              {manufacturers.map((m) => (
+                <option key={m} value={m}>
+                  {m}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {filteredMachineModels.length === 0 && (
+          <p className="list-toolbar__empty">No machine models match your search.</p>
+        )}
+
         <table>
           <caption>Active machine models</caption>
           <thead>
@@ -121,7 +164,7 @@ export default function MachineModelsPage() {
             </tr>
           </thead>
           <tbody>
-            {machineModels.map((m) => (
+            {filteredMachineModels.map((m) => (
               <tr key={m.id}>
                 <td>{m.name}</td>
                 <td>{m.manufacturer}</td>

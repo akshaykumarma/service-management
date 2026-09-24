@@ -267,6 +267,53 @@ tbody tr:hover {
   background: var(--color-bg);
 }
 
+/* --- Search/filter toolbar (admin list pages: machine models, stores, catalogue, team) --- */
+
+.list-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px 14px;
+  margin: 4px 0 14px;
+}
+
+.list-toolbar__field {
+  min-width: 190px;
+}
+
+.list-toolbar__field label {
+  margin-bottom: 3px;
+}
+
+.list-toolbar__field input,
+.list-toolbar__field select {
+  padding: 7px 10px;
+  font-size: 0.88rem;
+}
+
+.list-toolbar__empty {
+  color: var(--color-text-muted);
+}
+
+/* --- Team page: per-row reset-password control --- */
+
+.reset-password-cell {
+  min-width: 220px;
+  vertical-align: top;
+}
+
+.reset-password-cell label {
+  margin-bottom: 3px;
+}
+
+.reset-password-cell .password-input {
+  margin-bottom: 6px;
+}
+
+.reset-password-cell .password-input input {
+  min-width: 140px;
+}
+
 /* --- Definition lists (detail views, bill summaries) --- */
 
 dl {

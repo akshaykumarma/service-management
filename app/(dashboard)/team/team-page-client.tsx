@@ -49,6 +49,10 @@ export default function TeamPageClient({ callerRole }: { callerRole: "super_admi
   const [resetPasswords, setResetPasswords] = useState<Record<string, string>>({});
   const [resetMessages, setResetMessages] = useState<Record<string, { text: string; ok: boolean }>>({});
 
+  const [search, setSearch] = useState("");
+  const [roleFilter, setRoleFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+
   const loadUsers = useCallback(async () => {
     const res = await fetch("/api/auth/users");
     if (res.ok) {
@@ -126,6 +130,18 @@ export default function TeamPageClient({ callerRole }: { callerRole: "super_admi
       }));
     }
   }
+
+  const filteredUsers = users.filter((u) => {
+    const q = search.trim().toLowerCase();
+    const matchesSearch =
+      !q ||
+      u.name.toLowerCase().includes(q) ||
+      u.email.toLowerCase().includes(q) ||
+      (u.username ?? "").toLowerCase().includes(q);
+    const matchesRole = !roleFilter || u.role === roleFilter;
+    const matchesStatus = !statusFilter || (statusFilter === "active" ? u.active : !u.active);
+    return matchesSearch && matchesRole && matchesStatus;
+  });
 
   return (
     <main>
@@ -215,60 +231,95 @@ export default function TeamPageClient({ callerRole }: { callerRole: "super_admi
         <h2 id="user-list-heading">
           {callerRole === "super_admin" ? "All staff accounts" : "Service Managers and Technicians in your stores"}
         </h2>
-        <table>
-          <thead>
-            <tr>
-              <th scope="col">Name</th>
-              <th scope="col">Email</th>
-              <th scope="col">Username</th>
-              <th scope="col">Role</th>
-              <th scope="col">Status</th>
-              <th scope="col">Stores</th>
-              {callerRole === "super_admin" && <th scope="col">Active</th>}
-              <th scope="col">Reset password</th>
-            </tr>
-          </thead>
-          <tbody>
-            {users.map((u) => (
-              <tr key={u.id}>
-                <td>{u.name}</td>
-                <td>{u.email}</td>
-                <td>{u.username ?? "—"}</td>
-                <td>{u.role}</td>
-                <td>{u.active ? "Active" : "Deactivated"}</td>
-                <td>{storeNames(u.storeIds)}</td>
-                {callerRole === "super_admin" && (
-                  <td>
-                    <button type="button" onClick={() => toggleActive(u)}>
-                      {u.active ? "Deactivate" : "Reactivate"}
-                    </button>
-                  </td>
-                )}
-                <td>
-                  <label htmlFor={`reset-password-${u.id}`}>New password</label>
-                  <PasswordInput
-                    id={`reset-password-${u.id}`}
-                    autoComplete="new-password"
-                    value={resetPasswords[u.id] ?? ""}
-                    onChange={(value) => setResetPasswords((prev) => ({ ...prev, [u.id]: value }))}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => handleResetPassword(u.id)}
-                    disabled={!(resetPasswords[u.id] ?? "")}
-                  >
-                    Reset password
-                  </button>
-                  {resetMessages[u.id] && (
-                    <p role={resetMessages[u.id].ok ? "status" : "alert"} aria-live="assertive">
-                      {resetMessages[u.id].text}
-                    </p>
-                  )}
-                </td>
+
+        <div className="list-toolbar">
+          <div className="list-toolbar__field">
+            <label htmlFor="teamSearch">Search team</label>
+            <input
+              id="teamSearch"
+              placeholder="Name, email, or username"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          <div className="list-toolbar__field">
+            <label htmlFor="teamRoleFilter">Filter by role</label>
+            <select id="teamRoleFilter" value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}>
+              <option value="">All roles</option>
+              <option value="super_admin">Super Admin</option>
+              <option value="admin">Admin</option>
+              <option value="service_manager">Store Service Manager</option>
+              <option value="technician">Technician</option>
+            </select>
+          </div>
+          <div className="list-toolbar__field">
+            <label htmlFor="teamStatusFilter">Filter by status</label>
+            <select id="teamStatusFilter" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+              <option value="">All statuses</option>
+              <option value="active">Active</option>
+              <option value="inactive">Deactivated</option>
+            </select>
+          </div>
+        </div>
+
+        {filteredUsers.length === 0 && <p className="list-toolbar__empty">No staff accounts match your search.</p>}
+
+        <div className="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Name</th>
+                <th scope="col">Email</th>
+                <th scope="col">Username</th>
+                <th scope="col">Role</th>
+                <th scope="col">Status</th>
+                <th scope="col">Stores</th>
+                {callerRole === "super_admin" && <th scope="col">Active</th>}
+                <th scope="col">Reset password</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {filteredUsers.map((u) => (
+                <tr key={u.id}>
+                  <td>{u.name}</td>
+                  <td>{u.email}</td>
+                  <td>{u.username ?? "—"}</td>
+                  <td>{u.role}</td>
+                  <td>{u.active ? "Active" : "Deactivated"}</td>
+                  <td>{storeNames(u.storeIds)}</td>
+                  {callerRole === "super_admin" && (
+                    <td>
+                      <button type="button" onClick={() => toggleActive(u)}>
+                        {u.active ? "Deactivate" : "Reactivate"}
+                      </button>
+                    </td>
+                  )}
+                  <td className="reset-password-cell">
+                    <label htmlFor={`reset-password-${u.id}`}>New password</label>
+                    <PasswordInput
+                      id={`reset-password-${u.id}`}
+                      autoComplete="new-password"
+                      value={resetPasswords[u.id] ?? ""}
+                      onChange={(value) => setResetPasswords((prev) => ({ ...prev, [u.id]: value }))}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleResetPassword(u.id)}
+                      disabled={!(resetPasswords[u.id] ?? "")}
+                    >
+                      Reset password
+                    </button>
+                    {resetMessages[u.id] && (
+                      <p role={resetMessages[u.id].ok ? "status" : "alert"} aria-live="assertive">
+                        {resetMessages[u.id].text}
+                      </p>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </section>
     </main>
   );
