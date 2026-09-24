@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import PasswordInput from "@/components/password-input";
+import Modal from "@/components/modal";
 
 interface StaffUser {
   id: string;
@@ -37,14 +38,16 @@ export default function TeamPageClient({ callerRole }: { callerRole: "super_admi
   const [users, setUsers] = useState<StaffUser[]>([]);
   const [storeOptions, setStoreOptions] = useState<StoreOption[]>([]);
 
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [username, setUsername] = useState("");
-  const [role, setRole] = useState<"admin" | "service_manager" | "technician">("service_manager");
-  const [storeIds, setStoreIds] = useState<string[]>([]);
-  const [password, setPassword] = useState("");
-  const [createError, setCreateError] = useState<string | null>(null);
-  const [createdMessage, setCreatedMessage] = useState<string | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<StaffUser | null>(null);
+  const [formName, setFormName] = useState("");
+  const [formEmail, setFormEmail] = useState("");
+  const [formUsername, setFormUsername] = useState("");
+  const [formRole, setFormRole] = useState<"admin" | "service_manager" | "technician">("service_manager");
+  const [formStoreIds, setFormStoreIds] = useState<string[]>([]);
+  const [formPassword, setFormPassword] = useState("");
+  const [formError, setFormError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   const [resetPasswords, setResetPasswords] = useState<Record<string, string>>({});
   const [resetMessages, setResetMessages] = useState<Record<string, { text: string; ok: boolean }>>({});
@@ -75,28 +78,73 @@ export default function TeamPageClient({ callerRole }: { callerRole: "super_admi
     return ids.map((id) => storeOptions.find((s) => s.id === id)?.name ?? id).join(", ") || "—";
   }
 
-  async function handleCreate(e: React.FormEvent) {
+  function openCreateModal() {
+    setEditingUser(null);
+    setFormName("");
+    setFormEmail("");
+    setFormUsername("");
+    setFormRole("service_manager");
+    setFormStoreIds([]);
+    setFormPassword("");
+    setFormError(null);
+    setModalOpen(true);
+  }
+
+  function openEditModal(user: StaffUser) {
+    setEditingUser(user);
+    setFormName(user.name);
+    setFormEmail(user.email);
+    setFormUsername(user.username ?? "");
+    setFormRole(user.role === "super_admin" ? "admin" : user.role);
+    setFormStoreIds(user.storeIds);
+    setFormPassword("");
+    setFormError(null);
+    setModalOpen(true);
+  }
+
+  async function handleModalSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setCreateError(null);
-    setCreatedMessage(null);
+    setFormError(null);
+    setSubmitting(true);
+
+    if (editingUser) {
+      const patch: Record<string, unknown> = { name: formName, storeIds: formStoreIds };
+      if (editingUser.role !== "super_admin") patch.role = formRole;
+      const res = await fetch(`/api/auth/users/${editingUser.id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(patch),
+      });
+      setSubmitting(false);
+      if (res.ok) {
+        setModalOpen(false);
+        loadUsers();
+      } else {
+        const body = await res.json();
+        setFormError(ERROR_MESSAGES[body.error.code] ?? "Could not save changes.");
+      }
+      return;
+    }
 
     const res = await fetch("/api/auth/users", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name, email, username: username || undefined, role, storeIds, password }),
+      body: JSON.stringify({
+        name: formName,
+        email: formEmail,
+        username: formUsername || undefined,
+        role: formRole,
+        storeIds: formStoreIds,
+        password: formPassword,
+      }),
     });
-
+    setSubmitting(false);
     if (res.ok) {
-      setCreatedMessage(`${name}'s account was created.`);
-      setName("");
-      setEmail("");
-      setUsername("");
-      setStoreIds([]);
-      setPassword("");
+      setModalOpen(false);
       loadUsers();
     } else {
       const body = await res.json();
-      setCreateError(ERROR_MESSAGES[body.error.code] ?? "Could not create account.");
+      setFormError(ERROR_MESSAGES[body.error.code] ?? "Could not create account.");
     }
   }
 
@@ -147,90 +195,17 @@ export default function TeamPageClient({ callerRole }: { callerRole: "super_admi
     <main>
       <h1>Team</h1>
 
-      {callerRole === "super_admin" && (
-        <section aria-labelledby="create-user-heading">
-          <h2 id="create-user-heading">Add a staff account</h2>
-          <form onSubmit={handleCreate} noValidate>
-            <div>
-              <label htmlFor="name" className="required">
-                Name
-              </label>
-              <input id="name" required value={name} onChange={(e) => setName(e.target.value)} />
-            </div>
-            <div>
-              <label htmlFor="email" className="required">
-                Email
-              </label>
-              <input
-                id="email"
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            </div>
-            <div>
-              <label htmlFor="username">Username (optional — can log in with either)</label>
-              <input id="username" value={username} onChange={(e) => setUsername(e.target.value)} />
-            </div>
-            <div>
-              <label htmlFor="role">Role</label>
-              <select id="role" value={role} onChange={(e) => setRole(e.target.value as typeof role)}>
-                <option value="admin">Admin</option>
-                <option value="service_manager">Store Service Manager</option>
-                <option value="technician">Technician</option>
-              </select>
-            </div>
-            <div>
-              <label htmlFor="storeIds" className="required">
-                Store{role === "admin" ? "s" : ""} (
-                {role === "service_manager" || role === "technician"
-                  ? "select exactly one"
-                  : "ctrl/cmd-click to select more than one"}
-                )
-              </label>
-              <select
-                id="storeIds"
-                multiple
-                required
-                value={storeIds}
-                onChange={(e) => setStoreIds(Array.from(e.target.selectedOptions).map((o) => o.value))}
-              >
-                {storeOptions.map((store) => (
-                  <option key={store.id} value={store.id}>
-                    {store.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label htmlFor="password" className="required">
-                Password
-              </label>
-              <PasswordInput
-                id="password"
-                autoComplete="new-password"
-                required
-                value={password}
-                onChange={setPassword}
-              />
-              <small>{PASSWORD_HINT}</small>
-            </div>
-            {createError && (
-              <p role="alert" aria-live="assertive">
-                {createError}
-              </p>
-            )}
-            <button type="submit">Create account</button>
-          </form>
-          {createdMessage && <p role="status">{createdMessage}</p>}
-        </section>
-      )}
-
       <section aria-labelledby="user-list-heading">
-        <h2 id="user-list-heading">
-          {callerRole === "super_admin" ? "All staff accounts" : "Service Managers and Technicians in your stores"}
-        </h2>
+        <div className="section-header">
+          <h2 id="user-list-heading">
+            {callerRole === "super_admin" ? "All staff accounts" : "Service Managers and Technicians in your stores"}
+          </h2>
+          {callerRole === "super_admin" && (
+            <button type="button" onClick={openCreateModal}>
+              Add staff
+            </button>
+          )}
+        </div>
 
         <div className="list-toolbar">
           <div className="list-toolbar__field">
@@ -289,9 +264,14 @@ export default function TeamPageClient({ callerRole }: { callerRole: "super_admi
                   <td>{storeNames(u.storeIds)}</td>
                   {callerRole === "super_admin" && (
                     <td>
-                      <button type="button" onClick={() => toggleActive(u)}>
-                        {u.active ? "Deactivate" : "Reactivate"}
-                      </button>
+                      <div className="article-actions">
+                        <button type="button" onClick={() => openEditModal(u)}>
+                          Edit
+                        </button>
+                        <button type="button" onClick={() => toggleActive(u)}>
+                          {u.active ? "Deactivate" : "Reactivate"}
+                        </button>
+                      </div>
                     </td>
                   )}
                   <td className="reset-password-cell">
@@ -321,6 +301,112 @@ export default function TeamPageClient({ callerRole }: { callerRole: "super_admi
           </table>
         </div>
       </section>
+
+      <Modal
+        open={modalOpen}
+        title={editingUser ? "Edit staff account" : "Add a staff account"}
+        onClose={() => setModalOpen(false)}
+      >
+        <form onSubmit={handleModalSubmit} noValidate>
+          <div className="modal-panel__body">
+            <div>
+              <label htmlFor="name" className="required">
+                Name
+              </label>
+              <input id="name" required value={formName} onChange={(e) => setFormName(e.target.value)} />
+            </div>
+            <div>
+              <label htmlFor="email" className={editingUser ? undefined : "required"}>
+                Email{editingUser ? " (cannot be changed here)" : ""}
+              </label>
+              <input
+                id="email"
+                type="email"
+                required={!editingUser}
+                disabled={!!editingUser}
+                value={formEmail}
+                onChange={(e) => setFormEmail(e.target.value)}
+              />
+            </div>
+            {!editingUser && (
+              <div>
+                <label htmlFor="username">Username (optional — can log in with either)</label>
+                <input id="username" value={formUsername} onChange={(e) => setFormUsername(e.target.value)} />
+              </div>
+            )}
+            {editingUser?.username && (
+              <div>
+                <label htmlFor="usernameDisplay">Username (cannot be changed here)</label>
+                <input id="usernameDisplay" disabled value={editingUser.username} />
+              </div>
+            )}
+            <div>
+              <label htmlFor="role">Role</label>
+              {editingUser?.role === "super_admin" ? (
+                <input disabled value="Super Admin (cannot be changed here)" />
+              ) : (
+                <select id="role" value={formRole} onChange={(e) => setFormRole(e.target.value as typeof formRole)}>
+                  <option value="admin">Admin</option>
+                  <option value="service_manager">Store Service Manager</option>
+                  <option value="technician">Technician</option>
+                </select>
+              )}
+            </div>
+            {editingUser?.role !== "super_admin" && (
+              <div>
+                <label htmlFor="storeIds" className="required">
+                  Store{formRole === "admin" ? "s" : ""} (
+                  {formRole === "service_manager" || formRole === "technician"
+                    ? "select exactly one"
+                    : "ctrl/cmd-click to select more than one"}
+                  )
+                </label>
+                <select
+                  id="storeIds"
+                  multiple
+                  required
+                  value={formStoreIds}
+                  onChange={(e) => setFormStoreIds(Array.from(e.target.selectedOptions).map((o) => o.value))}
+                >
+                  {storeOptions.map((store) => (
+                    <option key={store.id} value={store.id}>
+                      {store.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+            {!editingUser && (
+              <div>
+                <label htmlFor="password" className="required">
+                  Password
+                </label>
+                <PasswordInput
+                  id="password"
+                  autoComplete="new-password"
+                  required
+                  value={formPassword}
+                  onChange={setFormPassword}
+                />
+                <small>{PASSWORD_HINT}</small>
+              </div>
+            )}
+            {formError && (
+              <p role="alert" aria-live="assertive">
+                {formError}
+              </p>
+            )}
+          </div>
+          <div className="modal-panel__footer">
+            <button type="button" onClick={() => setModalOpen(false)}>
+              Cancel
+            </button>
+            <button type="submit" disabled={submitting}>
+              {editingUser ? "Save changes" : "Create account"}
+            </button>
+          </div>
+        </form>
+      </Modal>
     </main>
   );
 }

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { formatDate, formatDateTime } from "@/lib/format/date";
+import SearchableSelect from "@/components/searchable-select";
 
 interface TicketDetail {
   id: string;
@@ -554,21 +555,14 @@ export default function TicketDetailPage() {
         <h2 id="technician-heading">Assigned technician</h2>
         {canAssignTechnician ? (
           <form onSubmit={handleAssignTechnician} noValidate>
-            <div>
-              <label htmlFor="technicianSelection">Technician</label>
-              <select
-                id="technicianSelection"
-                value={technicianSelection}
-                onChange={(e) => setTechnicianSelection(e.target.value)}
-              >
-                <option value="">Unassigned</option>
-                {technicianOptions.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <SearchableSelect
+              id="technicianSelection"
+              label="Technician"
+              placeholder="Unassigned"
+              options={technicianOptions.map((t) => ({ id: t.id, label: t.name }))}
+              value={technicianSelection}
+              onChange={setTechnicianSelection}
+            />
             {assignTechnicianError && (
               <p role="alert" aria-live="assertive">
                 {assignTechnicianError}

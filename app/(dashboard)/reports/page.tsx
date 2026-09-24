@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { formatDate } from "@/lib/format/date";
+import SearchableSelect from "@/components/searchable-select";
 
 interface StoreOption {
   id: string;
@@ -188,21 +189,14 @@ export default function ReportsPage() {
             <label htmlFor="tableTicketId">Ticket number</label>
             <input id="tableTicketId" value={tableTicketId} onChange={(e) => setTableTicketId(e.target.value)} />
           </div>
-          <div>
-            <label htmlFor="tableTechnicianId">Filter by technician</label>
-            <select
-              id="tableTechnicianId"
-              value={tableTechnicianId}
-              onChange={(e) => setTableTechnicianId(e.target.value)}
-            >
-              <option value="">All technicians</option>
-              {technicianOptions.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
-            </select>
-          </div>
+          <SearchableSelect
+            id="tableTechnicianId"
+            label="Filter by technician"
+            placeholder="All technicians"
+            options={technicianOptions.map((t) => ({ id: t.id, label: t.name }))}
+            value={tableTechnicianId}
+            onChange={setTableTechnicianId}
+          />
           {tableError && (
             <p role="alert" aria-live="assertive">
               {tableError}

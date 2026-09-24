@@ -15,6 +15,7 @@ import {
 import { createBoardKeyboardCoordinateGetter } from "@/lib/board/keyboard-coordinates";
 import { formatDate } from "@/lib/format/date";
 import MultiSelectDropdown from "@/components/multi-select-dropdown";
+import SearchableSelect from "@/components/searchable-select";
 
 interface TicketCard {
   id: string;
@@ -83,13 +84,17 @@ function TicketCardItem({ ticket }: { ticket: TicketCard }) {
       {...listeners}
       {...attributes}
     >
-      <a href={`/tickets/${ticket.id}`} onClick={(e) => isDragging && e.preventDefault()}>
+      <a
+        href={`/tickets/${ticket.id}`}
+        className="board-card__link"
+        onClick={(e) => isDragging && e.preventDefault()}
+      >
         <strong>{ticket.ticketNumber}</strong>
+        <div>{ticket.customerName}</div>
+        <div>{ticket.machineModel}</div>
+        <div>Created {formatDate(ticket.createdAt)}</div>
+        <div>{ticket.daysOpen} day(s) open</div>
       </a>
-      <div>{ticket.customerName}</div>
-      <div>{ticket.machineModel}</div>
-      <div>Created {formatDate(ticket.createdAt)}</div>
-      <div>{ticket.daysOpen} day(s) open</div>
     </li>
   );
 }
@@ -305,17 +310,14 @@ export default function BoardPage() {
             onChange={setSelectedStatuses}
           />
 
-          <div className="board-toolbar__field">
-            <label htmlFor="technicianFilter">Technician</label>
-            <select id="technicianFilter" value={technicianFilter} onChange={(e) => setTechnicianFilter(e.target.value)}>
-              <option value="">All technicians</option>
-              {technicianOptions.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
-            </select>
-          </div>
+          <SearchableSelect
+            id="technicianFilter"
+            label="Technician"
+            placeholder="All technicians"
+            options={technicianOptions.map((t) => ({ id: t.id, label: t.name }))}
+            value={technicianFilter}
+            onChange={setTechnicianFilter}
+          />
 
           <label className="board-toolbar__checkbox" htmlFor="includeCancelled">
             <input

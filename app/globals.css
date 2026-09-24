@@ -228,6 +228,28 @@ main > section h2:first-child {
   margin-top: 0;
 }
 
+/* --- Section header row (heading + a primary action, e.g. "Add store") --- */
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.section-header h2 {
+  margin: 0;
+}
+
+/* --- Inline action row within a card/article (e.g. Edit / Deactivate) --- */
+
+.article-actions {
+  display: flex;
+  gap: 8px;
+  margin: 10px 0;
+}
+
 /* --- Tables --- */
 
 /* Wraps a wide table (e.g. the Reports ticket-details table) so it scrolls
@@ -403,6 +425,17 @@ dd {
   font-size: 0.85rem;
 }
 
+/* On desktop the menu wrapper contributes no box of its own — its children (nav, user)
+   lay out exactly as if they were direct flex children of .app-header. The hamburger
+   toggle only appears once the tablet/mobile breakpoint takes over below. */
+button.app-header__menu-toggle {
+  display: none;
+}
+
+.app-header__menu {
+  display: contents;
+}
+
 /* --- Kanban board --- */
 
 .board {
@@ -475,7 +508,6 @@ dd {
   border: 1px solid var(--color-border);
   border-left: 4px solid var(--column-accent, var(--color-text-muted));
   border-radius: 6px;
-  padding: 10px 12px;
   cursor: grab;
   box-shadow: var(--shadow-sm);
   font-size: 0.85rem;
@@ -490,11 +522,25 @@ dd {
   outline-offset: 2px;
 }
 
-.board-card a {
-  font-size: 0.92rem;
+/* The whole card is the link (not just the ticket number), so the entire surface
+   navigates to the ticket detail page on a plain click; dnd-kit's PointerSensor
+   activationConstraint still intercepts anything that moves as a drag instead. */
+.board-card__link {
+  display: block;
+  padding: 10px 12px;
+  color: inherit;
 }
 
-.board-card > div {
+.board-card__link:hover {
+  text-decoration: none;
+}
+
+.board-card__link strong {
+  font-size: 0.92rem;
+  color: var(--color-primary);
+}
+
+.board-card__link > div {
   color: var(--color-text-muted);
   margin-top: 2px;
 }
@@ -717,6 +763,189 @@ button.multiselect__clear:hover {
   text-decoration: underline;
 }
 
+/* --- Searchable select (single-value combobox) --- */
+
+.searchable-select {
+  position: relative;
+  min-width: 190px;
+}
+
+.searchable-select__control {
+  position: relative;
+}
+
+.searchable-select__control input {
+  padding-right: 28px;
+}
+
+button.searchable-select__clear {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  transform: translateY(-50%);
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  line-height: 1;
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted);
+  font-size: 1.1rem;
+}
+
+button.searchable-select__clear:hover {
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+.searchable-select__panel {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  max-height: 260px;
+  overflow-y: auto;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  box-shadow: var(--shadow-md);
+  padding: 4px;
+  margin: 0;
+  list-style: none;
+}
+
+button.searchable-select__option {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  padding: 7px 8px;
+  font-weight: 400;
+  font-size: 0.88rem;
+  color: var(--color-text);
+}
+
+button.searchable-select__option:hover,
+button.searchable-select__option--highlighted {
+  background: var(--color-bg);
+}
+
+.searchable-select__empty {
+  padding: 8px;
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+}
+
+/* --- Modal (Carbon-inspired: sharp corners, full-width split footer buttons) --- */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 100;
+}
+
+.modal-panel {
+  background: var(--color-surface);
+  width: 100%;
+  max-width: 540px;
+  max-height: calc(100vh - 48px);
+  display: flex;
+  flex-direction: column;
+  border-radius: 4px;
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+}
+
+/* Neutralize the generic `form` chrome (border/shadow/padding) — the modal panel
+   itself is the visual container here. */
+.modal-panel form {
+  background: none;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  max-width: none;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.modal-panel__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.modal-panel__header h2 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+button.modal-panel__close {
+  background: transparent;
+  border: none;
+  font-size: 1.5rem;
+  line-height: 1;
+  padding: 2px 6px;
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+}
+
+button.modal-panel__close:hover {
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+.modal-panel__body {
+  padding: 20px 24px;
+  overflow-y: auto;
+}
+
+.modal-panel__error {
+  margin: 0 24px 16px;
+}
+
+.modal-panel__footer {
+  display: flex;
+  border-top: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.modal-panel__footer button {
+  flex: 1;
+  border-radius: 0;
+  padding: 14px;
+  font-size: 0.95rem;
+  margin: 0;
+}
+
+.modal-panel__footer button[type="button"] {
+  background: var(--color-bg);
+  border: none;
+  border-right: 1px solid var(--color-border);
+  color: var(--color-text);
+}
+
+.modal-panel__footer button[type="button"]:hover {
+  background: var(--color-border);
+}
+
+.modal-panel__footer button[type="submit"] {
+  background: var(--color-primary);
+}
+
 /* --- Auth pages (login / forgot / reset password) --- */
 
 .auth-shell {
@@ -744,4 +973,146 @@ button.multiselect__clear:hover {
 .auth-shell form {
   max-width: none;
   width: 100%;
+}
+
+/* ==========================================================================
+   Responsive breakpoints
+   - 860px: the header's nav links + user info stop fitting comfortably in
+     one row, so it collapses behind a hamburger menu.
+   - 640px: general mobile layout — tighter spacing, single-column toolbars,
+     near-fullscreen modals, one Kanban column visible at a time.
+   ========================================================================== */
+
+@media (max-width: 860px) {
+  button.app-header__menu-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    margin-left: auto;
+    background: transparent;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    font-size: 1.1rem;
+    color: var(--color-text);
+    flex-shrink: 0;
+  }
+
+  button.app-header__menu-toggle:hover {
+    background: var(--color-bg);
+  }
+
+  .app-header__menu {
+    display: none;
+  }
+
+  .app-header__menu--open {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--color-surface);
+    border-bottom: 1px solid var(--color-border);
+    box-shadow: var(--shadow-md);
+    padding: 8px 16px 16px;
+    max-height: calc(100vh - 64px);
+    overflow-y: auto;
+  }
+
+  .app-header__menu--open .app-header__nav {
+    flex-direction: column;
+    overflow-x: visible;
+    flex: none;
+  }
+
+  .app-header__menu--open .app-header__nav a {
+    padding: 12px;
+  }
+
+  .app-header__menu--open .app-header__user {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    margin-top: 8px;
+    padding-top: 12px;
+    border-top: 1px solid var(--color-border);
+  }
+}
+
+@media (max-width: 640px) {
+  main {
+    padding: 16px 16px 40px;
+  }
+
+  h1 {
+    font-size: 1.35rem;
+  }
+
+  form {
+    padding: 16px;
+  }
+
+  main > section {
+    padding: 14px 16px;
+  }
+
+  /* Toolbars already wrap via flex-wrap; just let each field take the full
+     row instead of a fixed min-width so they read as a clean stacked list. */
+  .board-toolbar__field,
+  .list-toolbar__field,
+  .multiselect,
+  .searchable-select {
+    min-width: 0;
+    flex: 1 1 100%;
+  }
+
+  .board-toolbar {
+    position: static;
+  }
+
+  dl {
+    grid-template-columns: 1fr;
+    gap: 2px 0;
+  }
+
+  dl dt {
+    margin-top: 10px;
+  }
+
+  /* One column roughly fills the screen — the standard mobile Kanban pattern
+     of swiping horizontally between columns instead of seeing several at once. */
+  .board-column {
+    width: 82vw;
+    flex: 0 0 82vw;
+  }
+
+  .board-column ul {
+    max-height: none;
+  }
+
+  .modal-overlay {
+    padding: 0;
+    align-items: flex-end;
+  }
+
+  .modal-panel {
+    max-width: 100%;
+    max-height: 92vh;
+    border-radius: 12px 12px 0 0;
+  }
+
+  .multiselect__panel,
+  .searchable-select__panel {
+    left: 0;
+    right: 0;
+    max-width: none;
+  }
+
+  table {
+    font-size: 0.85rem;
+  }
 }

@@ -10,12 +10,13 @@ test.describe("Board to report end-to-end (006-dashboard-reporting, US1-US5)", (
 
     const storeName = `E2E Report Store ${Date.now()}`;
     await page.goto("/admin/stores");
+    await page.getByRole("button", { name: "Add store" }).click();
     await page.getByLabel("Name", { exact: true }).fill(storeName);
     await page.getByLabel("Address").fill("1 Report Street");
     await page.getByLabel("Primary contact").fill("Report Contact");
     await page.getByLabel("WhatsApp number").fill("+919876500001");
     await page.getByLabel("Tax rate (%)").fill("18");
-    await page.getByRole("button", { name: "Add store" }).click();
+    await page.getByRole("button", { name: "Create store" }).click();
     const storeArticle = page.locator("article", { has: page.getByRole("heading", { name: new RegExp(storeName) }) });
     await storeArticle.getByRole("button", { name: "Activate" }).click();
     await expect(storeArticle).toContainText("Active");

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Modal from "@/components/modal";
 
 interface Store {
   id: string;
@@ -30,16 +31,21 @@ const STORE_ERROR_MESSAGES: Record<string, string> = {
 export default function StoresPage() {
   const [stores, setStores] = useState<Store[]>([]);
   const [users, setUsers] = useState<UserRow[]>([]);
-  const [name, setName] = useState("");
-  const [address, setAddress] = useState("");
-  const [primaryContact, setPrimaryContact] = useState("");
-  const [whatsappNumber, setWhatsappNumber] = useState("");
-  const [taxRate, setTaxRate] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [selectedAdmin, setSelectedAdmin] = useState<Record<string, string>>({});
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingStore, setEditingStore] = useState<Store | null>(null);
+  const [formName, setFormName] = useState("");
+  const [formAddress, setFormAddress] = useState("");
+  const [formPrimaryContact, setFormPrimaryContact] = useState("");
+  const [formWhatsapp, setFormWhatsapp] = useState("");
+  const [formTaxRate, setFormTaxRate] = useState("");
+  const [formError, setFormError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   const load = useCallback(async () => {
     const [storesRes, usersRes] = await Promise.all([fetch("/api/admin/stores"), fetch("/api/auth/users")]);
@@ -51,24 +57,57 @@ export default function StoresPage() {
     load();
   }, [load]);
 
-  async function handleCreate(e: React.FormEvent) {
+  function openCreateModal() {
+    setEditingStore(null);
+    setFormName("");
+    setFormAddress("");
+    setFormPrimaryContact("");
+    setFormWhatsapp("");
+    setFormTaxRate("");
+    setFormError(null);
+    setModalOpen(true);
+  }
+
+  function openEditModal(store: Store) {
+    setEditingStore(store);
+    setFormName(store.name);
+    setFormAddress(store.address ?? "");
+    setFormPrimaryContact(store.primaryContact ?? "");
+    setFormWhatsapp(store.whatsappNumber ?? "");
+    setFormTaxRate(String(store.taxRate ?? ""));
+    setFormError(null);
+    setModalOpen(true);
+  }
+
+  async function handleModalSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError(null);
-    const res = await fetch("/api/admin/stores", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name, address, primaryContact, whatsappNumber, taxRate: Number(taxRate) }),
-    });
+    setFormError(null);
+    setSubmitting(true);
+    const payload = {
+      name: formName,
+      address: formAddress,
+      primaryContact: formPrimaryContact,
+      whatsappNumber: formWhatsapp,
+      taxRate: Number(formTaxRate),
+    };
+    const res = editingStore
+      ? await fetch(`/api/admin/stores/${editingStore.id}`, {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(payload),
+        })
+      : await fetch("/api/admin/stores", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+    setSubmitting(false);
     if (res.ok) {
-      setName("");
-      setAddress("");
-      setPrimaryContact("");
-      setWhatsappNumber("");
-      setTaxRate("");
+      setModalOpen(false);
       load();
     } else {
       const body = await res.json();
-      setError(STORE_ERROR_MESSAGES[body.error.code] ?? "Could not create store.");
+      setFormError(STORE_ERROR_MESSAGES[body.error.code] ?? "Could not save store.");
     }
   }
 
@@ -120,65 +159,19 @@ export default function StoresPage() {
     <main>
       <h1>Stores</h1>
 
-      <section aria-labelledby="create-store-heading">
-        <h2 id="create-store-heading">Add a store</h2>
-        <form onSubmit={handleCreate} noValidate>
-          <div>
-            <label htmlFor="storeName" className="required">
-              Name
-            </label>
-            <input id="storeName" required value={name} onChange={(e) => setName(e.target.value)} />
-          </div>
-          <div>
-            <label htmlFor="storeAddress" className="required">
-              Address
-            </label>
-            <input id="storeAddress" required value={address} onChange={(e) => setAddress(e.target.value)} />
-          </div>
-          <div>
-            <label htmlFor="storePrimaryContact" className="required">
-              Primary contact
-            </label>
-            <input id="storePrimaryContact" required value={primaryContact} onChange={(e) => setPrimaryContact(e.target.value)} />
-          </div>
-          <div>
-            <label htmlFor="storeWhatsapp" className="required">
-              WhatsApp number
-            </label>
-            <input
-              id="storeWhatsapp"
-              required
-              placeholder="+919876543210"
-              pattern="\+[1-9]\d{7,14}"
-              title="International format starting with +, e.g. +919876543210 — no spaces or dashes."
-              value={whatsappNumber}
-              onChange={(e) => setWhatsappNumber(e.target.value)}
-            />
-            <small>International format, e.g. +919876543210 — country code with +, no spaces or dashes.</small>
-          </div>
-          <div>
-            <label htmlFor="storeTaxRate">Tax rate (%) (optional — tax is now set per-ticket)</label>
-            <input
-              id="storeTaxRate"
-              type="number"
-              step="0.01"
-              min="0"
-              max="100"
-              value={taxRate}
-              onChange={(e) => setTaxRate(e.target.value)}
-            />
-          </div>
-          {error && (
-            <p role="alert" aria-live="assertive">
-              {error}
-            </p>
-          )}
-          <button type="submit">Add store</button>
-        </form>
-      </section>
-
       <section aria-labelledby="stores-list-heading">
-        <h2 id="stores-list-heading">All stores</h2>
+        <div className="section-header">
+          <h2 id="stores-list-heading">All stores</h2>
+          <button type="button" onClick={openCreateModal}>
+            Add store
+          </button>
+        </div>
+
+        {error && (
+          <p role="alert" aria-live="assertive">
+            {error}
+          </p>
+        )}
 
         <div className="list-toolbar">
           <div className="list-toolbar__field">
@@ -219,9 +212,14 @@ export default function StoresPage() {
                 <dt>Tax rate</dt>
                 <dd>{store.taxRate}%</dd>
               </dl>
-              <button type="button" onClick={() => patchStore(store.id, { active: !store.active })}>
-                {store.active ? "Deactivate" : "Activate"}
-              </button>
+              <div className="article-actions">
+                <button type="button" onClick={() => openEditModal(store)}>
+                  Edit
+                </button>
+                <button type="button" onClick={() => patchStore(store.id, { active: !store.active })}>
+                  {store.active ? "Deactivate" : "Activate"}
+                </button>
+              </div>
 
               <div aria-labelledby={`store-${store.id}-admins-heading`}>
                 <h4 id={`store-${store.id}-admins-heading`}>Assigned Admins</h4>
@@ -256,6 +254,76 @@ export default function StoresPage() {
           );
         })}
       </section>
+
+      <Modal open={modalOpen} title={editingStore ? "Edit store" : "Add a store"} onClose={() => setModalOpen(false)}>
+        <form onSubmit={handleModalSubmit} noValidate>
+          <div className="modal-panel__body">
+            <div>
+              <label htmlFor="storeName" className="required">
+                Name
+              </label>
+              <input id="storeName" required value={formName} onChange={(e) => setFormName(e.target.value)} />
+            </div>
+            <div>
+              <label htmlFor="storeAddress" className="required">
+                Address
+              </label>
+              <input id="storeAddress" required value={formAddress} onChange={(e) => setFormAddress(e.target.value)} />
+            </div>
+            <div>
+              <label htmlFor="storePrimaryContact" className="required">
+                Primary contact
+              </label>
+              <input
+                id="storePrimaryContact"
+                required
+                value={formPrimaryContact}
+                onChange={(e) => setFormPrimaryContact(e.target.value)}
+              />
+            </div>
+            <div>
+              <label htmlFor="storeWhatsapp" className="required">
+                WhatsApp number
+              </label>
+              <input
+                id="storeWhatsapp"
+                required
+                placeholder="+919876543210"
+                pattern="\+[1-9]\d{7,14}"
+                title="International format starting with +, e.g. +919876543210 — no spaces or dashes."
+                value={formWhatsapp}
+                onChange={(e) => setFormWhatsapp(e.target.value)}
+              />
+              <small>International format, e.g. +919876543210 — country code with +, no spaces or dashes.</small>
+            </div>
+            <div>
+              <label htmlFor="storeTaxRate">Tax rate (%) (optional — tax is now set per-ticket)</label>
+              <input
+                id="storeTaxRate"
+                type="number"
+                step="0.01"
+                min="0"
+                max="100"
+                value={formTaxRate}
+                onChange={(e) => setFormTaxRate(e.target.value)}
+              />
+            </div>
+            {formError && (
+              <p role="alert" aria-live="assertive">
+                {formError}
+              </p>
+            )}
+          </div>
+          <div className="modal-panel__footer">
+            <button type="button" onClick={() => setModalOpen(false)}>
+              Cancel
+            </button>
+            <button type="submit" disabled={submitting}>
+              {editingStore ? "Save changes" : "Create store"}
+            </button>
+          </div>
+        </form>
+      </Modal>
     </main>
   );
 }
