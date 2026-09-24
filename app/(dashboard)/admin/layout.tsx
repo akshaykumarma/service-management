@@ -9,7 +9,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   if (!session) {
     redirect("/login");
   }
-  if (session.user.role !== "super_admin") {
+  // Widened from Super-Admin-only to Admin-or-above (per direct product feedback):
+  // Stores' own edit capability follows this gate. Machine models/Catalogue/Templates
+  // stay Super-Admin-only via the nested (super-admin-only) route group's own layout.
+  if (session.user.role !== "super_admin" && session.user.role !== "admin") {
     redirect("/dashboard");
   }
 

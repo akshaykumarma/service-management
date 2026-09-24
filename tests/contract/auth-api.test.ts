@@ -379,6 +379,49 @@ describe("POST /api/auth/users", () => {
     );
     expect(res.status).toBe(403);
   });
+
+  it("lets an Admin create a Service Manager within their own store (post-v1 product feedback)", async () => {
+    const store = await createStore();
+    const admin = await createUser({ role: "admin", storeIds: [store.id], password: "Correct123!" });
+    const cookie = await loginAs(admin.email, "Correct123!");
+
+    const res = await usersPOST(
+      jsonRequest("/api/auth/users", {
+        method: "POST",
+        cookie,
+        body: {
+          name: "New SM",
+          email: "newsm2@example.com",
+          role: "service_manager",
+          storeIds: [store.id],
+          password: "ValidPass1!",
+        },
+      }),
+    );
+    expect(res.status).toBe(201);
+  });
+
+  it("403s when an Admin tries to assign a store outside their own scope", async () => {
+    const storeA = await createStore();
+    const storeB = await createStore();
+    const admin = await createUser({ role: "admin", storeIds: [storeA.id], password: "Correct123!" });
+    const cookie = await loginAs(admin.email, "Correct123!");
+
+    const res = await usersPOST(
+      jsonRequest("/api/auth/users", {
+        method: "POST",
+        cookie,
+        body: {
+          name: "X",
+          email: "outofscope@example.com",
+          role: "service_manager",
+          storeIds: [storeB.id],
+          password: "ValidPass1!",
+        },
+      }),
+    );
+    expect(res.status).toBe(403);
+  });
 });
 
 describe("GET /api/auth/users", () => {
@@ -439,6 +482,74 @@ describe("PATCH /api/auth/users/:id", () => {
     );
     expect(res.status).toBe(409);
     expect((await res.json()).error.code).toBe("last_super_admin");
+  });
+
+  it("lets an Admin edit a Service Manager's name within their own store (post-v1 product feedback)", async () => {
+    const store = await createStore();
+    const admin = await createUser({ role: "admin", storeIds: [store.id], password: "Correct123!" });
+    const sm = await createUser({ role: "service_manager", storeIds: [store.id] });
+    const cookie = await loginAs(admin.email, "Correct123!");
+
+    const res = await userPATCH(
+      jsonRequest(`/api/auth/users/${sm.id}`, { method: "PATCH", cookie, body: { name: "Renamed by Admin" } }),
+      { params: { id: sm.id } },
+    );
+    expect(res.status).toBe(200);
+    expect((await res.json()).user.name).toBe("Renamed by Admin");
+  });
+
+  it("404s (not 403) when an Admin targets a Service Manager outside their own stores", async () => {
+    const storeA = await createStore();
+    const storeB = await createStore();
+    const admin = await createUser({ role: "admin", storeIds: [storeA.id], password: "Correct123!" });
+    const outOfScopeSm = await createUser({ role: "service_manager", storeIds: [storeB.id] });
+    const cookie = await loginAs(admin.email, "Correct123!");
+
+    const res = await userPATCH(
+      jsonRequest(`/api/auth/users/${outOfScopeSm.id}`, { method: "PATCH", cookie, body: { name: "X" } }),
+      { params: { id: outOfScopeSm.id } },
+    );
+    expect(res.status).toBe(404);
+  });
+
+  it("404s when an Admin targets another Admin or a Super Admin, even within their own store", async () => {
+    const store = await createStore();
+    const admin = await createUser({ role: "admin", storeIds: [store.id], password: "Correct123!" });
+    const otherAdmin = await createUser({ role: "admin", storeIds: [store.id] });
+    const cookie = await loginAs(admin.email, "Correct123!");
+
+    const res = await userPATCH(
+      jsonRequest(`/api/auth/users/${otherAdmin.id}`, { method: "PATCH", cookie, body: { name: "X" } }),
+      { params: { id: otherAdmin.id } },
+    );
+    expect(res.status).toBe(404);
+  });
+
+  it("403s when an Admin tries to promote a Service Manager to Admin", async () => {
+    const store = await createStore();
+    const admin = await createUser({ role: "admin", storeIds: [store.id], password: "Correct123!" });
+    const sm = await createUser({ role: "service_manager", storeIds: [store.id] });
+    const cookie = await loginAs(admin.email, "Correct123!");
+
+    const res = await userPATCH(
+      jsonRequest(`/api/auth/users/${sm.id}`, { method: "PATCH", cookie, body: { role: "admin" } }),
+      { params: { id: sm.id } },
+    );
+    expect(res.status).toBe(403);
+  });
+
+  it("403s when an Admin tries to reassign a Service Manager to a store outside their own scope", async () => {
+    const storeA = await createStore();
+    const storeB = await createStore();
+    const admin = await createUser({ role: "admin", storeIds: [storeA.id], password: "Correct123!" });
+    const sm = await createUser({ role: "service_manager", storeIds: [storeA.id] });
+    const cookie = await loginAs(admin.email, "Correct123!");
+
+    const res = await userPATCH(
+      jsonRequest(`/api/auth/users/${sm.id}`, { method: "PATCH", cookie, body: { storeIds: [storeB.id] } }),
+      { params: { id: sm.id } },
+    );
+    expect(res.status).toBe(403);
   });
 });
 

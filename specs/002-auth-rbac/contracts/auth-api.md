@@ -111,7 +111,14 @@ a Service Manager.
 
 ## `POST /api/auth/users`
 
-Creates a staff account. **Requires**: `super_admin` role (FR-011).
+Creates a staff account. **Requires**: `super_admin` role, or `admin` role creating a
+`service_manager`/`technician` within their own store(s) (FR-011).
+
+**Deviation** (post-v1, per direct product feedback: "Admin and super admin should be able
+to edit the teams table"): an Admin may now create staff, but only as `service_manager` or
+`technician` (never `admin`, matching the boundary `GET /api/auth/users` and
+`.../reset-password` already enforce), and only with `storeIds` inside their own scope. An
+Admin attempting either gets `403 { code: "forbidden" }`.
 
 **Request**:
 ```json
@@ -170,7 +177,16 @@ Managers within the Admin's own store(s) — the same visibility boundary `GET
 
 ## `PATCH /api/auth/users/:id`
 
-Edits role/active state/store assignment. **Requires**: `super_admin` role (FR-011, FR-012).
+Edits role/active state/store assignment. **Requires**: `super_admin` role, or `admin` role
+acting on a `service_manager`/`technician` within their own store(s) (FR-011, FR-012).
+
+**Deviation** (post-v1, per direct product feedback, mirroring `POST /api/auth/users`'
+widening): an Admin may edit a Store Service Manager or Technician within their own
+store(s) — the same visibility boundary `GET /api/auth/users` and `.../reset-password`
+already enforce. A target outside that boundary (wrong role, or out of scope) `404`s
+rather than `403`s, same "can't act on what you can't see" convention as reset-password.
+An Admin setting `role` to anything but `service_manager`/`technician`, or `storeIds`
+outside their own scope, gets `403 { code: "forbidden" }`.
 
 **Request** (all fields optional; only provided fields change):
 ```json
@@ -180,9 +196,11 @@ Edits role/active state/store assignment. **Requires**: `super_admin` role (FR-0
 **Responses**:
 - `200 { "user": { ...same shape as GET } }`
 - `400 { code: "invalid_store_count" }` — as above, if `role` is/becomes `service_manager`
+- `403 { code: "forbidden" }` — an Admin caller attempting a role or store assignment
+  outside what they're allowed to set
 - `409 { code: "last_super_admin" }` — attempting to set `active: false` on the last active
   `super_admin` (FR-020)
-- `404` — no such user
+- `404` — no such user, or (for an Admin caller) a target outside their role/store scope
 
 Every successful call here writes an `audit_log` row (actor = caller, entity = this user,
 before/after snapshot) per FR-018.

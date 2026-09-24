@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuthenticatedSession } from "@/lib/auth/require-session";
 import { requireSameOrigin } from "@/lib/auth/csrf";
-import { requireSuperAdmin, AccessDeniedError } from "@/lib/auth/rbac";
+import { requireAdminOrAbove, AccessDeniedError } from "@/lib/auth/rbac";
 import { createStore, listStores } from "@/lib/admin/stores";
 import type { stores } from "@/lib/db/schema";
 
@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
   if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
 
   try {
-    requireSuperAdmin(sessionOrResponse.user);
+    requireAdminOrAbove(sessionOrResponse.user);
   } catch (err) {
     if (err instanceof AccessDeniedError) {
       return NextResponse.json({ error: { code: "forbidden", message: err.message } }, { status: 403 });
@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
   if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
 
   try {
-    requireSuperAdmin(sessionOrResponse.user);
+    requireAdminOrAbove(sessionOrResponse.user);
   } catch (err) {
     if (err instanceof AccessDeniedError) {
       return NextResponse.json({ error: { code: "forbidden", message: err.message } }, { status: 403 });

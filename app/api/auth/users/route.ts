@@ -7,7 +7,7 @@ import { isValidEmail } from "@/lib/auth/email-validation";
 import { isValidPassword } from "@/lib/auth/password-policy";
 import { isValidUsername } from "@/lib/auth/username-validation";
 import { requireAuthenticatedSession } from "@/lib/auth/require-session";
-import { AccessDeniedError, getScopedStoreIds, requireAdminOrAbove, requireSuperAdmin } from "@/lib/auth/rbac";
+import { AccessDeniedError, getScopedStoreIds, requireAdminOrAbove } from "@/lib/auth/rbac";
 import { requireSameOrigin } from "@/lib/auth/csrf";
 
 export async function GET(request: NextRequest) {
@@ -59,9 +59,10 @@ export async function POST(request: NextRequest) {
 
   const sessionOrResponse = await requireAuthenticatedSession(request);
   if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
+  const caller = sessionOrResponse.user;
 
   try {
-    requireSuperAdmin(sessionOrResponse.user);
+    requireAdminOrAbove(caller);
   } catch (err) {
     if (err instanceof AccessDeniedError) {
       return NextResponse.json({ error: { code: "forbidden", message: err.message } }, { status: 403 });
@@ -75,6 +76,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       { error: { code: "invalid_role", message: "role must be admin, service_manager, or technician." } },
       { status: 400 },
+    );
+  }
+
+  // An Admin manages Service Managers/Technicians within their own stores (the same
+  // boundary GET /api/auth/users and the reset-password route already enforce) — they
+  // can't create another Admin, and only a Super Admin's own seeding step creates one.
+  if (caller.role === "admin" && role !== "service_manager" && role !== "technician") {
+    return NextResponse.json(
+      { error: { code: "forbidden", message: "An Admin can only create Service Manager or Technician accounts." } },
+      { status: 403 },
     );
   }
 
@@ -134,6 +145,16 @@ export async function POST(request: NextRequest) {
       },
       { status: 400 },
     );
+  }
+
+  if (caller.role === "admin") {
+    const callerScope = await getScopedStoreIds(caller);
+    if (callerScope !== "all" && !ids.every((id) => callerScope.includes(id))) {
+      return NextResponse.json(
+        { error: { code: "forbidden", message: "An Admin can only assign stores within their own scope." } },
+        { status: 403 },
+      );
+    }
   }
 
   const normalizedEmail = String(email).trim().toLowerCase();

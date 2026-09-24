@@ -210,9 +210,9 @@ describe("POST/PATCH /api/admin/stores", () => {
     expect((await res.json()).error.code).toBe("invalid_whatsapp_number");
   });
 
-  it("403s for a non-Super-Admin caller", async () => {
-    const admin = await createUser({ role: "admin", password: "Correct123!" });
-    const cookie = await loginAs(admin.email, "Correct123!");
+  it("403s for a caller below Admin", async () => {
+    const sm = await createUser({ role: "service_manager", password: "Correct123!" });
+    const cookie = await loginAs(sm.email, "Correct123!");
     const res = await storesPOST(
       jsonRequest("/api/admin/stores", {
         method: "POST",
@@ -221,6 +221,28 @@ describe("POST/PATCH /api/admin/stores", () => {
       }),
     );
     expect(res.status).toBe(403);
+  });
+
+  it("lets an Admin create and edit a store, same as a Super Admin (post-v1 product feedback)", async () => {
+    const admin = await createUser({ role: "admin", password: "Correct123!" });
+    const cookie = await loginAs(admin.email, "Correct123!");
+
+    const createRes = await storesPOST(
+      jsonRequest("/api/admin/stores", {
+        method: "POST",
+        cookie,
+        body: { name: "Admin-Created Store", address: "A", primaryContact: "B", whatsappNumber: "+919876543210", taxRate: 18 },
+      }),
+    );
+    expect(createRes.status).toBe(201);
+    const { store } = await createRes.json();
+
+    const patchRes = await storePATCH(
+      jsonRequest(`/api/admin/stores/${store.id}`, { method: "PATCH", cookie, body: { name: "Renamed by Admin" } }),
+      { params: { id: store.id } },
+    );
+    expect(patchRes.status).toBe(200);
+    expect((await patchRes.json()).store.name).toBe("Renamed by Admin");
   });
 
   it("lists all stores including inactive ones", async () => {

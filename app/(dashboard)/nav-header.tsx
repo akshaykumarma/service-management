@@ -71,11 +71,13 @@ export default function NavHeader({ name, role }: NavHeaderProps) {
               Team
             </a>
           )}
+          {(role === "admin" || role === "super_admin") && (
+            <a href="/admin/stores" className={navClass("/admin/stores")}>
+              Stores
+            </a>
+          )}
           {role === "super_admin" && (
             <>
-              <a href="/admin/stores" className={navClass("/admin/stores")}>
-                Stores
-              </a>
               <a href="/admin/machine-models" className={navClass("/admin/machine-models")}>
                 Machine models
               </a>

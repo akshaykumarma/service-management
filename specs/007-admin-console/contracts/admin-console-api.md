@@ -1,7 +1,13 @@
 # API Contract: Machine Model & Store Administration
 
 Per constitution Principle III. Common error shape as in prior contracts. Every endpoint
-below requires Super Admin (`assertAccess`) — FR-001, FR-005, FR-011.
+below requires Super Admin (`assertAccess`) — FR-001, FR-005, FR-011 — **except**
+`GET`/`POST /api/admin/stores` and `PATCH /api/admin/stores/:id`, widened to Admin-or-above
+(post-v1, per direct product feedback: "Admin and super admin should be able to edit the
+stores table"). An Admin gets full parity with a Super Admin here — every store, not just
+their own — since a store isn't scoped data the way staff accounts are. Deciding *who* is
+an Admin of a store stays Super-Admin-only: `POST`/`DELETE .../admins(/:userId)` are
+unchanged.
 
 ---
 

@@ -200,11 +200,9 @@ export default function TeamPageClient({ callerRole }: { callerRole: "super_admi
           <h2 id="user-list-heading">
             {callerRole === "super_admin" ? "All staff accounts" : "Service Managers and Technicians in your stores"}
           </h2>
-          {callerRole === "super_admin" && (
-            <button type="button" onClick={openCreateModal}>
-              Add staff
-            </button>
-          )}
+          <button type="button" onClick={openCreateModal}>
+            Add staff
+          </button>
         </div>
 
         <div className="list-toolbar">
@@ -249,7 +247,7 @@ export default function TeamPageClient({ callerRole }: { callerRole: "super_admi
                 <th scope="col">Role</th>
                 <th scope="col">Status</th>
                 <th scope="col">Stores</th>
-                {callerRole === "super_admin" && <th scope="col">Active</th>}
+                <th scope="col">Active</th>
                 <th scope="col">Reset password</th>
               </tr>
             </thead>
@@ -262,18 +260,16 @@ export default function TeamPageClient({ callerRole }: { callerRole: "super_admi
                   <td>{u.role}</td>
                   <td>{u.active ? "Active" : "Deactivated"}</td>
                   <td>{storeNames(u.storeIds)}</td>
-                  {callerRole === "super_admin" && (
-                    <td>
-                      <div className="article-actions">
-                        <button type="button" onClick={() => openEditModal(u)}>
-                          Edit
-                        </button>
-                        <button type="button" onClick={() => toggleActive(u)}>
-                          {u.active ? "Deactivate" : "Reactivate"}
-                        </button>
-                      </div>
-                    </td>
-                  )}
+                  <td>
+                    <div className="article-actions">
+                      <button type="button" onClick={() => openEditModal(u)}>
+                        Edit
+                      </button>
+                      <button type="button" onClick={() => toggleActive(u)}>
+                        {u.active ? "Deactivate" : "Reactivate"}
+                      </button>
+                    </div>
+                  </td>
                   <td className="reset-password-cell">
                     <label htmlFor={`reset-password-${u.id}`}>New password</label>
                     <PasswordInput
@@ -346,7 +342,7 @@ export default function TeamPageClient({ callerRole }: { callerRole: "super_admi
                 <input disabled value="Super Admin (cannot be changed here)" />
               ) : (
                 <select id="role" value={formRole} onChange={(e) => setFormRole(e.target.value as typeof formRole)}>
-                  <option value="admin">Admin</option>
+                  {callerRole === "super_admin" && <option value="admin">Admin</option>}
                   <option value="service_manager">Store Service Manager</option>
                   <option value="technician">Technician</option>
                 </select>
