@@ -160,9 +160,10 @@ export const tickets = pgTable("tickets", {
     .notNull()
     .references(() => customers.id),
   machineModel: text("machine_model").notNull(),
-  // Optional (post-003 product feedback) — a manufacturer serial number, distinct from
-  // the free-text machineModel field; no format validation, since serial number schemes
-  // vary by manufacturer.
+  // Mandatory at intake (post-003 product feedback) — a manufacturer serial number,
+  // distinct from the free-text machineModel field; no format validation, since serial
+  // number schemes vary by manufacturer. Left nullable at the DB level (rather than
+  // notNull()) because tickets created before this became mandatory have none.
   serialNumber: text("serial_number"),
   issueDescription: text("issue_description").notNull(),
   estimatedPickupDate: date("estimated_pickup_date"),

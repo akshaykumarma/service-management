@@ -24,6 +24,7 @@ describe("Ticket-number generation under concurrent creation", () => {
               customerName: `Customer ${i}`,
               customerPhone: `+91900000${String(i).padStart(4, "0")}`,
               machineModel: "Concurrent-Model",
+              serialNumber: "SN-Concurrent-Model",
               issueDescription: "Concurrency test",
             },
           }),

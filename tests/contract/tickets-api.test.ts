@@ -77,6 +77,7 @@ describe("POST /api/tickets", () => {
           customerName: "Priya Sharma",
           customerPhone: "+919876500001",
           machineModel: "LG-FHM1207ZDL",
+          serialNumber: "SN-LG-FHM1207ZDL",
           issueDescription: "Not spinning",
         },
       }),
@@ -118,6 +119,7 @@ describe("POST /api/tickets", () => {
           customerName: "X",
           customerPhone: "+91...",
           machineModel: "X",
+          serialNumber: "SN-X",
           issueDescription: "Y",
           photoObjectKeys: ["a", "b", "c", "d", "e", "f"],
         },
@@ -127,12 +129,30 @@ describe("POST /api/tickets", () => {
     expect((await res.json()).error.code).toBe("too_many_photos");
   });
 
-  it("accepts an optional serialNumber and persists it; defaults to null when omitted", async () => {
+  it("400s with missing_required_field when serialNumber is absent", async () => {
     const store = await createStore();
     const sm = await createUser({ role: "service_manager", storeIds: [store.id], password: "Correct123!" });
     const cookie = await loginAs(sm.email, "Correct123!");
 
-    const withSerial = await ticketsPOST(
+    const res = await ticketsPOST(
+      jsonRequest("/api/tickets", {
+        method: "POST",
+        cookie,
+        body: { storeId: store.id, customerName: "X", customerPhone: "+91...", machineModel: "X", issueDescription: "Y" },
+      }),
+    );
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error.code).toBe("missing_required_field");
+    expect(body.error.field).toBe("serialNumber");
+  });
+
+  it("persists a provided serialNumber", async () => {
+    const store = await createStore();
+    const sm = await createUser({ role: "service_manager", storeIds: [store.id], password: "Correct123!" });
+    const cookie = await loginAs(sm.email, "Correct123!");
+
+    const res = await ticketsPOST(
       jsonRequest("/api/tickets", {
         method: "POST",
         cookie,
@@ -146,28 +166,10 @@ describe("POST /api/tickets", () => {
         },
       }),
     );
-    expect(withSerial.status).toBe(201);
-    const { ticket } = await withSerial.json();
+    expect(res.status).toBe(201);
+    const { ticket } = await res.json();
     const detail = await ticketGET(jsonRequest(`/api/tickets/${ticket.id}`, { cookie }), { params: { id: ticket.id } });
     expect((await detail.json()).ticket.serialNumber).toBe("SN-12345");
-
-    const withoutSerial = await ticketsPOST(
-      jsonRequest("/api/tickets", {
-        method: "POST",
-        cookie,
-        body: {
-          storeId: store.id,
-          customerName: "Someone Else",
-          customerPhone: "+919876500003",
-          machineModel: "X",
-          issueDescription: "Y",
-        },
-      }),
-    );
-    expect(withoutSerial.status).toBe(201);
-    const { ticket: ticket2 } = await withoutSerial.json();
-    const detail2 = await ticketGET(jsonRequest(`/api/tickets/${ticket2.id}`, { cookie }), { params: { id: ticket2.id } });
-    expect((await detail2.json()).ticket.serialNumber).toBeNull();
   });
 
   it("403s when the creator's role/store scope doesn't permit creating at storeId", async () => {
@@ -180,7 +182,14 @@ describe("POST /api/tickets", () => {
       jsonRequest("/api/tickets", {
         method: "POST",
         cookie,
-        body: { storeId: storeB.id, customerName: "X", customerPhone: "+91...", machineModel: "X", issueDescription: "Y" },
+        body: {
+          storeId: storeB.id,
+          customerName: "X",
+          customerPhone: "+91...",
+          machineModel: "X",
+          serialNumber: "SN-X",
+          issueDescription: "Y",
+        },
       }),
     );
     expect(res.status).toBe(403);

@@ -33,6 +33,7 @@ test.describe("Board to report end-to-end (006-dashboard-reporting, US1-US5)", (
     await page.getByLabel("Customer name").fill(customerName);
     await page.getByLabel("Customer phone").fill("+919999900003");
     await page.getByLabel("Machine model").fill(`E2E-Report-Model-${Date.now()}`);
+    await page.getByLabel("Serial number").fill(`SN-Report-${Date.now()}`);
     await page.getByLabel("Issue description").fill("Board-to-report e2e test");
     await page.getByRole("button", { name: "Create ticket" }).click();
     await page.getByRole("link", { name: "View full ticket" }).click();

@@ -13,7 +13,7 @@ import { queryScopedTickets } from "@/lib/board/ticket-query";
 import { toTicketCard } from "@/lib/board/card-shape";
 import type { TicketStatus } from "@/lib/tickets/status-transitions";
 
-const REQUIRED_FIELDS = ["storeId", "customerName", "customerPhone", "machineModel", "issueDescription"] as const;
+const REQUIRED_FIELDS = ["storeId", "customerName", "customerPhone", "machineModel", "serialNumber", "issueDescription"] as const;
 
 export async function POST(request: NextRequest) {
   const csrfResponse = requireSameOrigin(request);
@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
         customerAltPhone: payload.customerAltPhone ?? null,
         customerId: customer.id,
         machineModel: payload.machineModel,
-        serialNumber: payload.serialNumber || null,
+        serialNumber: payload.serialNumber,
         issueDescription: payload.issueDescription,
         estimatedPickupDate: payload.estimatedPickupDate ?? null,
         status: "open",

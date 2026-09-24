@@ -6,6 +6,7 @@ async function createTicketAndGetId(page: import("@playwright/test").Page, label
   await page.getByLabel("Customer name").fill(`${label} Customer`);
   await page.getByLabel("Customer phone").fill(`+9198${Date.now().toString().slice(-8)}`);
   await page.getByLabel("Machine model").fill(`${label} Model ${Date.now()}`);
+  await page.getByLabel("Serial number").fill(`SN-${label}-${Date.now()}`);
   await page.getByLabel("Issue description").fill(`${label} e2e test`);
   await page.getByRole("button", { name: "Create ticket" }).click();
   const href = await page.getByRole("link", { name: "View full ticket" }).getAttribute("href");

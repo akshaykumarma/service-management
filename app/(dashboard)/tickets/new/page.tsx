@@ -66,7 +66,7 @@ export default function NewTicketPage() {
           customerPhone,
           customerAltPhone: customerAltPhone || null,
           machineModel,
-          serialNumber: serialNumber || null,
+          serialNumber,
           issueDescription,
           estimatedPickupDate: estimatedPickupDate || null,
         }),
@@ -181,8 +181,10 @@ export default function NewTicketPage() {
           </datalist>
         </div>
         <div>
-          <label htmlFor="serialNumber">Serial number (optional)</label>
-          <input id="serialNumber" value={serialNumber} onChange={(e) => setSerialNumber(e.target.value)} />
+          <label htmlFor="serialNumber" className="required">
+            Serial number
+          </label>
+          <input id="serialNumber" required value={serialNumber} onChange={(e) => setSerialNumber(e.target.value)} />
         </div>
         <div>
           <label htmlFor="issueDescription" className="required">

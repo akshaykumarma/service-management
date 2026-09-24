@@ -38,17 +38,19 @@ assigned store), or Super Admin (any store) — role scope per FR-006/FR-017.
   "customerPhone": "string",
   "customerAltPhone": "string | null",
   "machineModel": "string",
-  "serialNumber": "string | null",
+  "serialNumber": "string",
   "issueDescription": "string",
   "estimatedPickupDate": "date | null",
   "photoObjectKeys": ["string", "... up to 5"]
 }
 ```
 
-**Deviation** (post-v1, per direct product feedback): `serialNumber` — an optional
+**Deviation** (post-v1, per direct product feedback): `serialNumber` — a mandatory
 manufacturer serial number, distinct from `machineModel`'s free-text model
 name/number. No format validation (schemes vary by manufacturer). Shown on the ticket
-detail page's Intake information, right after Machine model.
+detail page's Intake information, right after Machine model. Mandatory only going
+forward: tickets created before this requirement existed may have `serialNumber: null`,
+so `GET`/detail responses still type it as `string | null`.
 
 **Responses**:
 - `201 { "ticket": { "id", "ticketNumber", "status": "open", "createdAt", ... }, "history": { "found": boolean, "entries": [...] } }` —

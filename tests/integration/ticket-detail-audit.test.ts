@@ -38,6 +38,7 @@ describe("Ticket detail consolidated audit trail (User Story 4)", () => {
           customerName: "Audit Trail Customer",
           customerPhone: "+919888800002",
           machineModel: "Model-Audit",
+          serialNumber: "SN-Model-Audit",
           issueDescription: "Full lifecycle audit trail test",
         },
       }),

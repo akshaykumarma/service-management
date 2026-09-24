@@ -21,6 +21,7 @@ test.describe("Complete and deliver (005-customer-notifications, US1+US3)", () =
     await page.getByLabel("Customer name").fill("E2E Delivery Customer");
     await page.getByLabel("Customer phone").fill(customerPhone);
     await page.getByLabel("Machine model").fill(`E2E-Deliver-Model-${Date.now()}`);
+    await page.getByLabel("Serial number").fill(`SN-Deliver-${Date.now()}`);
     await page.getByLabel("Issue description").fill("Delivery e2e test");
     await page.getByRole("button", { name: "Create ticket" }).click();
     await page.getByRole("link", { name: "View full ticket" }).click();
