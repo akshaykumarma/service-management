@@ -1,0 +1,1295 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes slideIn{from{transform:translateX(40px);opacity:0}to{transform:none;opacity:1}}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+body{margin:0;-webkit-font-smoothing:antialiased;background:#f7f7f8}
+*{box-sizing:border-box}
+a{color:#c81e1e;text-decoration:none}
+a:hover{text-decoration:underline}
+input,select,textarea,button{font-family:inherit}
+input:focus,select:focus,textarea:focus{outline:2px solid rgba(200,30,30,.25);outline-offset:0;border-color:#c81e1e !important}
+::-webkit-scrollbar{height:8px;width:8px}::-webkit-scrollbar-thumb{background:#dcdce0;border-radius:4px}
+</style>
+</helmet>
+<div style="font-family:'Geist',system-ui,sans-serif;color:#18181b;font-size:14px;line-height:1.5;min-height:100vh;background:#f7f7f8">
+
+<sc-if value="{{ isLogin }}" hint-placeholder-val="{{ false }}">
+<div style="min-height:100vh;display:grid;grid-template-columns:{{ loginCols }};background:#fff">
+  <div style="display:flex;flex-direction:column;justify-content:center;padding:48px clamp(24px,8vw,96px);animation:fadeUp .4s ease both">
+    <img src="assets/logo.png" alt="Shubha Sewing" style="height:44px;width:auto;align-self:flex-start;margin-bottom:48px">
+    <h1 style="font-size:28px;font-weight:600;letter-spacing:-.02em;margin:0 0 6px">Log in to Service Desk</h1>
+    <p style="color:#71717a;margin:0 0 32px">Tickets, delivery and billing for every store.</p>
+    <form onSubmit="{{ onLogin }}" style="display:flex;flex-direction:column;gap:16px;max-width:380px">
+      <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500">Email or Username
+        <input required value="{{ loginEmail }}" onChange="{{ onLoginEmail }}" autocomplete="username" style="height:40px;border:1px solid #e4e4e7;border-radius:8px;padding:0 12px;font-size:14px">
+      </label>
+      <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500">Password
+        <div style="display:flex;border:1px solid #e4e4e7;border-radius:8px;overflow:hidden">
+          <input required type="{{ pwType }}" autocomplete="current-password" style="flex:1;height:38px;border:0;padding:0 12px;font-size:14px;outline:none">
+          <button type="button" onClick="{{ togglePw }}" style="border:0;border-left:1px solid #e4e4e7;background:#fafafa;padding:0 14px;font-size:12px;font-weight:500;color:#52525b;cursor:pointer">{{ pwLabel }}</button>
+        </div>
+      </label>
+      <button type="submit" style="height:40px;border:0;border-radius:8px;background:#18181b;color:#fff;font-size:14px;font-weight:500;cursor:pointer;margin-top:4px" style-hover="background:#27272a">Log in</button>
+      <a href="#" onClick="{{ onForgot }}" style="font-size:13px;align-self:flex-start">Forgot your password?</a>
+    </form>
+  </div>
+  <sc-if value="{{ isWide }}" hint-placeholder-val="{{ true }}">
+    <div style="background:#f4f4f5;border-left:1px solid #e4e4e7;display:flex;align-items:center;justify-content:center;padding:48px;overflow:hidden">
+      <div style="width:100%;max-width:460px;display:flex;flex-direction:column;gap:10px;animation:fadeUp .6s .1s ease both">
+        <sc-for list="{{ loginPreview }}" as="c" hint-placeholder-count="3">
+          <div style="background:#fff;border:1px solid #e4e4e7;border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:14px;box-shadow:0 1px 2px rgba(0,0,0,.04);margin-left:{{ c.indent }}">
+            <span style="width:8px;height:8px;border-radius:50%;background:{{ c.color }};flex-shrink:0"></span>
+            <div style="flex:1;min-width:0">
+              <div style="font-family:'Geist Mono',monospace;font-size:12px;color:#71717a">{{ c.num }}</div>
+              <div style="font-weight:500">{{ c.title }}</div>
+            </div>
+            <span style="font-size:12px;font-weight:500;padding:3px 9px;border-radius:999px;background:{{ c.bg }};color:{{ c.color }}">{{ c.label }}</span>
+          </div>
+        </sc-for>
+        <p style="color:#52525b;font-size:13px;margin:18px 0 0;text-align:center">Customers get a WhatsApp update the moment their machine is ready.</p>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{ isApp }}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;min-height:100vh">
+
+  <sc-if value="{{ isWide }}" hint-placeholder-val="{{ true }}">
+  <aside style="width:232px;flex-shrink:0;background:#fbfbfb;border-right:1px solid #ececef;display:flex;flex-direction:column;position:sticky;top:0;height:100vh">
+    <div style="padding:18px 18px 22px"><img src="assets/logo.png" alt="Shubha Sewing" style="height:32px;width:auto"></div>
+    <div style="padding:0 10px 10px">
+      <button onClick="{{ goNew }}" style="width:100%;height:36px;border:1px solid #e4e4e7;background:#fff;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:0 1px 2px rgba(0,0,0,.04)" style-hover="border-color:#d4d4d8">
+        <span style="font-size:16px;line-height:1;color:#c81e1e">+</span> New ticket
+      </button>
+    </div>
+    <nav style="display:flex;flex-direction:column;gap:2px;padding:6px 10px">
+      <sc-for list="{{ nav }}" as="n" hint-placeholder-count="3">
+        <button onClick="{{ n.onClick }}" style="display:flex;align-items:center;gap:10px;height:34px;padding:0 10px;border:0;border-radius:7px;background:{{ n.bg }};color:{{ n.color }};font-size:13px;font-weight:500;cursor:pointer;text-align:left" style-hover="background:#f0f0f2">
+          <span style="width:16px;height:16px;border-radius:4px;border:1.5px solid currentColor;opacity:.7;flex-shrink:0"></span>
+          <span style="flex:1">{{ n.label }}</span>
+          <span style="font-family:'Geist Mono',monospace;font-size:11px;color:#a1a1aa">{{ n.count }}</span>
+        </button>
+      </sc-for>
+    </nav>
+    <sc-if value="{{ hasAdminNav }}" hint-placeholder-val="{{ true }}">
+      <div style="padding:18px 20px 6px;font-size:11px;font-weight:600;color:#a1a1aa;text-transform:uppercase;letter-spacing:.06em">Admin</div>
+      <nav style="display:flex;flex-direction:column;gap:2px;padding:0 10px">
+        <sc-for list="{{ adminNav }}" as="n" hint-placeholder-count="4">
+          <button onClick="{{ n.onClick }}" style="display:flex;align-items:center;gap:10px;height:34px;padding:0 10px;border:0;border-radius:7px;background:{{ n.bg }};color:{{ n.color }};font-size:13px;font-weight:500;cursor:pointer;text-align:left" style-hover="background:#f0f0f2">
+            <span style="width:16px;height:16px;border-radius:50%;border:1.5px solid currentColor;opacity:.7;flex-shrink:0"></span>
+            <span style="flex:1">{{ n.label }}</span>
+          </button>
+        </sc-for>
+      </nav>
+    </sc-if>
+    <div style="margin-top:auto;padding:12px;border-top:1px solid #ececef;display:flex;align-items:center;gap:10px">
+      <span style="width:30px;height:30px;border-radius:50%;background:#18181b;color:#fff;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center">{{ userInitials }}</span>
+      <div style="flex:1;min-width:0;line-height:1.3">
+        <div style="font-size:13px;font-weight:500">{{ userName }}</div>
+        <div style="font-size:12px;color:#71717a">{{ roleLabel }}</div>
+      </div>
+      <button onClick="{{ onLogout }}" title="Log out" style="border:0;background:none;color:#71717a;font-size:12px;cursor:pointer;padding:4px" style-hover="color:#18181b">Log out</button>
+    </div>
+  </aside>
+  </sc-if>
+
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column">
+    <sc-if value="{{ isNarrow }}" hint-placeholder-val="{{ false }}">
+      <div style="position:sticky;top:0;z-index:20;background:#fff;border-bottom:1px solid #ececef;padding:10px 16px;display:flex;align-items:center;gap:12px">
+        <img src="assets/logo.png" alt="Shubha Sewing" style="height:28px;width:auto">
+        <div style="flex:1"></div>
+        <button onClick="{{ goNew }}" style="height:34px;border:0;background:#c81e1e;color:#fff;border-radius:8px;padding:0 12px;font-size:13px;font-weight:500;cursor:pointer">+ New</button>
+      </div>
+      <div style="display:flex;gap:4px;padding:8px 12px;background:#fff;border-bottom:1px solid #ececef;overflow-x:auto">
+        <sc-for list="{{ nav }}" as="n" hint-placeholder-count="3">
+          <button onClick="{{ n.onClick }}" style="flex-shrink:0;height:32px;padding:0 12px;border:0;border-radius:7px;background:{{ n.bg }};color:{{ n.color }};font-size:13px;font-weight:500;cursor:pointer">{{ n.label }}</button>
+        </sc-for>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isBoard }}" hint-placeholder-val="{{ true }}">
+    <div style="padding:24px clamp(16px,3vw,32px) 0;animation:fade .3s ease">
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:18px">
+        <div>
+          <div style="font-size:12px;color:#71717a;margin-bottom:2px">{{ scopeLabel }}</div>
+          <h1 style="font-size:22px;font-weight:600;letter-spacing:-.02em;margin:0">Board</h1>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#71717a"><span style="width:6px;height:6px;border-radius:50%;background:#15803d"></span>{{ boardHint }}</div>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px;background:#fff;border:1px solid #ececef;border-radius:10px;margin-bottom:16px">
+        <div style="flex:1 1 220px;display:flex;align-items:center;gap:8px;height:34px;padding:0 10px;border:1px solid #e4e4e7;border-radius:7px;background:#fafafa">
+          <span style="width:12px;height:12px;border:1.5px solid #a1a1aa;border-radius:50%;flex-shrink:0"></span>
+          <input value="{{ q }}" onInput="{{ onQ }}" placeholder="Search ticket, customer, phone or model" aria-label="Search tickets" style="flex:1;min-width:0;border:0;background:none;font-size:13px;outline:none;height:100%">
+        </div>
+        <select value="{{ storeFilter }}" onChange="{{ onStore }}" aria-label="Store" style="height:34px;border:1px solid #e4e4e7;border-radius:7px;padding:0 10px;font-size:13px;background:#fff">
+          <option value="">All stores</option>
+          <sc-for list="{{ storeOptions }}" as="s" hint-placeholder-count="4"><option value="{{ s }}">{{ s }}</option></sc-for>
+        </select>
+        <select value="{{ techFilter }}" onChange="{{ onTech }}" aria-label="Technician" style="height:34px;border:1px solid #e4e4e7;border-radius:7px;padding:0 10px;font-size:13px;background:#fff">
+          <option value="">All technicians</option>
+          <sc-for list="{{ techOptions }}" as="t" hint-placeholder-count="4"><option value="{{ t }}">{{ t }}</option></sc-for>
+        </select>
+        <button onClick="{{ toggleCancelled }}" aria-pressed="{{ showCancelled }}" style="height:34px;border:1px solid {{ cancelBorder }};border-radius:7px;padding:0 12px;font-size:13px;background:{{ cancelBg }};color:{{ cancelColor }};cursor:pointer;font-weight:500">Include cancelled</button>
+        <sc-if value="{{ hasFilters }}" hint-placeholder-val="{{ false }}">
+          <button onClick="{{ clearFilters }}" style="height:34px;border:0;background:none;color:#c81e1e;font-size:13px;font-weight:500;cursor:pointer;padding:0 6px">Clear filters</button>
+        </sc-if>
+      </div>
+    </div>
+    <div ref="{{ boardRef }}" style="flex:1;overflow-x:auto;padding:0 clamp(16px,3vw,32px) 32px;-webkit-overflow-scrolling:touch">
+      <div style="display:flex;gap:14px;align-items:flex-start;min-width:min-content">
+        <sc-for list="{{ columns }}" as="col" hint-placeholder-count="5">
+          <section data-col="{{ col.key }}" onDragOver="{{ col.onDragOver }}" onDragLeave="{{ col.onDragLeave }}" onDrop="{{ col.onDrop }}" aria-label="{{ col.label }}" style="width:{{ colWidth }};flex-shrink:0;background:{{ col.bg }};border:1px solid {{ col.border }};border-radius:12px;padding:10px;transition:background .15s,border-color .15s">
+            <div style="display:flex;align-items:center;gap:8px;padding:4px 6px 12px">
+              <span style="width:8px;height:8px;border-radius:50%;background:{{ col.color }}"></span>
+              <h2 style="font-size:13px;font-weight:600;margin:0;flex:1">{{ col.label }}</h2>
+              <span style="font-family:'Geist Mono',monospace;font-size:11px;color:#71717a;background:#fff;border:1px solid #ececef;border-radius:999px;padding:1px 8px">{{ col.count }}</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px;min-height:60px">
+              <sc-for list="{{ col.cards }}" as="t" hint-placeholder-count="2">
+                <article draggable="true" onTouchStart="{{ t.onTouchStart }}" onContextMenu="{{ t.onContextMenu }}" onDragStart="{{ t.onDragStart }}" onDragEnd="{{ onDragEnd }}" onClick="{{ t.onOpen }}" tabindex="0" style="background:#fff;border:1px solid #e7e7ea;border-radius:10px;padding:12px;cursor:grab;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;box-shadow:0 1px 2px rgba(0,0,0,.04);opacity:{{ t.opacity }};animation:fadeUp .3s ease both;transition:box-shadow .15s,border-color .15s" style-hover="border-color:#d4d4d8;box-shadow:0 4px 12px rgba(0,0,0,.06)">
+                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+                    <span style="font-family:'Geist Mono',monospace;font-size:12px;color:#71717a">{{ t.num }}</span>
+                    <span style="font-size:11px;font-weight:500;padding:1px 7px;border-radius:999px;background:{{ t.ageBg }};color:{{ t.ageColor }}">{{ t.ageLabel }}</span>
+                  </div>
+                  <div style="font-weight:500;margin-bottom:2px">{{ t.customer }}</div>
+                  <div style="font-size:13px;color:#52525b;margin-bottom:10px">{{ t.model }}</div>
+                  <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;color:#71717a;border-top:1px solid #f4f4f5;padding-top:8px">
+                    <span>{{ t.store }}</span>
+                    <span title="{{ t.techName }}" style="width:22px;height:22px;border-radius:50%;background:{{ t.techBg }};color:{{ t.techColor }};font-size:10px;font-weight:600;display:flex;align-items:center;justify-content:center">{{ t.techInitials }}</span>
+                  </div>
+                </article>
+              </sc-for>
+            </div>
+          </section>
+        </sc-for>
+      </div>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{ isNew }}" hint-placeholder-val="{{ false }}">
+    <div style="padding:24px clamp(16px,3vw,32px) 48px;max-width:880px;width:100%;animation:fade .3s ease">
+      <sc-if value="{{ notCreated }}" hint-placeholder-val="{{ true }}">
+        <h1 style="font-size:22px;font-weight:600;letter-spacing:-.02em;margin:0 0 4px">New ticket</h1>
+        <p style="color:#71717a;margin:0 0 20px">Record a machine at intake. Prior service history for the model shows after saving.</p>
+        <form onSubmit="{{ onCreate }}" style="background:#fff;border:1px solid #ececef;border-radius:12px;overflow:hidden">
+          <div style="padding:20px;display:grid;grid-template-columns:{{ formCols }};gap:16px">
+            <div style="grid-column:1/-1;font-size:12px;font-weight:600;color:#71717a;text-transform:uppercase;letter-spacing:.04em">Customer</div>
+            <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500">Store <span style="display:none"></span>
+              <select required value="{{ form.store }}" onChange="{{ f.store }}" style="height:38px;border:1px solid #e4e4e7;border-radius:8px;padding:0 10px;font-size:14px;background:#fff">
+                <option value="">Select a store</option>
+                <sc-for list="{{ storeOptions }}" as="s" hint-placeholder-count="4"><option value="{{ s }}">{{ s }}</option></sc-for>
+              </select>
+            </label>
+            <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500">Customer name
+              <input required value="{{ form.customer }}" onChange="{{ f.customer }}" style="height:38px;border:1px solid #e4e4e7;border-radius:8px;padding:0 12px;font-size:14px">
+            </label>
+            <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500">Customer phone
+              <input required value="{{ form.phone }}" onChange="{{ f.phone }}" placeholder="WhatsApp number" style="height:38px;border:1px solid #e4e4e7;border-radius:8px;padding:0 12px;font-size:14px">
+            </label>
+            <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500">Alternate phone <span style="font-weight:400;color:#a1a1aa;margin-top:-6px;font-size:12px">Optional</span>
+              <input value="{{ form.alt }}" onChange="{{ f.alt }}" style="height:38px;border:1px solid #e4e4e7;border-radius:8px;padding:0 12px;font-size:14px">
+            </label>
+            <div style="grid-column:1/-1;font-size:12px;font-weight:600;color:#71717a;text-transform:uppercase;letter-spacing:.04em;margin-top:8px;padding-top:16px;border-top:1px solid #f4f4f5">Machine</div>
+            <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500">Machine model
+              <input required list="models" value="{{ form.model }}" onChange="{{ f.model }}" placeholder="Search or type a model" style="height:38px;border:1px solid #e4e4e7;border-radius:8px;padding:0 12px;font-size:14px">
+              <datalist id="models"><sc-for list="{{ modelOptions }}" as="m" hint-placeholder-count="4"><option value="{{ m }}"></option></sc-for></datalist>
+            </label>
+            <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500">Serial number
+              <input required value="{{ form.serial }}" onChange="{{ f.serial }}" style="height:38px;border:1px solid #e4e4e7;border-radius:8px;padding:0 12px;font-size:14px;font-family:'Geist Mono',monospace">
+            </label>
+            <label style="grid-column:1/-1;display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500">Issue description
+              <textarea required value="{{ form.issue }}" onChange="{{ f.issue }}" rows="3" style="border:1px solid #e4e4e7;border-radius:8px;padding:10px 12px;font-size:14px;resize:vertical"></textarea>
+            </label>
+            <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:500">Estimated delivery date <span style="font-weight:400;color:#a1a1aa;margin-top:-6px;font-size:12px">Optional</span>
+              <input type="date" value="{{ form.eta }}" onChange="{{ f.eta }}" style="height:38px;border:1px solid #e4e4e7;border-radius:8px;padding:0 12px;font-size:14px">
+            </label>
+          </div>
+          <div style="display:flex;justify-content:flex-end;gap:8px;padding:14px 20px;background:#fafafa;border-top:1px solid #ececef">
+            <button type="button" onClick="{{ goBoard }}" style="height:36px;border:1px solid #e4e4e7;background:#fff;border-radius:8px;padding:0 14px;font-size:13px;font-weight:500;cursor:pointer">Cancel</button>
+            <button type="submit" style="height:36px;border:0;background:#c81e1e;color:#fff;border-radius:8px;padding:0 16px;font-size:13px;font-weight:500;cursor:pointer" style-hover="background:#9c1717">Create ticket</button>
+          </div>
+        </form>
+      </sc-if>
+      <sc-if value="{{ created }}" hint-placeholder-val="{{ false }}">
+        <div style="background:#fff;border:1px solid #ececef;border-radius:12px;padding:28px;animation:fadeUp .35s ease both">
+          <div style="width:36px;height:36px;border-radius:50%;background:#e8f5ec;color:#15803d;display:flex;align-items:center;justify-content:center;font-weight:700;margin-bottom:16px">✓</div>
+          <div style="font-size:13px;color:#71717a">Ticket created</div>
+          <h1 style="font-family:'Geist Mono',monospace;font-size:24px;font-weight:500;margin:2px 0 20px">{{ created.num }}</h1>
+          <div style="font-size:13px;font-weight:600;margin-bottom:8px">Prior service history for {{ created.model }}</div>
+          <sc-if value="{{ created.hasHistory }}" hint-placeholder-val="{{ false }}">
+            <div style="border:1px solid #ececef;border-radius:8px;overflow:hidden;margin-bottom:20px">
+              <sc-for list="{{ created.history }}" as="h" hint-placeholder-count="2">
+                <div style="display:flex;justify-content:space-between;padding:10px 14px;border-bottom:1px solid #f4f4f5;font-size:13px">
+                  <span style="font-family:'Geist Mono',monospace">{{ h.num }}</span>
+                  <span style="font-size:12px;font-weight:500;padding:1px 8px;border-radius:999px;background:{{ h.bg }};color:{{ h.color }}">{{ h.label }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+          <sc-if value="{{ created.noHistory }}" hint-placeholder-val="{{ true }}">
+            <p style="color:#71717a;margin:0 0 20px">No prior service history for this machine model.</p>
+          </sc-if>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button onClick="{{ openCreated }}" style="height:36px;border:0;background:#18181b;color:#fff;border-radius:8px;padding:0 14px;font-size:13px;font-weight:500;cursor:pointer">View full ticket</button>
+            <button onClick="{{ resetNew }}" style="height:36px;border:1px solid #e4e4e7;background:#fff;border-radius:8px;padding:0 14px;font-size:13px;font-weight:500;cursor:pointer">Create another</button>
+          </div>
+        </div>
+      </sc-if>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{ isTeam }}" hint-placeholder-val="{{ false }}">
+    <div style="padding:24px clamp(16px,3vw,32px) 48px;animation:fade .3s ease">
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:18px">
+        <div>
+          <div style="font-size:12px;color:#71717a;margin-bottom:2px">{{ teamScope }}</div>
+          <h1 style="font-size:22px;font-weight:600;letter-spacing:-.02em;margin:0">Team</h1>
+        </div>
+        <button onClick="{{ addStaff }}" style="height:34px;border:0;background:#c81e1e;color:#fff;border-radius:8px;padding:0 14px;font-size:13px;font-weight:500;cursor:pointer" style-hover="background:#9c1717">+ Add staff</button>
+      </div>
+      <div style="background:#fff;border:1px solid #ececef;border-radius:12px;overflow:hidden">
+        <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:12px;border-bottom:1px solid #ececef">
+          <input value="{{ teamQ }}" onInput="{{ onTeamQ }}" placeholder="Search name, email, or username" aria-label="Search team" style="flex:1 1 220px;height:32px;border:1px solid #e4e4e7;border-radius:7px;padding:0 10px;font-size:13px;background:#fafafa">
+          <select value="{{ teamRole }}" onChange="{{ onTeamRole }}" aria-label="Filter by role" style="height:32px;border:1px solid #e4e4e7;border-radius:7px;padding:0 10px;font-size:13px;background:#fff">
+            <option value="">All roles</option>
+            <option value="super_admin">Super Admin</option>
+            <option value="admin">Admin</option>
+            <option value="service_manager">Store Service Manager</option>
+            <option value="technician">Technician</option>
+          </select>
+          <select value="{{ teamStatus }}" onChange="{{ onTeamStatus }}" aria-label="Filter by status" style="height:32px;border:1px solid #e4e4e7;border-radius:7px;padding:0 10px;font-size:13px;background:#fff">
+            <option value="">All statuses</option>
+            <option value="active">Active</option>
+            <option value="inactive">Deactivated</option>
+          </select>
+          <span style="font-size:12px;color:#71717a;margin-left:auto">{{ teamCount }}</span>
+        </div>
+        <sc-if value="{{ tableMode }}" hint-placeholder-val="{{ true }}"><div style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:13px;min-width:720px">
+            <thead>
+              <tr style="background:#fafafa">
+                <th style="text-align:left;padding:10px 14px;font-weight:500;color:#71717a;font-size:12px;border-bottom:1px solid #ececef">Name</th>
+                <th style="text-align:left;padding:10px 14px;font-weight:500;color:#71717a;font-size:12px;border-bottom:1px solid #ececef">Username</th>
+                <th style="text-align:left;padding:10px 14px;font-weight:500;color:#71717a;font-size:12px;border-bottom:1px solid #ececef">Role</th>
+                <th style="text-align:left;padding:10px 14px;font-weight:500;color:#71717a;font-size:12px;border-bottom:1px solid #ececef">Stores</th>
+                <th style="text-align:left;padding:10px 14px;font-weight:500;color:#71717a;font-size:12px;border-bottom:1px solid #ececef">Status</th>
+                <th style="padding:10px 14px;border-bottom:1px solid #ececef"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <sc-for list="{{ teamRows }}" as="u" hint-placeholder-count="6">
+                <tr style="opacity:{{ u.rowOpacity }}" style-hover="background:#fafafa">
+                  <td style="padding:10px 14px;border-bottom:1px solid #f4f4f5">
+                    <div style="display:flex;align-items:center;gap:10px">
+                      <span style="width:30px;height:30px;border-radius:50%;background:#f4f4f5;color:#3f3f46;font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0">{{ u.initials }}</span>
+                      <div><div style="font-weight:500">{{ u.name }}</div><div style="font-size:12px;color:#71717a">{{ u.email }}</div></div>
+                    </div>
+                  </td>
+                  <td style="padding:10px 14px;border-bottom:1px solid #f4f4f5;font-family:'Geist Mono',monospace;font-size:12px;color:#52525b">{{ u.username }}</td>
+                  <td style="padding:10px 14px;border-bottom:1px solid #f4f4f5"><span style="font-size:12px;font-weight:500;padding:2px 9px;border-radius:999px;background:{{ u.roleBg }};color:{{ u.roleColor }};white-space:nowrap">{{ u.roleLabel }}</span></td>
+                  <td style="padding:10px 14px;border-bottom:1px solid #f4f4f5;color:#52525b">{{ u.storesLabel }}</td>
+                  <td style="padding:10px 14px;border-bottom:1px solid #f4f4f5"><span style="display:inline-flex;align-items:center;gap:6px;white-space:nowrap"><span style="width:6px;height:6px;border-radius:50%;background:{{ u.statusDot }}"></span>{{ u.statusLabel }}</span></td>
+                  <td style="padding:10px 14px;border-bottom:1px solid #f4f4f5">
+                    <div style="display:flex;gap:6px;justify-content:flex-end">
+                      <button onClick="{{ u.onEdit }}" style="height:28px;border:1px solid #e4e4e7;background:#fff;border-radius:6px;padding:0 10px;font-size:12px;font-weight:500;cursor:pointer;color:#3f3f46" style-hover="border-color:#a1a1aa">Edit</button>
+                      <button onClick="{{ u.onReset }}" style="height:28px;border:1px solid #e4e4e7;background:#fff;border-radius:6px;padding:0 10px;font-size:12px;font-weight:500;cursor:pointer;color:#3f3f46;white-space:nowrap" style-hover="border-color:#a1a1aa">Reset password</button>
+                      <sc-if value="{{ u.canToggle }}" hint-placeholder-val="{{ true }}">
+                        <button onClick="{{ u.onToggle }}" style="height:28px;border:1px solid #e4e4e7;background:#fff;border-radius:6px;padding:0 10px;font-size:12px;font-weight:500;cursor:pointer;color:{{ u.toggleColor }}" style-hover="border-color:#a1a1aa">{{ u.toggleLabel }}</button>
+                      </sc-if>
+                    </div>
+                  </td>
+                </tr>
+              </sc-for>
+            </tbody>
+          </table>
+        </div></sc-if>
+        <sc-if value="{{ listMode }}" hint-placeholder-val="{{ false }}"><div style="display:flex;flex-direction:column">
+          <sc-for list="{{ teamRows }}" as="u" hint-placeholder-count="4">
+            <div style="padding:14px;border-bottom:1px solid #f4f4f5;opacity:{{ u.rowOpacity }}">
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+                <span style="width:34px;height:34px;border-radius:50%;background:#f4f4f5;color:#3f3f46;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0">{{ u.initials }}</span>
+                <div style="flex:1;min-width:0"><div style="font-weight:500">{{ u.name }}</div><div style="font-size:12px;color:#71717a;overflow:hidden;text-overflow:ellipsis">{{ u.email }}</div></div>
+                <span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:999px;background:{{ u.roleBg }};color:{{ u.roleColor }};flex-shrink:0">{{ u.roleLabel }}</span>
+              </div>
+              <div style="display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:#52525b;margin-bottom:12px">
+                <span>{{ u.storesLabel }}</span>
+                <span style="display:inline-flex;align-items:center;gap:6px"><span style="width:6px;height:6px;border-radius:50%;background:{{ u.statusDot }}"></span>{{ u.statusLabel }}</span>
+                <span style="font-family:'Geist Mono',monospace">{{ u.username }}</span>
+              </div>
+              <div style="display:flex;gap:6px">
+                <button onClick="{{ u.onEdit }}" style="flex:1;height:36px;border:1px solid #e4e4e7;background:#fff;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;color:#3f3f46">Edit</button>
+                <button onClick="{{ u.onReset }}" style="flex:1;height:36px;border:1px solid #e4e4e7;background:#fff;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;color:#3f3f46">Reset password</button>
+                <sc-if value="{{ u.canToggle }}" hint-placeholder-val="{{ true }}"><button onClick="{{ u.onToggle }}" style="flex:1;height:36px;border:1px solid #e4e4e7;background:#fff;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;color:{{ u.toggleColor }}">{{ u.toggleLabel }}</button></sc-if>
+              </div>
+            </div>
+          </sc-for>
+        </div></sc-if>
+        <sc-if value="{{ teamEmpty }}" hint-placeholder-val="{{ false }}"><p style="padding:28px;text-align:center;color:#71717a;margin:0">No staff accounts match your search.</p></sc-if>
+      </div>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{ isStores }}" hint-placeholder-val="{{ false }}">
+    <div style="padding:24px clamp(16px,3vw,32px) 48px;animation:fade .3s ease">
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:18px">
+        <div>
+          <div style="font-size:12px;color:#71717a;margin-bottom:2px">{{ storesScope }}</div>
+          <h1 style="font-size:22px;font-weight:600;letter-spacing:-.02em;margin:0">Stores</h1>
+        </div>
+        <button onClick="{{ addStore }}" style="height:34px;border:0;background:#c81e1e;color:#fff;border-radius:8px;padding:0 14px;font-size:13px;font-weight:500;cursor:pointer" style-hover="background:#9c1717">+ Add store</button>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px">
+        <input value="{{ storeQ }}" onInput="{{ onStoreQ }}" placeholder="Search name, address, or contact" aria-label="Search stores" style="flex:1 1 240px;max-width:360px;height:34px;border:1px solid #e4e4e7;border-radius:8px;padding:0 12px;font-size:13px;background:#fff">
+        <select value="{{ storeStatus }}" onChange="{{ onStoreStatus }}" aria-label="Filter by status" style="height:34px;border:1px solid #e4e4e7;border-radius:8px;padding:0 10px;font-size:13px;background:#fff">
+          <option value="">All statuses</option>
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+        </select>
+        <span style="font-size:12px;color:#71717a;margin-left:auto">{{ storeCount }}</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px">
+        <sc-for list="{{ storeCards }}" as="st" hint-placeholder-count="4">
+          <div style="background:#fff;border:1px solid #ececef;border-radius:12px;display:flex;flex-direction:column;opacity:{{ st.cardOpacity }};animation:fadeUp .3s ease both">
+            <div style="padding:16px 16px 14px">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+                <h2 style="font-size:15px;font-weight:600;margin:0;flex:1">{{ st.name }}</h2>
+                <span style="font-size:12px;font-weight:500;padding:2px 9px;border-radius:999px;background:{{ st.statusBg }};color:{{ st.statusColor }}">{{ st.statusLabel }}</span>
+              </div>
+              <div style="font-size:13px;color:#71717a;margin-bottom:14px;text-wrap:pretty">{{ st.address }}</div>
+              <dl style="display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin:0;font-size:13px">
+                <dt style="color:#71717a">Primary contact</dt><dd style="margin:0">{{ st.contact }}</dd>
+                <dt style="color:#71717a">WhatsApp</dt><dd style="margin:0;font-family:'Geist Mono',monospace;font-size:12px">{{ st.whatsapp }}</dd>
+                <dt style="color:#71717a">Default tax</dt><dd style="margin:0">{{ st.tax }}</dd>
+                <dt style="color:#71717a">Open tickets</dt><dd style="margin:0">{{ st.open }}</dd>
+              </dl>
+            </div>
+            <div style="padding:12px 16px;border-top:1px solid #f4f4f5">
+              <div style="font-size:12px;color:#71717a;margin-bottom:8px">Assigned admins</div>
+              <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">
+                <sc-for list="{{ st.admins }}" as="a" hint-placeholder-count="1">
+                  <span style="display:inline-flex;align-items:center;gap:2px;height:26px;padding:0 4px 0 10px;border:1px solid #e4e4e7;border-radius:999px;font-size:12px;font-weight:500">{{ a.name }}
+                    <sc-if value="{{ a.canRemove }}" hint-placeholder-val="{{ false }}"><button onClick="{{ a.onRemove }}" aria-label="Remove admin" style="border:0;background:none;color:#a1a1aa;cursor:pointer;font-size:14px;padding:0 4px;line-height:1" style-hover="color:#b91c1c">×</button></sc-if>
+                  </span>
+                </sc-for>
+                <sc-if value="{{ st.noAdmins }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#a1a1aa">None assigned</span></sc-if>
+                <sc-if value="{{ st.canAssign }}" hint-placeholder-val="{{ false }}">
+                  <select value="" onChange="{{ st.onAssign }}" aria-label="Assign an admin" style="height:26px;border:1px dashed #d4d4d8;border-radius:999px;padding:0 8px;font-size:12px;background:#fff;color:#52525b;cursor:pointer">
+                    <option value="">+ Assign</option>
+                    <sc-for list="{{ st.adminChoices }}" as="o" hint-placeholder-count="1"><option value="{{ o.value }}">{{ o.label }}</option></sc-for>
+                  </select>
+                </sc-if>
+              </div>
+            </div>
+            <div style="margin-top:auto;display:flex;border-top:1px solid #f4f4f5">
+              <button onClick="{{ st.onEdit }}" style="flex:1;height:38px;border:0;border-right:1px solid #f4f4f5;background:none;font-size:13px;font-weight:500;cursor:pointer;color:#18181b;border-radius:0 0 0 12px" style-hover="background:#fafafa">Edit</button>
+              <button onClick="{{ st.onToggle }}" style="flex:1;height:38px;border:0;background:none;font-size:13px;font-weight:500;cursor:pointer;color:{{ st.toggleColor }};border-radius:0 0 12px 0" style-hover="background:#fafafa">{{ st.toggleLabel }}</button>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+      <sc-if value="{{ storesEmpty }}" hint-placeholder-val="{{ false }}"><p style="padding:28px;text-align:center;color:#71717a;margin:0">No stores match your search.</p></sc-if>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{ isModels }}" hint-placeholder-val="{{ false }}">
+    <div style="padding:24px clamp(16px,3vw,32px) 48px;animation:fade .3s ease">
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:18px">
+        <div>
+          <div style="font-size:12px;color:#71717a;margin-bottom:2px">Suggested in New ticket · free text still allowed</div>
+          <h1 style="font-size:22px;font-weight:600;letter-spacing:-.02em;margin:0">Machine models</h1>
+        </div>
+        <div style="display:flex;gap:8px">
+          <label title="CSV columns: name, manufacturer, category" style="height:34px;border:1px solid #e4e4e7;background:#fff;border-radius:8px;padding:0 12px;font-size:13px;font-weight:500;cursor:pointer;display:inline-flex;align-items:center">Import CSV<input type="file" accept=".csv" onChange="{{ onImportModels }}" style="display:none"></label>
+          <button onClick="{{ addModel }}" style="height:34px;border:0;background:#c81e1e;color:#fff;border-radius:8px;padding:0 14px;font-size:13px;font-weight:500;cursor:pointer" style-hover="background:#9c1717">+ Add model</button>
+        </div>
+      </div>
+      <div style="background:#fff;border:1px solid #ececef;border-radius:12px;overflow:hidden">
+        <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:12px;border-bottom:1px solid #ececef">
+          <input value="{{ modelQ }}" onInput="{{ onModelQ }}" placeholder="Search name or category" aria-label="Search machine models" style="flex:1 1 220px;height:32px;border:1px solid #e4e4e7;border-radius:7px;padding:0 10px;font-size:13px;background:#fafafa">
+          <select value="{{ modelMfr }}" onChange="{{ onModelMfr }}" aria-label="Filter by manufacturer" style="height:32px;border:1px solid #e4e4e7;border-radius:7px;padding:0 10px;font-size:13px;background:#fff">
+            <option value="">All manufacturers</option>
+            <sc-for list="{{ manufacturers }}" as="m" hint-placeholder-count="4"><option value="{{ m }}">{{ m }}</option></sc-for>
+          </select>
+          <span style="font-size:12px;color:#71717a;margin-left:auto">{{ modelCount }}</span>
+        </div>
+        <sc-if value="{{ tableMode }}" hint-placeholder-val="{{ true }}"><div style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:13px;min-width:700px">
+            <thead>
+              <tr style="background:#fafafa">
+                <th style="text-align:left;padding:10px 14px;font-weight:500;color:#71717a;font-size:12px;border-bottom:1px solid #ececef">Model</th>
+                <th style="text-align:left;padding:10px 14px;font-weight:500;color:#71717a;font-size:12px;border-bottom:1px solid #ececef">Manufacturer</th>
+                <th style="text-align:left;padding:10px 14px;font-weight:500;color:#71717a;font-size:12px;border-bottom:1px solid #ececef">Category</th>
+                <th style="text-align:right;padding:10px 14px;font-weight:500;color:#71717a;font-size:12px;border-bottom:1px solid #ececef">Tickets</th>
+                <th style="text-align:left;padding:10px 14px;font-weight:500;color:#71717a;font-size:12px;border-bottom:1px solid #ececef">Status</th>
+                <th style="padding:10px 14px;border-bottom:1px solid #ececef"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <sc-for list="{{ modelRows }}" as="m" hint-placeholder-count="8">
+                <tr style="opacity:{{ m.rowOpacity }}" style-hover="background:#fafafa">
+                  <td style="padding:10px 14px;border-bottom:1px solid #f4f4f5;font-weight:500">{{ m.name }}</td>
+                  <td style="padding:10px 14px;border-bottom:1px solid #f4f4f5;color:#52525b">{{ m.manufacturer }}</td>
+                  <td style="padding:10px 14px;border-bottom:1px solid #f4f4f5;color:#52525b">{{ m.category }}</td>
+                  <td style="padding:10px 14px;border-bottom:1px solid #f4f4f5;text-align:right;font-family:'Geist Mono',monospace;font-size:12px">{{ m.tickets }}</td>
+                  <td style="padding:10px 14px;border-bottom:1px solid #f4f4f5"><span style="display:inline-flex;align-items:center;gap:6px"><span style="width:6px;height:6px;border-radius:50%;background:{{ m.statusDot }}"></span>{{ m.statusLabel }}</span></td>
+                  <td style="padding:10px 14px;border-bottom:1px solid #f4f4f5">
+                    <div style="display:flex;gap:6px;justify-content:flex-end">
+                      <button onClick="{{ m.onEdit }}" style="height:28px;border:1px solid #e4e4e7;background:#fff;border-radius:6px;padding:0 10px;font-size:12px;font-weight:500;cursor:pointer;color:#3f3f46" style-hover="border-color:#a1a1aa">Edit</button>
+                      <button onClick="{{ m.onToggle }}" style="height:28px;border:1px solid #e4e4e7;background:#fff;border-radius:6px;padding:0 10px;font-size:12px;font-weight:500;cursor:pointer;color:{{ m.toggleColor }}" style-hover="border-color:#a1a1aa">{{ m.toggleLabel }}</button>
+                    </div>
+                  </td>
+                </tr>
+              </sc-for>
+            </tbody>
+          </table>
+        </div></sc-if>
+        <sc-if value="{{ listMode }}" hint-placeholder-val="{{ false }}"><div style="display:flex;flex-direction:column">
+          <sc-for list="{{ modelRows }}" as="m" hint-placeholder-count="5">
+            <div style="padding:14px;border-bottom:1px solid #f4f4f5;opacity:{{ m.rowOpacity }}">
+              <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px">
+                <div style="flex:1;min-width:0"><div style="font-weight:500">{{ m.manufacturer }} {{ m.name }}</div><div style="font-size:12px;color:#71717a">{{ m.category }} · {{ m.tickets }} tickets</div></div>
+                <span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#52525b"><span style="width:6px;height:6px;border-radius:50%;background:{{ m.statusDot }}"></span>{{ m.statusLabel }}</span>
+              </div>
+              <div style="display:flex;gap:6px">
+                <button onClick="{{ m.onEdit }}" style="flex:1;height:36px;border:1px solid #e4e4e7;background:#fff;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;color:#3f3f46">Edit</button>
+                <button onClick="{{ m.onToggle }}" style="flex:1;height:36px;border:1px solid #e4e4e7;background:#fff;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;color:{{ m.toggleColor }}">{{ m.toggleLabel }}</button>
+              </div>
+            </div>
+          </sc-for>
+        </div></sc-if>
+        <sc-if value="{{ modelsEmpty }}" hint-placeholder-val="{{ false }}"><p style="padding:28px;text-align:center;color:#71717a;margin:0">No machine models match your search.</p></sc-if>
+      </div>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{ isCatalogue }}" hint-placeholder-val="{{ false }}">
+    <div style="padding:24px clamp(16px,3vw,32px) 48px;animation:fade .3s ease">
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:18px">
+        <div>
+          <div style="font-size:12px;color:#71717a;margin-bottom:2px">One price list for every store · tickets keep a price snapshot</div>
+          <h1 style="font-size:22px;font-weight:600;letter-spacing:-.02em;margin:0">Parts &amp; services</h1>
+        </div>
+        <div style="display:flex;gap:8px">
+          <sc-if value="{{ isPartsTab }}" hint-placeholder-val="{{ true }}">
+            <label title="CSV columns: name, sku, unit_cost, category" style="height:34px;border:1px solid #e4e4e7;background:#fff;border-radius:8px;padding:0 12px;font-size:13px;font-weight:500;cursor:pointer;display:inline-flex;align-items:center">Import CSV<input type="file" accept=".csv" onChange="{{ onImportParts }}" style="display:none"></label>
+          </sc-if>
+          <button onClick="{{ addCatItem }}" style="height:34px;border:0;background:#c81e1e;color:#fff;border-radius:8px;padding:0 14px;font-size:13px;font-weight:500;cursor:pointer" style-hover="background:#9c1717">{{ catAddLabel }}</button>
+        </div>
+      </div>
+      <div style="background:#fff;border:1px solid #ececef;border-radius:12px;overflow:hidden">
+        <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:12px;border-bottom:1px solid #ececef">
+          <div style="display:flex;gap:2px;padding:3px;background:#f4f4f5;border-radius:9px">
+            <sc-for list="{{ catTabs }}" as="tb" hint-placeholder-count="2">
+              <button onClick="{{ tb.onClick }}" style="height:28px;border:0;border-radius:7px;padding:0 12px;font-size:13px;font-weight:500;cursor:pointer;background:{{ tb.bg }};color:{{ tb.color }};box-shadow:{{ tb.shadow }};display:flex;align-items:center;gap:6px">{{ tb.label }}<span style="font-family:'Geist Mono',monospace;font-size:11px;color:#a1a1aa">{{ tb.count }}</span></button>
+            </sc-for>
+          </div>
+          <input value="{{ catQ }}" onInput="{{ onCatQ }}" placeholder="{{ catPlaceholder }}" aria-label="Search catalogue" style="flex:1 1 200px;height:32px;border:1px solid #e4e4e7;border-radius:7px;padding:0 10px;font-size:13px;background:#fafafa">
+          <sc-if value="{{ isPartsTab }}" hint-placeholder-val="{{ true }}">
+            <select value="{{ catCat }}" onChange="{{ onCatCat }}" aria-label="Filter by category" style="height:32px;border:1px solid #e4e4e7;border-radius:7px;padding:0 10px;font-size:13px;background:#fff">
+              <option value="">All categories</option>
+              <sc-for list="{{ partCats }}" as="c" hint-placeholder-count="4"><option value="{{ c }}">{{ c }}</option></sc-for>
+            </select>
+          </sc-if>
+        </div>
+        <sc-if value="{{ tableMode }}" hint-placeholder-val="{{ true }}"><div style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:13px;min-width:720px">
+            <thead>
+              <tr style="background:#fafafa">
+                <th style="text-align:left;padding:10px 14px;font-weight:500;color:#71717a;font-size:12px;border-bottom:1px solid #ececef">{{ catNameHead }}</th>
+                <sc-if value="{{ isPartsTab }}" hint-placeholder-val="{{ true }}"><th style="text-align:left;padding:10px 14px;font-weight:500;color:#71717a;font-size:12px;border-bottom:1px solid #ececef">Category</th></sc-if>
+                <th style="text-align:right;padding:10px 14px;font-weight:500;color:#71717a;font-size:12px;border-bottom:1px solid #ececef">Unit cost</th>
+                <th style="text-align:right;padding:10px 14px;font-weight:500;color:#71717a;font-size:12px;border-bottom:1px solid #ececef">Used on</th>
+                <th style="text-align:left;padding:10px 14px;font-weight:500;color:#71717a;font-size:12px;border-bottom:1px solid #ececef">Status</th>
+                <th style="padding:10px 14px;border-bottom:1px solid #ececef"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <sc-for list="{{ catRows }}" as="it" hint-placeholder-count="6">
+                <tr style="opacity:{{ it.rowOpacity }}" style-hover="background:#fafafa">
+                  <td style="padding:10px 14px;border-bottom:1px solid #f4f4f5"><div style="font-weight:500">{{ it.name }}</div><div style="font-size:12px;color:#71717a;font-family:{{ it.subFont }}">{{ it.sub }}</div></td>
+                  <sc-if value="{{ isPartsTab }}" hint-placeholder-val="{{ true }}"><td style="padding:10px 14px;border-bottom:1px solid #f4f4f5;color:#52525b">{{ it.category }}</td></sc-if>
+                  <td style="padding:10px 14px;border-bottom:1px solid #f4f4f5;text-align:right;font-family:'Geist Mono',monospace;font-size:12px">{{ it.cost }}</td>
+                  <td style="padding:10px 14px;border-bottom:1px solid #f4f4f5;text-align:right;color:#52525b">{{ it.usage }}</td>
+                  <td style="padding:10px 14px;border-bottom:1px solid #f4f4f5"><span style="display:inline-flex;align-items:center;gap:6px"><span style="width:6px;height:6px;border-radius:50%;background:{{ it.statusDot }}"></span>{{ it.statusLabel }}</span></td>
+                  <td style="padding:10px 14px;border-bottom:1px solid #f4f4f5">
+                    <div style="display:flex;gap:6px;justify-content:flex-end">
+                      <button onClick="{{ it.onEdit }}" style="height:28px;border:1px solid #e4e4e7;background:#fff;border-radius:6px;padding:0 10px;font-size:12px;font-weight:500;cursor:pointer;color:#3f3f46" style-hover="border-color:#a1a1aa">Edit</button>
+                      <button onClick="{{ it.onToggle }}" style="height:28px;border:1px solid #e4e4e7;background:#fff;border-radius:6px;padding:0 10px;font-size:12px;font-weight:500;cursor:pointer;color:{{ it.toggleColor }}" style-hover="border-color:#a1a1aa">{{ it.toggleLabel }}</button>
+                    </div>
+                  </td>
+                </tr>
+              </sc-for>
+            </tbody>
+          </table>
+        </div></sc-if>
+        <sc-if value="{{ listMode }}" hint-placeholder-val="{{ false }}"><div style="display:flex;flex-direction:column">
+          <sc-for list="{{ catRows }}" as="it" hint-placeholder-count="5">
+            <div style="padding:14px;border-bottom:1px solid #f4f4f5;opacity:{{ it.rowOpacity }}">
+              <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px">
+                <div style="flex:1;min-width:0"><div style="font-weight:500">{{ it.name }}</div><div style="font-size:12px;color:#71717a;font-family:{{ it.subFont }}">{{ it.sub }}</div></div>
+                <span style="font-family:'Geist Mono',monospace;font-size:13px;font-weight:500">{{ it.cost }}</span>
+              </div>
+              <div style="display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:#52525b;margin-bottom:12px">
+                <span>{{ it.listMeta }}</span>
+                <span style="display:inline-flex;align-items:center;gap:6px"><span style="width:6px;height:6px;border-radius:50%;background:{{ it.statusDot }}"></span>{{ it.statusLabel }}</span>
+              </div>
+              <div style="display:flex;gap:6px">
+                <button onClick="{{ it.onEdit }}" style="flex:1;height:36px;border:1px solid #e4e4e7;background:#fff;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;color:#3f3f46">Edit</button>
+                <button onClick="{{ it.onToggle }}" style="flex:1;height:36px;border:1px solid #e4e4e7;background:#fff;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;color:{{ it.toggleColor }}">{{ it.toggleLabel }}</button>
+              </div>
+            </div>
+          </sc-for>
+        </div></sc-if>
+        <sc-if value="{{ catEmpty }}" hint-placeholder-val="{{ false }}"><p style="padding:28px;text-align:center;color:#71717a;margin:0">{{ catEmptyLabel }}</p></sc-if>
+      </div>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{ isReports }}" hint-placeholder-val="{{ false }}">
+    <div style="padding:24px clamp(16px,3vw,32px) 48px;animation:fade .3s ease">
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:18px">
+        <div>
+          <div style="font-size:12px;color:#71717a;margin-bottom:2px">{{ scopeLabel }}</div>
+          <h1 style="font-size:22px;font-weight:600;letter-spacing:-.02em;margin:0">Reports</h1>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button onClick="{{ onExport }}" style="height:34px;border:1px solid #e4e4e7;background:#fff;border-radius:8px;padding:0 12px;font-size:13px;font-weight:500;cursor:pointer">Export CSV</button>
+          <button onClick="{{ onExport }}" style="height:34px;border:1px solid #e4e4e7;background:#fff;border-radius:8px;padding:0 12px;font-size:13px;font-weight:500;cursor:pointer">Export PDF</button>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:{{ kpiCols }};gap:12px;margin-bottom:16px">
+        <sc-for list="{{ kpis }}" as="k" hint-placeholder-count="4">
+          <div style="background:#fff;border:1px solid #ececef;border-radius:12px;padding:16px">
+            <div style="font-size:13px;color:#71717a;margin-bottom:6px">{{ k.label }}</div>
+            <div style="font-size:26px;font-weight:600;letter-spacing:-.02em">{{ k.value }}</div>
+          </div>
+        </sc-for>
+      </div>
+      <div style="background:#fff;border:1px solid #ececef;border-radius:12px;overflow:hidden">
+        <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:12px;border-bottom:1px solid #ececef">
+          <select value="{{ storeFilter }}" onChange="{{ onStore }}" aria-label="Store" style="height:32px;border:1px solid #e4e4e7;border-radius:7px;padding:0 10px;font-size:13px;background:#fff">
+            <option value="">All stores</option>
+            <sc-for list="{{ storeOptions }}" as="s" hint-placeholder-count="4"><option value="{{ s }}">{{ s }}</option></sc-for>
+          </select>
+          <div style="display:flex;gap:4px;flex-wrap:wrap">
+            <sc-for list="{{ statusChips }}" as="c" hint-placeholder-count="6">
+              <button onClick="{{ c.onClick }}" style="height:32px;border:1px solid {{ c.border }};background:{{ c.bg }};color:{{ c.color }};border-radius:999px;padding:0 12px;font-size:12px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:6px"><span style="width:6px;height:6px;border-radius:50%;background:{{ c.dot }}"></span>{{ c.label }}</button>
+            </sc-for>
+          </div>
+          <div style="flex:1"></div>
+          <span style="font-size:12px;color:#71717a">{{ reportCount }}</span>
+        </div>
+        <sc-if value="{{ tableMode }}" hint-placeholder-val="{{ true }}"><div style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:13px;min-width:720px">
+            <thead>
+              <tr style="background:#fafafa">
+                <th style="text-align:left;padding:10px 14px;font-weight:500;color:#71717a;font-size:12px;border-bottom:1px solid #ececef">Ticket</th>
+                <th style="text-align:left;padding:10px 14px;font-weight:500;color:#71717a;font-size:12px;border-bottom:1px solid #ececef">Customer</th>
+                <th style="text-align:left;padding:10px 14px;font-weight:500;color:#71717a;font-size:12px;border-bottom:1px solid #ececef">Machine</th>
+                <th style="text-align:left;padding:10px 14px;font-weight:500;color:#71717a;font-size:12px;border-bottom:1px solid #ececef">Store</th>
+                <th style="text-align:left;padding:10px 14px;font-weight:500;color:#71717a;font-size:12px;border-bottom:1px solid #ececef">Status</th>
+                <th style="text-align:left;padding:10px 14px;font-weight:500;color:#71717a;font-size:12px;border-bottom:1px solid #ececef">Technician</th>
+                <th style="text-align:left;padding:10px 14px;font-weight:500;color:#71717a;font-size:12px;border-bottom:1px solid #ececef">Created</th>
+                <th style="text-align:right;padding:10px 14px;font-weight:500;color:#71717a;font-size:12px;border-bottom:1px solid #ececef">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              <sc-for list="{{ reportRows }}" as="r" hint-placeholder-count="8">
+                <tr onClick="{{ r.onOpen }}" style="cursor:pointer" style-hover="background:#fafafa">
+                  <td style="padding:11px 14px;border-bottom:1px solid #f4f4f5;font-family:'Geist Mono',monospace;font-size:12px;color:#c81e1e">{{ r.num }}</td>
+                  <td style="padding:11px 14px;border-bottom:1px solid #f4f4f5"><div style="font-weight:500">{{ r.customer }}</div><div style="font-size:12px;color:#71717a">{{ r.phone }}</div></td>
+                  <td style="padding:11px 14px;border-bottom:1px solid #f4f4f5">{{ r.model }}</td>
+                  <td style="padding:11px 14px;border-bottom:1px solid #f4f4f5;color:#52525b">{{ r.store }}</td>
+                  <td style="padding:11px 14px;border-bottom:1px solid #f4f4f5"><span style="font-size:12px;font-weight:500;padding:2px 8px;border-radius:999px;background:{{ r.bg }};color:{{ r.color }};white-space:nowrap">{{ r.label }}</span></td>
+                  <td style="padding:11px 14px;border-bottom:1px solid #f4f4f5;color:#52525b">{{ r.techName }}</td>
+                  <td style="padding:11px 14px;border-bottom:1px solid #f4f4f5;color:#52525b;white-space:nowrap">{{ r.created }}</td>
+                  <td style="padding:11px 14px;border-bottom:1px solid #f4f4f5;text-align:right;font-family:'Geist Mono',monospace;font-size:12px">{{ r.total }}</td>
+                </tr>
+              </sc-for>
+            </tbody>
+          </table>
+        </div></sc-if>
+        <sc-if value="{{ listMode }}" hint-placeholder-val="{{ false }}"><div style="display:flex;flex-direction:column">
+          <sc-for list="{{ reportRows }}" as="r" hint-placeholder-count="5">
+            <button onClick="{{ r.onOpen }}" style="display:block;width:100%;text-align:left;border:0;border-bottom:1px solid #f4f4f5;background:#fff;padding:14px;cursor:pointer;font-size:13px;color:#18181b">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+                <span style="font-family:'Geist Mono',monospace;font-size:12px;color:#c81e1e">{{ r.num }}</span>
+                <span style="font-size:11px;font-weight:500;padding:2px 8px;border-radius:999px;background:{{ r.bg }};color:{{ r.color }}">{{ r.label }}</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;gap:10px"><span style="font-weight:500">{{ r.customer }}</span><span style="font-family:'Geist Mono',monospace;font-size:12px">{{ r.total }}</span></div>
+              <div style="font-size:12px;color:#71717a;margin-top:2px">{{ r.model }} · {{ r.store }} · {{ r.created }}</div>
+            </button>
+          </sc-for>
+        </div></sc-if>
+      </div>
+    </div>
+    </sc-if>
+  </div>
+</div>
+
+<sc-if value="{{ detail }}" hint-placeholder-val="{{ false }}">
+  <div onClick="{{ closeDetail }}" style="position:fixed;inset:0;background:rgba(24,24,27,.25);z-index:40;animation:fade .2s ease"></div>
+  <aside role="dialog" aria-label="Ticket detail" style="position:fixed;top:0;right:0;bottom:0;width:min(560px,100vw);background:#fff;z-index:41;box-shadow:-12px 0 32px rgba(0,0,0,.08);display:flex;flex-direction:column;animation:slideIn .25s ease">
+    <div style="padding:16px 20px;border-bottom:1px solid #ececef;display:flex;align-items:center;gap:10px">
+      <span style="font-family:'Geist Mono',monospace;font-size:13px;color:#71717a">{{ detail.num }}</span>
+      <span style="font-size:12px;font-weight:500;padding:2px 9px;border-radius:999px;background:{{ detail.bg }};color:{{ detail.color }}">{{ detail.label }}</span>
+      <div style="flex:1"></div>
+      <button onClick="{{ closeDetail }}" aria-label="Close" style="width:30px;height:30px;border:0;background:none;border-radius:6px;font-size:18px;color:#71717a;cursor:pointer" style-hover="background:#f4f4f5">×</button>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:20px">
+      <h2 style="font-size:20px;font-weight:600;letter-spacing:-.01em;margin:0 0 2px">{{ detail.customer }}</h2>
+      <div style="color:#71717a;margin-bottom:20px">{{ detail.model }} · {{ detail.store }}</div>
+
+      <div style="display:flex;gap:4px;margin-bottom:22px">
+        <sc-for list="{{ detail.steps }}" as="st" hint-placeholder-count="5">
+          <div style="flex:1;display:flex;flex-direction:column;gap:6px">
+            <span style="height:4px;border-radius:2px;background:{{ st.bar }}"></span>
+            <span style="font-size:11px;color:{{ st.text }};font-weight:500">{{ st.label }}</span>
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:24px">
+        <sc-for list="{{ detail.moves }}" as="m" hint-placeholder-count="3">
+          <button onClick="{{ m.onClick }}" style="height:32px;border:1px solid #e4e4e7;background:{{ m.bg }};color:{{ m.color }};border-radius:8px;padding:0 12px;font-size:13px;font-weight:500;cursor:pointer" style-hover="border-color:#a1a1aa">{{ m.label }}</button>
+        </sc-for>
+      </div>
+
+      <sc-if value="{{ detail.isCompleted }}" hint-placeholder-val="{{ false }}">
+        <div style="border:1px solid #ececef;border-radius:10px;padding:14px;margin-bottom:24px;background:#fafafa">
+          <div style="font-weight:600;font-size:13px;margin-bottom:4px">Delivery verification</div>
+          <p style="margin:0 0 12px;color:#52525b;font-size:13px">Send a one-time WhatsApp code to {{ detail.phone }} to confirm handover.</p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <input value="{{ otp }}" onInput="{{ onOtp }}" inputmode="numeric" maxlength="6" placeholder="6-digit code" aria-label="One-time code" style="width:140px;height:34px;border:1px solid #e4e4e7;border-radius:8px;padding:0 12px;font-family:'Geist Mono',monospace;letter-spacing:.2em">
+            <button onClick="{{ onVerify }}" style="height:34px;border:0;background:#18181b;color:#fff;border-radius:8px;padding:0 14px;font-size:13px;font-weight:500;cursor:pointer">Verify &amp; deliver</button>
+            <button onClick="{{ onResend }}" style="height:34px;border:0;background:none;color:#c81e1e;font-size:13px;font-weight:500;cursor:pointer">Resend code</button>
+          </div>
+        </div>
+      </sc-if>
+
+      <div style="font-size:12px;font-weight:600;color:#71717a;text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px">Intake</div>
+      <dl style="display:grid;grid-template-columns:130px 1fr;gap:8px 12px;margin:0 0 24px;font-size:13px">
+        <dt style="color:#71717a">Phone</dt><dd style="margin:0">{{ detail.phone }}</dd>
+        <dt style="color:#71717a">Serial number</dt><dd style="margin:0;font-family:'Geist Mono',monospace;font-size:12px">{{ detail.serial }}</dd>
+        <dt style="color:#71717a">Issue</dt><dd style="margin:0">{{ detail.issue }}</dd>
+        <dt style="color:#71717a">Created</dt><dd style="margin:0">{{ detail.created }}</dd>
+        <dt style="color:#71717a">Est. delivery</dt><dd style="margin:0">{{ detail.eta }}</dd>
+        <dt style="color:#71717a;align-self:center">Technician</dt>
+        <dd style="margin:0">
+          <select value="{{ detail.tech }}" onChange="{{ onAssign }}" disabled="{{ cannotAssign }}" aria-label="Assigned technician" style="height:32px;border:1px solid #e4e4e7;border-radius:7px;padding:0 8px;font-size:13px;background:#fff;min-width:180px">
+            <option value="">Unassigned</option>
+            <sc-for list="{{ techOptions }}" as="t" hint-placeholder-count="4"><option value="{{ t }}">{{ t }}</option></sc-for>
+          </select>
+        </dd>
+      </dl>
+
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div style="font-size:12px;font-weight:600;color:#71717a;text-transform:uppercase;letter-spacing:.04em">Parts &amp; services</div>
+        <sc-if value="{{ detail.locked }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#71717a">Bill locked</span></sc-if>
+      </div>
+      <div style="border:1px solid #ececef;border-radius:10px;overflow:hidden;margin-bottom:24px">
+        <sc-for list="{{ detail.items }}" as="li" hint-placeholder-count="2">
+          <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid #f4f4f5;font-size:13px">
+            <span style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:#71717a;background:#f4f4f5;border-radius:4px;padding:1px 5px">{{ li.type }}</span>
+            <span style="flex:1">{{ li.name }} <span style="color:#a1a1aa">× {{ li.qty }}</span></span>
+            <span style="font-family:'Geist Mono',monospace;font-size:12px">{{ li.total }}</span>
+            <sc-if value="{{ li.canRemove }}" hint-placeholder-val="{{ false }}"><button onClick="{{ li.onRemove }}" aria-label="Remove" style="border:0;background:none;color:#a1a1aa;cursor:pointer;font-size:16px;padding:0 2px" style-hover="color:#b91c1c">×</button></sc-if>
+          </div>
+        </sc-for>
+        <sc-if value="{{ detail.editable }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;gap:8px;padding:10px 14px;background:#fafafa;border-bottom:1px solid #f4f4f5">
+            <select value="{{ addItem }}" onChange="{{ onAddItem }}" aria-label="Catalogue item" style="flex:1;min-width:0;height:32px;border:1px solid #e4e4e7;border-radius:7px;padding:0 8px;font-size:13px;background:#fff">
+              <option value="">Add part or service…</option>
+              <sc-for list="{{ catalogue }}" as="c" hint-placeholder-count="4"><option value="{{ c.id }}">{{ c.optionLabel }}</option></sc-for>
+            </select>
+            <button onClick="{{ onAddLine }}" style="height:32px;border:0;background:#18181b;color:#fff;border-radius:7px;padding:0 12px;font-size:13px;font-weight:500;cursor:pointer">Add</button>
+          </div>
+        </sc-if>
+        <div style="padding:12px 14px;display:grid;grid-template-columns:1fr auto;gap:4px;font-size:13px">
+          <span style="color:#71717a">Subtotal</span><span style="font-family:'Geist Mono',monospace;font-size:12px;text-align:right">{{ detail.subtotal }}</span>
+          <span style="color:#71717a">GST 18%</span><span style="font-family:'Geist Mono',monospace;font-size:12px;text-align:right">{{ detail.tax }}</span>
+          <span style="font-weight:600;padding-top:6px;border-top:1px solid #f4f4f5;margin-top:4px">Total</span><span style="font-family:'Geist Mono',monospace;font-weight:500;text-align:right;padding-top:6px;border-top:1px solid #f4f4f5;margin-top:4px">{{ detail.total }}</span>
+        </div>
+      </div>
+
+      <div style="font-size:12px;font-weight:600;color:#71717a;text-transform:uppercase;letter-spacing:.04em;margin-bottom:12px">Timeline</div>
+      <div style="display:flex;flex-direction:column">
+        <sc-for list="{{ detail.timeline }}" as="h" hint-placeholder-count="3">
+          <div style="display:flex;gap:12px">
+            <div style="display:flex;flex-direction:column;align-items:center">
+              <span style="width:10px;height:10px;border-radius:50%;background:#fff;border:2px solid {{ h.color }};margin-top:4px"></span>
+              <span style="flex:1;width:1px;background:#ececef"></span>
+            </div>
+            <div style="padding-bottom:16px;font-size:13px">
+              <div><strong style="font-weight:500">{{ h.title }}</strong> <span style="color:#71717a">by {{ h.actor }}</span></div>
+              <div style="font-size:12px;color:#a1a1aa">{{ h.when }}</div>
+              <sc-if value="{{ h.comment }}" hint-placeholder-val="{{ false }}"><div style="margin-top:6px;padding:8px 10px;background:#fafafa;border:1px solid #f0f0f2;border-radius:8px;color:#52525b">{{ h.comment }}</div></sc-if>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </aside>
+</sc-if>
+
+<sc-if value="{{ modal }}" hint-placeholder-val="{{ false }}">
+  <div style="position:fixed;inset:0;background:rgba(24,24,27,.35);z-index:60;display:flex;align-items:center;justify-content:center;padding:20px;animation:fade .15s ease">
+    <form onSubmit="{{ modal.onSubmit }}" noValidate style="background:#fff;border-radius:14px;width:100%;max-width:480px;max-height:calc(100vh - 40px);display:flex;flex-direction:column;box-shadow:0 20px 50px rgba(0,0,0,.18);animation:fadeUp .2s ease;overflow:hidden">
+      <div style="padding:18px 20px 14px;border-bottom:1px solid #f4f4f5;display:flex;align-items:flex-start;gap:12px">
+        <div style="flex:1">
+          <h3 style="margin:0;font-size:16px;font-weight:600">{{ modal.title }}</h3>
+          <p style="margin:2px 0 0;color:#71717a;font-size:13px">{{ modal.desc }}</p>
+        </div>
+        <button type="button" onClick="{{ modal.onClose }}" aria-label="Close" style="width:28px;height:28px;border:0;background:none;border-radius:6px;font-size:18px;color:#71717a;cursor:pointer" style-hover="background:#f4f4f5">×</button>
+      </div>
+      <div style="padding:16px 20px;overflow-y:auto;display:flex;flex-direction:column;gap:14px">
+        <sc-for list="{{ modal.fields }}" as="fd" hint-placeholder-count="3">
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <div style="display:flex;justify-content:space-between;gap:8px;font-size:13px;font-weight:500">{{ fd.label }}<span style="font-weight:400;color:#a1a1aa;font-size:12px">{{ fd.hint }}</span></div>
+            <sc-if value="{{ fd.isInput }}" hint-placeholder-val="{{ true }}">
+              <input type="{{ fd.type }}" value="{{ fd.value }}" onChange="{{ fd.onChange }}" disabled="{{ fd.disabled }}" placeholder="{{ fd.placeholder }}" aria-label="{{ fd.label }}" style="height:38px;border:1px solid #e4e4e7;border-radius:8px;padding:0 12px;font-size:14px;background:{{ fd.bg }};color:#18181b">
+            </sc-if>
+            <sc-if value="{{ fd.isSelect }}" hint-placeholder-val="{{ false }}">
+              <select value="{{ fd.value }}" onChange="{{ fd.onChange }}" disabled="{{ fd.disabled }}" aria-label="{{ fd.label }}" style="height:38px;border:1px solid #e4e4e7;border-radius:8px;padding:0 10px;font-size:14px;background:{{ fd.bg }}">
+                <sc-for list="{{ fd.options }}" as="o" hint-placeholder-count="3"><option value="{{ o.value }}">{{ o.label }}</option></sc-for>
+              </select>
+            </sc-if>
+            <sc-if value="{{ fd.isChips }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;flex-wrap:wrap;gap:6px">
+                <sc-for list="{{ fd.options }}" as="o" hint-placeholder-count="4">
+                  <button type="button" onClick="{{ o.onClick }}" aria-pressed="{{ o.on }}" style="height:30px;border:1px solid {{ o.border }};background:{{ o.bg }};color:{{ o.color }};border-radius:999px;padding:0 12px;font-size:12px;font-weight:500;cursor:pointer">{{ o.label }}</button>
+                </sc-for>
+              </div>
+            </sc-if>
+            <sc-if value="{{ fd.note }}" hint-placeholder-val="{{ false }}"><div style="font-size:12px;color:#71717a">{{ fd.note }}</div></sc-if>
+          </div>
+        </sc-for>
+        <sc-if value="{{ modal.error }}" hint-placeholder-val="{{ false }}"><p role="alert" style="margin:0;padding:10px 12px;border-radius:8px;background:#fce9e9;color:#b91c1c;font-size:13px">{{ modal.error }}</p></sc-if>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:8px;padding:14px 20px;background:#fafafa;border-top:1px solid #ececef">
+        <button type="button" onClick="{{ modal.onClose }}" style="height:34px;border:1px solid #e4e4e7;background:#fff;border-radius:8px;padding:0 14px;font-size:13px;font-weight:500;cursor:pointer">Cancel</button>
+        <button type="submit" style="height:34px;border:0;background:#c81e1e;color:#fff;border-radius:8px;padding:0 14px;font-size:13px;font-weight:500;cursor:pointer" style-hover="background:#9c1717">{{ modal.submitLabel }}</button>
+      </div>
+    </form>
+  </div>
+</sc-if>
+
+<sc-if value="{{ pending }}" hint-placeholder-val="{{ false }}">
+  <div style="position:fixed;inset:0;background:rgba(24,24,27,.35);z-index:60;display:flex;align-items:center;justify-content:center;padding:20px;animation:fade .15s ease">
+    <form onSubmit="{{ confirmPending }}" style="background:#fff;border-radius:14px;width:100%;max-width:440px;box-shadow:0 20px 50px rgba(0,0,0,.18);animation:fadeUp .2s ease;overflow:hidden">
+      <div style="padding:20px 20px 0">
+        <h3 style="margin:0 0 4px;font-size:16px;font-weight:600">Move {{ pending.num }} to {{ pending.toLabel }}</h3>
+        <p style="margin:0 0 14px;color:#71717a;font-size:13px">{{ pending.reason }}</p>
+        <textarea required value="{{ pendingComment }}" onInput="{{ onPendingComment }}" rows="3" placeholder="Add a comment" aria-label="Comment" style="width:100%;border:1px solid #e4e4e7;border-radius:8px;padding:10px 12px;font-size:14px;resize:vertical"></textarea>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:8px;padding:14px 20px">
+        <button type="button" onClick="{{ cancelPending }}" style="height:34px;border:1px solid #e4e4e7;background:#fff;border-radius:8px;padding:0 14px;font-size:13px;font-weight:500;cursor:pointer">Cancel</button>
+        <button type="submit" style="height:34px;border:0;background:#c81e1e;color:#fff;border-radius:8px;padding:0 14px;font-size:13px;font-weight:500;cursor:pointer">Move ticket</button>
+      </div>
+    </form>
+  </div>
+</sc-if>
+
+<sc-if value="{{ ghost }}" hint-placeholder-val="{{ false }}">
+  <div style="position:fixed;left:{{ ghost.left }};top:{{ ghost.top }};width:220px;z-index:90;pointer-events:none;background:#fff;border:1.5px solid #c81e1e;border-radius:10px;padding:10px 12px;box-shadow:0 14px 34px rgba(0,0,0,.2);transform:rotate(-2deg)">
+    <div style="font-family:'Geist Mono',monospace;font-size:12px;color:#71717a">{{ ghost.num }}</div>
+    <div style="font-weight:500">{{ ghost.customer }}</div>
+    <div style="font-size:12px;color:#c81e1e;margin-top:4px">{{ ghost.target }}</div>
+  </div>
+</sc-if>
+
+<sc-if value="{{ sheet }}" hint-placeholder-val="{{ false }}">
+  <div onClick="{{ closeSheet }}" style="position:fixed;inset:0;background:rgba(24,24,27,.35);z-index:70;display:flex;align-items:{{ sheetAlign }};justify-content:center;padding:{{ sheetPad }};animation:fade .15s ease">
+    <div onClick="{{ stopProp }}" role="dialog" aria-label="Move ticket" style="background:#fff;width:100%;max-width:420px;border-radius:{{ sheetRadius }};box-shadow:0 20px 50px rgba(0,0,0,.18);animation:fadeUp .2s ease;padding-bottom:env(safe-area-inset-bottom)">
+      <div style="padding:16px 18px 10px">
+        <div style="font-weight:600;font-size:15px">Move {{ sheet.num }}</div>
+        <div style="font-size:13px;color:#71717a">{{ sheet.customer }} · currently {{ sheet.current }}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;padding:0 8px">
+        <sc-for list="{{ sheet.options }}" as="o" hint-placeholder-count="6">
+          <button onClick="{{ o.onClick }}" disabled="{{ o.disabled }}" style="display:flex;align-items:center;gap:12px;height:48px;padding:0 12px;border:0;background:none;border-radius:8px;font-size:14px;font-weight:{{ o.weight }};color:#18181b;opacity:{{ o.opacity }};cursor:pointer;text-align:left" style-hover="background:#f4f4f5">
+            <span style="width:9px;height:9px;border-radius:50%;background:{{ o.dot }}"></span>
+            <span style="flex:1">{{ o.label }}</span>
+            <span style="font-size:12px;color:#71717a;font-weight:400">{{ o.note }}</span>
+          </button>
+        </sc-for>
+      </div>
+      <div style="display:flex;gap:8px;padding:10px 18px 16px;border-top:1px solid #f4f4f5;margin-top:6px">
+        <button onClick="{{ sheet.onOpenTicket }}" style="flex:1;height:40px;border:1px solid #e4e4e7;background:#fff;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer">Open ticket</button>
+        <button onClick="{{ closeSheet }}" style="flex:1;height:40px;border:0;background:#f4f4f5;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer">Cancel</button>
+      </div>
+    </div>
+  </div>
+</sc-if>
+
+<sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+  <div role="status" style="position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:80;background:{{ toastBg }};color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;box-shadow:0 8px 24px rgba(0,0,0,.2);animation:fadeUp .2s ease;max-width:90vw">{{ toast }}</div>
+</sc-if>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;role&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;super_admin&quot;,&quot;admin&quot;,&quot;service_manager&quot;,&quot;technician&quot;],&quot;default&quot;:&quot;admin&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;density&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;comfortable&quot;,&quot;compact&quot;],&quot;default&quot;:&quot;comfortable&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;startOnLogin&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;}}">
+const S = {
+  open:{label:'Open',color:'#52525b',bg:'#f4f4f5'},
+  in_progress:{label:'In Progress',color:'#2563eb',bg:'#eaf0fe'},
+  on_hold:{label:'On Hold',color:'#b45309',bg:'#fdf1e0'},
+  completed:{label:'Completed',color:'#15803d',bg:'#e8f5ec'},
+  delivered:{label:'Delivered',color:'#6d28d9',bg:'#efe8fc'},
+  cancelled:{label:'Cancelled',color:'#b91c1c',bg:'#fce9e9'}
+};
+const ORDER = ['open','in_progress','on_hold','completed','delivered'];
+const STORES = ['Balepet','Hanumanth Nagar','Madiwala','Hebbal'];
+const TECHS = ['Ravi Kumar','Suresh N','Manjula R','Imran Pasha'];
+const MODELS = ['Brother JA1400','Brother GS 1700','Brother LX27NT','Usha Janome Allure','Singer Heavy Duty 4423','Ricoma EM-1010','Juki DDL-8700','Bruce Q5'];
+const CATALOGUE = [
+  {id:'p1',type:'Part',name:'Bobbin case',sku:'BC-110',category:'Bobbins',cost:350,active:true},{id:'p2',type:'Part',name:'Feed dog assembly',sku:'FD-220',category:'Feed',cost:1200,active:true},
+  {id:'p3',type:'Part',name:'Drive belt',sku:'DB-080',category:'Drive',cost:280,active:true},{id:'p4',type:'Part',name:'Needle plate',sku:'NP-310',category:'Plates',cost:650,active:true},
+  {id:'p5',type:'Part',name:'Presser foot set',sku:'PF-400',category:'Presser feet',cost:520,active:true},
+  {id:'s1',type:'Service',name:'General service & oiling',desc:'Clean, oil and test run',cost:600,active:true},{id:'s2',type:'Service',name:'Timing adjustment',desc:'Hook and needle timing reset',cost:450,active:true},
+  {id:'s3',type:'Service',name:'Motor repair',desc:'Brush, bearing or winding repair',cost:1500,active:true}
+];
+const DAY = 86400000;
+const now = new Date('2026-09-25T11:00:00');
+const mk = (n, store, customer, phone, model, status, age, tech, issue, items, hist) => ({
+  id:'t'+n, num:'SS-'+String(n).padStart(5,'0'), store, customer, phone, model, status, tech,
+  serial:'SN'+(482000+n*37), issue, createdAt:new Date(now - age*DAY), eta: age < 6 ? new Date(+now + (6-age)*DAY) : null,
+  items: items.map((id,i)=>({ lid:'l'+n+i, ...CATALOGUE.find(c=>c.id===id), qty:1 })), history: hist || []
+});
+const SEED = [
+  mk(1042,'Balepet','Lakshmi Narayan','98450 12345','Brother JA1400','open',0,'','Thread keeps bunching under the fabric.',[]),
+  mk(1041,'Madiwala','Priya Shetty','99001 22334','Usha Janome Allure','open',1,'','Machine does not power on.',[]),
+  mk(1039,'Hebbal','Anil Gowda','97411 88765','Juki DDL-8700','open',2,'Imran Pasha','Needle breaking on thick denim.',[]),
+  mk(1036,'Balepet','Farah Khan','98860 45671','Brother GS 1700','in_progress',3,'Ravi Kumar','Skipped stitches, noisy motor.',['s1','p3']),
+  mk(1033,'Hanumanth Nagar','Deepa Rao','90080 11223','Singer Heavy Duty 4423','in_progress',5,'Suresh N','Bobbin winder not engaging.',['p1']),
+  mk(1030,'Madiwala','Karthik M','96633 77889','Ricoma EM-1010','in_progress',9,'Manjula R','Hoop sensor error on start.',['s2']),
+  mk(1028,'Hebbal','Shobha Iyer','98441 20304','Brother LX27NT','on_hold',11,'Imran Pasha','Feed dogs not moving fabric.',['p2'],[{from:'in_progress',to:'on_hold',comment:'Waiting for feed dog assembly from supplier.',actor:'Imran Pasha',age:4}]),
+  mk(1025,'Balepet','Rahul Jain','99452 66554','Bruce Q5','on_hold',14,'Ravi Kumar','Oil leak near the bed.',['s1'],[{from:'in_progress',to:'on_hold',comment:'Customer to approve motor repair quote.',actor:'Ravi Kumar',age:6}]),
+  mk(1022,'Hanumanth Nagar','Meena Kumari','97390 44556','Brother JA1400','completed',7,'Suresh N','Tension inconsistent.',['s1','s2']),
+  mk(1020,'Madiwala','Vinay Hegde','98800 33221','Usha Janome Allure','completed',8,'Manjula R','Pedal unresponsive.',['p3','s1']),
+  mk(1017,'Balepet','Nandini S','90190 55667','Singer Heavy Duty 4423','delivered',12,'Ravi Kumar','Annual service.',['s1']),
+  mk(1015,'Hebbal','Arjun Pai','96111 99008','Brother GS 1700','delivered',16,'Imran Pasha','Needle plate scratched.',['p4','s1']),
+  mk(1012,'Hanumanth Nagar','Kavya B','99160 12098','Juki DDL-8700','cancelled',15,'Suresh N','Customer withdrew.',[],[{from:'open',to:'cancelled',comment:'Customer chose to replace the machine.',actor:'Admin',age:13}])
+];
+const fmtDate = d => d ? d.toLocaleDateString('en-IN',{day:'numeric',month:'short'}) : '—';
+const fmtDT = d => d.toLocaleDateString('en-IN',{day:'numeric',month:'short'})+', '+d.toLocaleTimeString('en-IN',{hour:'numeric',minute:'2-digit'});
+const inr = n => '₹'+n.toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
+const initials = n => n ? n.split(' ').map(p=>p[0]).join('').slice(0,2).toUpperCase() : '—';
+const ROLE_LABELS = {super_admin:'Super Admin',admin:'Admin',service_manager:'Store Service Manager',technician:'Technician'};
+const PASSWORD_HINT = 'At least 8 characters, including an uppercase letter, a lowercase letter, and a special character.';
+const PW_RE = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{8,}$/;
+const WA_RE = /^\+[1-9]\d{7,14}$/;
+const SEED_STORES = [
+  {name:'Balepet',address:'42, Balepet Main Rd, Bengaluru 560053',contact:'Rekha M',whatsapp:'+919845012345',tax:18,active:true},
+  {name:'Hanumanth Nagar',address:'15, 50 Feet Rd, Hanumanth Nagar, Bengaluru 560019',contact:'Suresh N',whatsapp:'+919900122334',tax:18,active:true},
+  {name:'Madiwala',address:'7, Hosur Rd, Madiwala, Bengaluru 560068',contact:'Manjula R',whatsapp:'+919741188765',tax:18,active:true},
+  {name:'Hebbal',address:'210, Bellary Rd, Hebbal, Bengaluru 560024',contact:'Lokesh G',whatsapp:'+919886045671',tax:18,active:true}
+];
+const SEED_USERS = [
+  {id:'u1',name:'Akshay Kumar',email:'akshay@shubhasewing.in',username:'akshay',role:'super_admin',active:true,stores:[]},
+  {id:'u2',name:'Shubha Admin',email:'admin@shubhasewing.in',username:'shubha',role:'admin',active:true,stores:['Balepet','Hanumanth Nagar','Madiwala','Hebbal']},
+  {id:'u3',name:'Naveen Reddy',email:'naveen@shubhasewing.in',username:null,role:'admin',active:true,stores:['Madiwala','Hebbal']},
+  {id:'u4',name:'Rekha M',email:'rekha@shubhasewing.in',username:'rekha.m',role:'service_manager',active:true,stores:['Balepet']},
+  {id:'u5',name:'Lokesh G',email:'lokesh@shubhasewing.in',username:null,role:'service_manager',active:true,stores:['Hebbal']},
+  {id:'u6',name:'Ravi Kumar',email:'ravi@shubhasewing.in',username:'ravi.k',role:'technician',active:true,stores:['Balepet']},
+  {id:'u7',name:'Suresh N',email:'suresh@shubhasewing.in',username:null,role:'technician',active:true,stores:['Hanumanth Nagar']},
+  {id:'u8',name:'Manjula R',email:'manjula@shubhasewing.in',username:'manjula',role:'technician',active:true,stores:['Madiwala']},
+  {id:'u9',name:'Imran Pasha',email:'imran@shubhasewing.in',username:null,role:'technician',active:true,stores:['Hebbal']},
+  {id:'u10',name:'Deepak S',email:'deepak@shubhasewing.in',username:null,role:'technician',active:false,stores:['Madiwala']}
+];
+const SEED_MODELS = [
+  {id:'m1',name:'JA1400',manufacturer:'Brother',category:'Home sewing',active:true},{id:'m2',name:'GS 1700',manufacturer:'Brother',category:'Home sewing',active:true},
+  {id:'m3',name:'LX27NT',manufacturer:'Brother',category:'Home sewing',active:true},{id:'m4',name:'Janome Allure',manufacturer:'Usha',category:'Home sewing',active:true},
+  {id:'m5',name:'Heavy Duty 4423',manufacturer:'Singer',category:'Home sewing',active:true},{id:'m6',name:'EM-1010',manufacturer:'Ricoma',category:'Embroidery',active:true},
+  {id:'m7',name:'DDL-8700',manufacturer:'Juki',category:'Industrial',active:true},{id:'m8',name:'Q5',manufacturer:'Bruce',category:'Industrial',active:true},
+  {id:'m9',name:'Marvela',manufacturer:'Usha',category:null,active:false}
+];
+
+function checkTransition(role, from, to, comment){
+  if (from==='cancelled' || from===to) return 'invalid_transition';
+  if (to==='cancelled'){
+    if (from==='completed'||from==='delivered') return 'invalid_transition';
+    if (role==='service_manager'||role==='technician') return 'role_not_permitted';
+    return comment ? null : 'comment_required';
+  }
+  const fi = ORDER.indexOf(from), ti = ORDER.indexOf(to);
+  if (fi<0||ti<0) return 'invalid_transition';
+  if (from==='open' && (to==='completed'||to==='delivered')) return 'invalid_transition';
+  const back = ti < fi;
+  if (back && from==='delivered' && (role==='service_manager'||role==='technician')) return 'role_not_permitted';
+  if ((back || to==='on_hold') && !comment) return 'comment_required';
+  return null;
+}
+const ERR = { invalid_transition:"That status change isn't allowed from the current status.", role_not_permitted:"Your role doesn't permit this status change." };
+
+class Component extends DCLogic {
+  state = { screen:'board', tickets:SEED, q:'', storeFilter:'', techFilter:'', showCancelled:false, dragId:null, overCol:null,
+    detailId:null, pending:null, pendingComment:'', toast:'', toastErr:false, otp:'', addItem:'', statusFilter:[], pwVisible:false, loginEmail:'',
+    form:{store:'',customer:'',phone:'',alt:'',model:'',serial:'',issue:'',eta:''}, createdId:null, width:1280, seq:1043,
+    users:SEED_USERS, stores:SEED_STORES, models:SEED_MODELS, parts:CATALOGUE.filter(c=>c.type==='Part'), services:CATALOGUE.filter(c=>c.type==='Service'),
+    modal:null, ghost:null, sheetId:null, teamQ:'', teamRole:'', teamStatus:'', storeQ:'', storeStatus:'', modelQ:'', modelMfr:'', catTab:'parts', catQ:'', catCat:'' };
+
+  boardRef = React.createRef();
+  touchStart(e, t){
+    if (e.touches.length>1) return;
+    const p=e.touches[0];
+    this._touch={id:t.id,num:t.num,customer:t.customer,x0:p.clientX,y0:p.clientY,x:p.clientX,y:p.clientY,active:false,dragged:false};
+    clearTimeout(this._lp);
+    this._lp=setTimeout(()=>{ const tc=this._touch; if(!tc) return; tc.active=true; try{ navigator.vibrate && navigator.vibrate(12); }catch(_){}
+      this.setState({dragId:tc.id, ghost:{x:tc.x,y:tc.y,num:tc.num,customer:tc.customer}}); this.scrollLoop(); }, 380);
+    document.addEventListener('touchmove',this._tm,{passive:false});
+    document.addEventListener('touchend',this._te); document.addEventListener('touchcancel',this._te);
+  }
+  _tm = e => { const tc=this._touch; if(!tc) return; const p=e.touches[0]; tc.x=p.clientX; tc.y=p.clientY;
+    if(!tc.active){ if(Math.hypot(tc.x-tc.x0,tc.y-tc.y0)>10){ clearTimeout(this._lp); this.cleanupTouch(); } return; }
+    e.preventDefault(); if(Math.hypot(tc.x-tc.x0,tc.y-tc.y0)>10) tc.dragged=true;
+    const el=document.elementFromPoint(tc.x,tc.y); const col=el && el.closest ? el.closest('[data-col]') : null;
+    this.setState(s=>({ghost:{...s.ghost,x:tc.x,y:tc.y}, overCol: col ? col.getAttribute('data-col') : null})); };
+  _te = () => { const tc=this._touch; clearTimeout(this._lp); this.cleanupTouch(); if(!tc||!tc.active) return;
+    this._suppress=true; setTimeout(()=>{ this._suppress=false; },500);
+    const k=this.state.overCol, t=this.state.tickets.find(x=>x.id===tc.id);
+    this.setState({dragId:null, ghost:null, overCol:null});
+    if (tc.dragged && k && t && t.status!==k) this.move(tc.id,k,null);
+    else if (!tc.dragged) this.setState({sheetId:tc.id}); };
+  cleanupTouch(){ document.removeEventListener('touchmove',this._tm); document.removeEventListener('touchend',this._te); document.removeEventListener('touchcancel',this._te); cancelAnimationFrame(this._raf); this._touch=null; }
+  scrollLoop(){ const step=()=>{ const tc=this._touch; if(!tc||!tc.active) return; const b=this.boardRef.current; if(b){ const w=window.innerWidth; if(tc.x<48) b.scrollLeft-=14; else if(tc.x>w-48) b.scrollLeft+=14; } this._raf=requestAnimationFrame(step); }; this._raf=requestAnimationFrame(step); }
+  componentDidMount(){ this._r=()=>this.setState({width:window.innerWidth}); this._r(); window.addEventListener('resize',this._r); if (this.props.startOnLogin) this.setState({screen:'login'}); }
+  componentWillUnmount(){ window.removeEventListener('resize',this._r); this.cleanupTouch(); }
+  componentDidUpdate(prev){ if (prev.startOnLogin !== this.props.startOnLogin) this.setState({screen: this.props.startOnLogin ? 'login' : 'board'}); }
+
+  say(msg, err){ clearTimeout(this._t); this.setState({toast:msg, toastErr:!!err}); this._t=setTimeout(()=>this.setState({toast:''}),3200); }
+  role(){ return this.props.role || 'admin'; }
+  update(id, fn){ this.setState(s=>({ tickets: s.tickets.map(t=> t.id===id ? fn(t) : t) })); }
+
+  move(id, to, comment){
+    const t = this.state.tickets.find(x=>x.id===id); if (!t) return;
+    const err = checkTransition(this.role(), t.status, to, comment);
+    if (err==='comment_required'){
+      const back = ORDER.indexOf(to) < ORDER.indexOf(t.status);
+      const reason = to==='cancelled' ? 'Cancelling a ticket needs a reason.' : to==='on_hold' ? 'Putting a ticket on hold needs a comment.' : 'Moving a ticket backward needs a comment.';
+      this.setState({pending:{id,to,num:t.num,toLabel:S[to].label,reason}, pendingComment:''}); return;
+    }
+    if (err){ this.say(ERR[err], true); return; }
+    this.update(id, x=>({...x, status:to, history:[...x.history,{from:x.status,to,comment:comment||'',actor:this.userName(),at:new Date()}]}));
+    if (to==='completed') this.say(t.num+' completed. WhatsApp "ready for pickup" sent to '+t.customer+'.');
+    else if (to==='delivered') this.say(t.num+' delivered. Invoice sent on WhatsApp.');
+    else this.say(t.num+' moved to '+S[to].label+'.');
+  }
+  setAdmin(uid, store, add){ const u=this.state.users.find(y=>y.id===uid); this.setState(x=>({users:x.users.map(y=>y.id!==uid?y:{...y,stores:add?[...y.stores,store]:y.stores.filter(n=>n!==store)})})); this.say(u.name+(add?' assigned to ':' removed from ')+store+'.'); }
+  toggleIn(key,id){ const it=this.state[key].find(x=>x.id===id); this.setState(x=>({[key]:x[key].map(y=>y.id===id?{...y,active:!y.active}:y)})); this.say((it.manufacturer?it.manufacturer+' ':'')+it.name+(it.active?' deactivated. It no longer appears in pickers.':' reactivated.')); }
+  openModal(kind, rec){
+    const d = {
+      staff: rec ? {name:rec.name,email:rec.email,username:rec.username||'',role:rec.role,stores:[...rec.stores],password:''} : {name:'',email:'',username:'',role:'service_manager',stores:[],password:''},
+      reset: {password:''},
+      store: rec ? {...rec, tax:String(rec.tax)} : {name:'',address:'',contact:'',whatsapp:'',tax:'18'},
+      model: rec ? {...rec, category:rec.category||''} : {name:'',manufacturer:'',category:''},
+      part: rec ? {...rec, sku:rec.sku||'', category:rec.category||'', cost:String(rec.cost)} : {name:'',sku:'',cost:'',category:''},
+      service: rec ? {...rec, desc:rec.desc||'', cost:String(rec.cost)} : {name:'',desc:'',cost:''}
+    }[kind];
+    this.setState({modal:{kind, rec:rec||null, values:d, error:''}});
+  }
+  setModalVal(k,v){ this.setState(x=>({modal:{...x.modal, values:{...x.modal.values,[k]:v}, error:''}})); }
+  saveModal(){
+    const s=this.state, m=s.modal, v=m.values, rec=m.rec;
+    const fail=err=>this.setState(x=>({modal:{...x.modal,error:err}}));
+    const close=msg=>{ this.setState({modal:null}); this.say(msg); };
+    if (m.kind==='staff'){
+      const name=v.name.trim(); if(!name) return fail('Name is required.');
+      if(!rec){
+        if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.email.trim())) return fail('Enter a valid email address.');
+        if(s.users.some(u=>u.email.toLowerCase()===v.email.trim().toLowerCase())) return fail('That email is already registered.');
+        if(v.username && !/^[A-Za-z0-9._-]{3,32}$/.test(v.username)) return fail('Username must be 3-32 characters: letters, digits, dots, underscores, or hyphens only.');
+        if(v.username && s.users.some(u=>(u.username||'').toLowerCase()===v.username.toLowerCase())) return fail('That username is already taken.');
+      }
+      const isSA = rec && rec.role==='super_admin';
+      if(!isSA){
+        if(!v.stores.length) return fail('At least one store is required.');
+        if((v.role==='service_manager'||v.role==='technician') && v.stores.length!==1) return fail('A Service Manager or Technician must have exactly one store.');
+      }
+      if(!rec && !PW_RE.test(v.password)) return fail(PASSWORD_HINT);
+      if(rec){ this.setState(x=>({users:x.users.map(u=>u.id===rec.id?{...u,name,role:isSA?u.role:v.role,stores:isSA?u.stores:v.stores}:u)})); return close('Changes saved for '+name+'.'); }
+      this.setState(x=>({users:[...x.users,{id:'u'+Date.now(),name,email:v.email.trim(),username:v.username||null,role:v.role,active:true,stores:v.stores}]}));
+      return close('Account created for '+name+'.');
+    }
+    if (m.kind==='reset'){ if(!PW_RE.test(v.password)) return fail(PASSWORD_HINT); return close('Password reset for '+rec.name+'. Their other sessions are signed out.'); }
+    if (m.kind==='store'){
+      const name=v.name.trim();
+      if(!name||!v.address.trim()||!v.contact.trim()) return fail('Name, address and primary contact are required.');
+      if(!WA_RE.test(v.whatsapp.trim())) return fail('WhatsApp number must be in international format, e.g. +919876543210.');
+      const tax = v.tax===''?0:Number(v.tax); if(isNaN(tax)||tax<0||tax>100) return fail('Tax rate must be between 0 and 100.');
+      if(s.stores.some(x=>x.name.toLowerCase()===name.toLowerCase() && (!rec||x.name!==rec.name))) return fail('A store with that name already exists.');
+      const next={name,address:v.address.trim(),contact:v.contact.trim(),whatsapp:v.whatsapp.trim(),tax,active:rec?rec.active:true};
+      if(rec){ const old=rec.name; this.setState(x=>({stores:x.stores.map(y=>y.name===old?next:y), tickets:x.tickets.map(t=>t.store===old?{...t,store:name}:t), users:x.users.map(u=>({...u,stores:u.stores.map(n=>n===old?name:n)}))})); return close(name+' updated.'); }
+      const meName=this.userName();
+      this.setState(x=>({stores:[...x.stores,next], users:x.users.map(u=>u.name===meName&&u.role==='admin'?{...u,stores:[...u.stores,name]}:u)})); return close(name+' created.');
+    }
+    if (m.kind==='model'){
+      if(!v.name.trim()||!v.manufacturer.trim()) return fail('Model name and manufacturer are required.');
+      const next={name:v.name.trim(),manufacturer:v.manufacturer.trim(),category:v.category.trim()||null};
+      if(s.models.some(x=>x.id!==(rec&&rec.id) && x.name.toLowerCase()===next.name.toLowerCase() && x.manufacturer.toLowerCase()===next.manufacturer.toLowerCase())) return fail('That model already exists.');
+      if(rec){ this.setState(x=>({models:x.models.map(y=>y.id===rec.id?{...y,...next}:y)})); return close(next.manufacturer+' '+next.name+' updated.'); }
+      this.setState(x=>({models:[...x.models,{id:'m'+Date.now(),...next,active:true}]})); return close(next.manufacturer+' '+next.name+' added.');
+    }
+    const cost=Number(v.cost);
+    if(!v.name.trim()) return fail('Name is required.');
+    if(v.cost===''||isNaN(cost)||cost<0) return fail('Unit cost must be zero or a positive number.');
+    const isPart=m.kind==='part', key=isPart?'parts':'services';
+    const next = isPart ? {name:v.name.trim(),sku:v.sku.trim()||null,category:v.category.trim()||null,cost} : {name:v.name.trim(),desc:v.desc.trim()||null,cost};
+    if(rec){ this.setState(x=>({[key]:x[key].map(y=>y.id===rec.id?{...y,...next}:y)})); return close(next.name+' updated. Existing tickets keep their snapshot price.'); }
+    this.setState(x=>({[key]:[...x[key],{id:(isPart?'p':'s')+Date.now(),type:isPart?'Part':'Service',...next,active:true}]})); return close(next.name+' added to the catalogue.');
+  }
+  importCsv(e, kind){
+    const file=e.target.files&&e.target.files[0]; if(!file) return; e.target.value='';
+    const r=new FileReader();
+    r.onload=()=>{
+      const lines=String(r.result).split(/\r?\n/).filter(l=>l.trim()); const failed=[], added=[];
+      lines.forEach((line,i)=>{ const c=line.split(',').map(x=>x.trim()); if(i===0 && c[0].toLowerCase()==='name') return;
+        if(kind==='models'){ if(!c[0]||!c[1]) failed.push('row '+(i+1)+' (missing name or manufacturer)'); else added.push({id:'m'+Date.now()+'_'+i,name:c[0],manufacturer:c[1],category:c[2]||null,active:true}); }
+        else { const cost=Number(c[2]); if(!c[0]) failed.push('row '+(i+1)+' (missing name)'); else if(c[2]===undefined||c[2]===''||isNaN(cost)||cost<0) failed.push('row '+(i+1)+' (invalid unit_cost)'); else added.push({id:'p'+Date.now()+'_'+i,type:'Part',name:c[0],sku:c[1]||null,cost,category:c[3]||null,active:true}); } });
+      this.setState(x=>({[kind]:[...x[kind],...added]}));
+      this.say('Imported '+added.length+'.'+(failed.length?' '+failed.length+' row(s) failed: '+failed.join(', '):''), failed.length>0 && !added.length);
+    };
+    r.readAsText(file);
+  }
+  adminVals(s, role, scoped, isAdmin){
+    const isSuper = role==='super_admin';
+    const PILL = {super_admin:['#18181b','#fff'],admin:['#fbeaea','#9c1717'],service_manager:['#eaf0fe','#1d4ed8'],technician:['#f4f4f5','#3f3f46']};
+    const val = k => e => this.setState({[k]:e.target.value});
+    const has = (fields, q) => !q || fields.join(' ').toLowerCase().includes(q);
+    const st8 = (a, off='Inactive') => ({statusLabel:a?'Active':off, statusDot:a?'#15803d':'#a1a1aa', rowOpacity:a?1:0.6, toggleLabel:a?'Deactivate':'Reactivate', toggleColor:a?'#b91c1c':'#15803d'});
+    const plural = (n,w) => n+' '+w+(n===1?'':'s');
+
+    const tq=s.teamQ.trim().toLowerCase();
+    const manageable = s.users.filter(u => isSuper || ((u.role==='service_manager'||u.role==='technician') && u.stores.some(x=>scoped.includes(x))));
+    const teamRows = manageable.filter(u => has([u.name,u.email,u.username||''],tq) && (!s.teamRole||u.role===s.teamRole) && (!s.teamStatus||(s.teamStatus==='active')===u.active)).map(u=>({
+      ...st8(u.active,'Deactivated'), name:u.name, email:u.email, initials:initials(u.name), username:u.username||'—',
+      roleLabel:ROLE_LABELS[u.role], roleBg:PILL[u.role][0], roleColor:PILL[u.role][1],
+      storesLabel: u.role==='super_admin' ? 'All stores' : (u.stores.join(', ')||'—'), canToggle: u.name!==this.userName(),
+      onEdit:()=>this.openModal('staff',u), onReset:()=>this.openModal('reset',u),
+      onToggle:()=>{ this.setState(x=>({users:x.users.map(y=>y.id===u.id?{...y,active:!y.active}:y)})); this.say(u.name+(u.active?' deactivated. Active sessions are revoked.':' reactivated.')); }
+    }));
+
+    const sq=s.storeQ.trim().toLowerCase();
+    const adminUsers = s.users.filter(u=>u.role==='admin'&&u.active);
+    const storeCards = s.stores.filter(x=>isSuper||scoped.includes(x.name)).filter(x=>has([x.name,x.address,x.contact],sq) && (!s.storeStatus||(s.storeStatus==='active')===x.active)).map(x=>{
+      const admins = s.users.filter(u=>u.role==='admin'&&u.stores.includes(x.name));
+      const free = adminUsers.filter(u=>!u.stores.includes(x.name));
+      return { ...st8(x.active), toggleLabel:x.active?'Deactivate':'Activate', name:x.name, address:x.address, contact:x.contact, whatsapp:x.whatsapp||'—', tax:x.tax+'%',
+        open:s.tickets.filter(t=>t.store===x.name&&!['delivered','cancelled'].includes(t.status)).length,
+        statusBg:x.active?'#e8f5ec':'#f4f4f5', statusColor:x.active?'#15803d':'#71717a', cardOpacity:x.active?1:0.7,
+        admins: admins.map(a=>({name:a.name, canRemove:isSuper, onRemove:()=>this.setAdmin(a.id,x.name,false)})), noAdmins:!admins.length,
+        canAssign: isSuper && free.length>0, adminChoices: free.map(a=>({value:a.id,label:a.name})),
+        onAssign: e=>{ if(e.target.value) this.setAdmin(e.target.value,x.name,true); },
+        onEdit:()=>this.openModal('store',x),
+        onToggle:()=>{ if(!x.active && !WA_RE.test(x.whatsapp||'')){ this.say('A valid WhatsApp number is required before this store can be activated.',true); return; } this.setState(y=>({stores:y.stores.map(z=>z.name===x.name?{...z,active:!z.active}:z)})); this.say(x.name+(x.active?' deactivated.':' activated.')); } };
+    });
+
+    const mq=s.modelQ.trim().toLowerCase();
+    const modelRows = s.models.filter(m=>has([m.name,m.category||''],mq) && (!s.modelMfr||m.manufacturer===s.modelMfr)).map(m=>({
+      ...st8(m.active), name:m.name, manufacturer:m.manufacturer, category:m.category||'—', tickets:s.tickets.filter(t=>t.model===m.manufacturer+' '+m.name).length,
+      onEdit:()=>this.openModal('model',m), onToggle:()=>this.toggleIn('models',m.id) }));
+
+    const isParts = s.catTab==='parts', cq=s.catQ.trim().toLowerCase();
+    const src = isParts ? s.parts.filter(p=>has([p.name,p.sku||'',p.category||''],cq) && (!s.catCat||p.category===s.catCat)) : s.services.filter(v=>has([v.name,v.desc||''],cq));
+    const catRows = src.map(it=>{ const n=s.tickets.reduce((a,t)=>a+(t.items.some(i=>i.id===it.id)?1:0),0); return {
+      ...st8(it.active), name:it.name, sub: isParts?(it.sku||'No SKU'):(it.desc||''), subFont: isParts?"'Geist Mono',monospace":'inherit', category:it.category||'—', cost:inr(it.cost),
+      usage: plural(n,'ticket'), listMeta: (isParts?(it.category||'No category')+' · ':'')+'Used on '+plural(n,'ticket'), onEdit:()=>this.openModal(isParts?'part':'service',it), onToggle:()=>this.toggleIn(isParts?'parts':'services',it.id) }; });
+    const tab = (k,l,n) => ({label:l, count:n, bg:s.catTab===k?'#fff':'transparent', color:s.catTab===k?'#18181b':'#71717a', shadow:s.catTab===k?'0 1px 2px rgba(0,0,0,.08)':'none', onClick:()=>this.setState({catTab:k,catQ:'',catCat:''})});
+
+    let modal=null;
+    if (s.modal){
+      const m=s.modal, v=m.values, rec=m.rec, edit=!!rec;
+      const base = {isInput:false,isSelect:false,isChips:false,hint:'',note:'',disabled:false,bg:'#fff',placeholder:'',type:'text',options:[]};
+      const inp=(key,label,o={})=>({...base,...o,label,isInput:true,value:v[key]??'',bg:o.disabled?'#fafafa':'#fff',onChange:e=>this.setModalVal(key,e.target.value)});
+      const sel=(key,label,options,o={})=>({...base,...o,label,isSelect:true,value:v[key],options,bg:o.disabled?'#fafafa':'#fff',onChange:e=>this.setModalVal(key,e.target.value)});
+      const single = v.role==='service_manager'||v.role==='technician';
+      const storeChoices = isSuper ? s.stores.map(x=>x.name) : scoped;
+      const chips=(label,o)=>({...base,...o,label,isChips:true,options:storeChoices.map(n=>{ const on=(v.stores||[]).includes(n); return {label:n,on,bg:on?'#18181b':'#fff',color:on?'#fff':'#3f3f46',border:on?'#18181b':'#e4e4e7',
+        onClick:()=>this.setModalVal('stores', single ? (on?[]:[n]) : (on?v.stores.filter(y=>y!==n):[...v.stores,n]))}; })});
+      let title='', desc='', fields=[], submitLabel='Save changes';
+      if (m.kind==='staff'){
+        const isSA = edit && rec.role==='super_admin';
+        title = edit?'Edit staff account':'Add a staff account'; desc = edit?rec.email:'They can log in with email or username.'; submitLabel = edit?'Save changes':'Create account';
+        fields = [inp('name','Name'), inp('email','Email',{type:'email',disabled:edit,hint:edit?'Cannot be changed here':''})];
+        if (!edit) fields.push(inp('username','Username',{hint:'Optional'}));
+        else if (rec.username) fields.push(inp('username','Username',{disabled:true,hint:'Cannot be changed here'}));
+        const roleOpts = [...(isSuper?[{value:'admin',label:'Admin'}]:[]),{value:'service_manager',label:'Store Service Manager'},{value:'technician',label:'Technician'}];
+        fields.push(isSA ? sel('role','Role',[{value:'super_admin',label:'Super Admin'}],{disabled:true,hint:'Cannot be changed here'}) : sel('role','Role',roleOpts));
+        if (!isSA) fields.push(chips(single?'Store':'Stores',{hint:single?'Select exactly one':'Select one or more'}));
+        if (!edit) fields.push(inp('password','Password',{type:'password',note:PASSWORD_HINT}));
+      } else if (m.kind==='reset'){
+        title='Reset password'; desc='Set a new password for '+rec.name+'.'; submitLabel='Reset password';
+        fields=[inp('password','New password',{type:'password',note:PASSWORD_HINT})];
+      } else if (m.kind==='store'){
+        title=edit?'Edit store':'Add a store'; desc='Customers receive WhatsApp updates from this store\'s number.'; submitLabel=edit?'Save changes':'Create store';
+        fields=[inp('name','Name'),inp('address','Address'),inp('contact','Primary contact'),inp('whatsapp','WhatsApp number',{placeholder:'+919876543210',note:'International format with country code, no spaces or dashes.'}),inp('tax','Default tax rate (%)',{type:'number',hint:'Optional',note:'Tax is set per ticket; this is the starting value.'})];
+      } else if (m.kind==='model'){
+        title=edit?'Edit machine model':'Add a machine model'; desc='Appears as a suggestion when creating tickets.'; submitLabel=edit?'Save changes':'Add model';
+        fields=[inp('name','Model name',{placeholder:'e.g. JA1400'}),inp('manufacturer','Manufacturer',{placeholder:'e.g. Brother'}),inp('category','Category',{hint:'Optional'})];
+      } else if (m.kind==='part'){
+        title=edit?'Edit part':'Add a part'; desc='Price applies to every store. Existing tickets keep their snapshot.'; submitLabel=edit?'Save changes':'Add part';
+        fields=[inp('name','Name'),inp('sku','SKU',{hint:'Optional'}),inp('cost','Unit cost (₹)',{type:'number'}),inp('category','Category',{hint:'Optional'})];
+      } else {
+        title=edit?'Edit service':'Add a service'; desc='Price applies to every store. Existing tickets keep their snapshot.'; submitLabel=edit?'Save changes':'Add service';
+        fields=[inp('name','Name'),inp('desc','Description',{hint:'Optional'}),inp('cost','Unit cost (₹)',{type:'number'})];
+      }
+      modal={title,desc,fields,submitLabel,error:m.error,onSubmit:e=>{e.preventDefault(); this.saveModal();},onClose:()=>this.setState({modal:null})};
+    }
+
+    return {
+      isTeam: s.screen==='team'&&isAdmin, isStores: s.screen==='stores'&&isAdmin, isModels: s.screen==='models'&&isSuper, isCatalogue: s.screen==='catalogue'&&isSuper,
+      teamScope: isSuper?'All staff accounts':'Service Managers and Technicians in your stores', teamRows, teamEmpty:!teamRows.length, teamCount:plural(teamRows.length,'person').replace('persons','people'),
+      teamQ:s.teamQ, teamRole:s.teamRole, teamStatus:s.teamStatus, onTeamQ:val('teamQ'), onTeamRole:val('teamRole'), onTeamStatus:val('teamStatus'), addStaff:()=>this.openModal('staff'),
+      storesScope: isSuper?'All stores':'Stores you manage', storeCards, storesEmpty:!storeCards.length, storeCount:plural(storeCards.length,'store'),
+      storeQ:s.storeQ, storeStatus:s.storeStatus, onStoreQ:val('storeQ'), onStoreStatus:val('storeStatus'), addStore:()=>this.openModal('store'),
+      modelRows, modelsEmpty:!modelRows.length, modelCount:plural(modelRows.length,'model'), manufacturers:[...new Set(s.models.map(m=>m.manufacturer))].sort(),
+      modelQ:s.modelQ, modelMfr:s.modelMfr, onModelQ:val('modelQ'), onModelMfr:val('modelMfr'), addModel:()=>this.openModal('model'), onImportModels:e=>this.importCsv(e,'models'),
+      isPartsTab:isParts, catTabs:[tab('parts','Parts',s.parts.length),tab('services','Services',s.services.length)], catRows, catEmpty:!catRows.length,
+      catEmptyLabel: isParts?'No parts match your search.':'No services match your search.', catNameHead: isParts?'Part':'Service',
+      catPlaceholder: isParts?'Search name, SKU, or category':'Search name or description', catAddLabel: isParts?'+ Add part':'+ Add service',
+      partCats:[...new Set(s.parts.map(p=>p.category).filter(Boolean))].sort(), catQ:s.catQ, catCat:s.catCat, onCatQ:val('catQ'), onCatCat:val('catCat'),
+      addCatItem:()=>this.openModal(isParts?'part':'service'), onImportParts:e=>this.importCsv(e,'parts'),
+      modal
+    };
+  }
+  userName(){ return {super_admin:'Akshay Kumar',admin:'Shubha Admin',service_manager:'Rekha M',technician:'Ravi Kumar'}[this.role()]; }
+
+  renderVals(){
+    const s = this.state, role = this.role();
+    const wide = s.width >= 860;
+    const density = this.props.density || 'comfortable';
+    const isAdmin = role==='admin'||role==='super_admin';
+    const me = s.users.find(u=>u.name===this.userName());
+    const scopedStores = role==='super_admin' ? s.stores.map(x=>x.name) : (me ? me.stores : []);
+    let visible = s.tickets.filter(t=>scopedStores.includes(t.store));
+    if (role==='technician') visible = visible.filter(t=>t.tech==='Ravi Kumar');
+    const q = s.q.trim().toLowerCase();
+    const filtered = visible.filter(t => (!s.storeFilter||t.store===s.storeFilter) && (!s.techFilter||t.tech===s.techFilter) &&
+      (!q || [t.num,t.customer,t.phone,t.model].join(' ').toLowerCase().includes(q)));
+
+    const daysOpen = t => { const end = (t.status==='delivered'||t.status==='cancelled') && t.history.length ? (t.history[t.history.length-1].at || new Date(now - t.history[t.history.length-1].age*DAY)) : now; return Math.max(0,Math.floor((end - t.createdAt)/DAY)); };
+    const card = t => {
+      const d = daysOpen(t), terminal = t.status==='delivered'||t.status==='cancelled', late = !terminal && d>=7;
+      return { num:t.num, customer:t.customer, model:t.model, store:t.store, techName:t.tech||'Unassigned', techInitials:t.tech?initials(t.tech):'–',
+        techBg:t.tech?'#f4f4f5':'#fff', techColor:t.tech?'#3f3f46':'#a1a1aa',
+        ageLabel: d===0?'Today':d+'d', ageBg: late?'#fdf1e0':'#f4f4f5', ageColor: late?'#b45309':'#71717a',
+        opacity: s.dragId===t.id?0.4:1,
+        onDragStart: e => { e.dataTransfer.effectAllowed='move'; e.dataTransfer.setData('text/plain',t.id); this.setState({dragId:t.id}); },
+        onOpen: () => { if (this._suppress) return; this.setState({detailId:t.id, otp:'', addItem:''}); },
+        onTouchStart: e => this.touchStart(e, t),
+        onContextMenu: e => { e.preventDefault(); if (this._touch) return; this.setState({sheetId:t.id}); } };
+    };
+    const colKeys = s.showCancelled ? [...ORDER,'cancelled'] : ORDER;
+    const columns = colKeys.map(k => {
+      const cards = filtered.filter(t=>t.status===k).map(card), over = s.overCol===k;
+      return { key:k, label:S[k].label, color:S[k].color, count:cards.length, cards,
+        bg: over?'#fef2f2':'#f1f1f3', border: over?'#c81e1e':'transparent',
+        onDragOver: e => { e.preventDefault(); if (s.overCol!==k) this.setState({overCol:k}); },
+        onDragLeave: () => {},
+        onDrop: e => { e.preventDefault(); const id = e.dataTransfer.getData('text/plain') || s.dragId; this.setState({dragId:null, overCol:null}); const t = this.state.tickets.find(x=>x.id===id); if (t && t.status!==k) this.move(id,k,null); } };
+    });
+
+    const bill = t => { const sub = t.items.reduce((a,i)=>a+i.cost*i.qty,0); return {sub, tax:sub*0.18, total:sub*1.18}; };
+
+    let detail = null;
+    const dt = s.tickets.find(t=>t.id===s.detailId);
+    if (dt){
+      const b = bill(dt), editable = dt.status==='in_progress'||dt.status==='on_hold';
+      const cur = ORDER.indexOf(dt.status);
+      const nexts = { open:['in_progress','cancelled'], in_progress:['on_hold','completed','open','cancelled'], on_hold:['in_progress','completed','cancelled'], completed:['in_progress'], delivered:['completed'], cancelled:[] }[dt.status];
+      const timeline = [{title:'Created as Open', actor:'Rekha M', when:fmtDT(dt.createdAt), comment:'', color:S.open.color},
+        ...dt.history.map(h=>({title:S[h.from].label+' → '+S[h.to].label, actor:h.actor, when:fmtDT(h.at||new Date(now - h.age*DAY)), comment:h.comment, color:S[h.to].color}))].reverse();
+      detail = { ...S[dt.status], num:dt.num, customer:dt.customer, model:dt.model, store:dt.store, phone:dt.phone, serial:dt.serial, issue:dt.issue, tech:dt.tech,
+        created:fmtDT(dt.createdAt), eta:fmtDate(dt.eta), isCompleted: dt.status==='completed', editable, locked: ['completed','delivered'].includes(dt.status),
+        steps: ORDER.map((k,i)=>({label:S[k].label, bar: dt.status==='cancelled' ? '#fce9e9' : i<=cur ? S[dt.status].color : '#ececef', text: i===cur ? '#18181b' : '#a1a1aa'})),
+        moves: nexts.map(k=>({label: (ORDER.indexOf(k)<cur && k!=='cancelled' ? '← ' : k==='cancelled'?'':'→ ')+S[k].label, bg: k==='completed'?'#18181b':'#fff', color: k==='completed'?'#fff':k==='cancelled'?'#b91c1c':'#18181b', onClick:()=>this.move(dt.id,k,null)})),
+        items: dt.items.map(li=>({type:li.type, name:li.name, qty:li.qty, total:inr(li.cost*li.qty), canRemove:editable, onRemove:()=>this.update(dt.id,x=>({...x,items:x.items.filter(i=>i.lid!==li.lid)}))})),
+        subtotal:inr(b.sub), tax:inr(b.tax), total:inr(b.total), timeline };
+    }
+
+    const reportBase = visible.filter(t => !s.storeFilter||t.store===s.storeFilter);
+    const reportRows = reportBase.filter(t=>!s.statusFilter.length||s.statusFilter.includes(t.status)).map(t=>({ ...S[t.status], num:t.num, customer:t.customer, phone:t.phone, model:t.model, store:t.store, techName:t.tech||'—', created:fmtDate(t.createdAt), total:inr(bill(t).total), onOpen:()=>this.setState({detailId:t.id}) }));
+    const openCount = reportBase.filter(t=>['open','in_progress','on_hold'].includes(t.status)).length;
+    const doneList = reportBase.filter(t=>['completed','delivered'].includes(t.status));
+    const revenue = reportBase.filter(t=>t.status==='delivered').reduce((a,t)=>a+bill(t).total,0);
+    const avg = doneList.length ? (doneList.reduce((a,t)=>a+daysOpen(t),0)/doneList.length).toFixed(1)+' days' : '—';
+
+    const navDefs = [['board','Board',visible.filter(t=>t.status!=='cancelled'&&t.status!=='delivered').length],['new','New ticket',''],...(isAdmin?[['reports','Reports','']]:[])];
+    const navItem = ([k,l,c])=>({label:l,count:c,bg:s.screen===k?'#f0f0f2':'transparent',color:s.screen===k?'#18181b':'#52525b',onClick:()=>this.setState({screen:k, createdId:null})});
+    const mainNav = navDefs.map(navItem);
+    const adminNav = [...(isAdmin?[['team','Team',''],['stores','Stores','']]:[]), ...(role==='super_admin'?[['models','Machine models',''],['catalogue','Catalogue','']]:[])].map(navItem);
+    const nav = wide ? mainNav : [...mainNav, ...adminNav];
+
+    const created = s.createdId ? (()=>{ const t = s.tickets.find(x=>x.id===s.createdId); const hist = s.tickets.filter(x=>x.model.toLowerCase()===t.model.toLowerCase() && x.id!==t.id).map(x=>({num:x.num,...S[x.status]})); return {num:t.num, model:t.model, history:hist, hasHistory:hist.length>0, noHistory:hist.length===0}; })() : null;
+    const setF = k => e => this.setState({form:{...this.state.form,[k]:e.target.value}});
+    const n = s.width;
+    const sheetT = s.tickets.find(t=>t.id===s.sheetId);
+    const sheet = sheetT ? { num:sheetT.num, customer:sheetT.customer, current:S[sheetT.status].label,
+      options: [...ORDER,'cancelled'].map(k=>{ const cur=k===sheetT.status; const err=cur?null:checkTransition(role,sheetT.status,k,null); const ok=!cur && (!err||err==='comment_required');
+        return {label:S[k].label, dot:S[k].color, weight:cur?600:500, disabled:!ok, opacity:ok||cur?1:0.4,
+          note: cur?'Current': err==='role_not_permitted'?'Not permitted': !ok?'Not allowed': err==='comment_required'?'Needs a comment':'',
+          onClick:()=>{ this.setState({sheetId:null}); this.move(sheetT.id,k,null); }}; }),
+      onOpenTicket:()=>this.setState({sheetId:null, detailId:sheetT.id}) } : null;
+    const ghost = s.ghost ? { num:s.ghost.num, customer:s.ghost.customer, left:(s.ghost.x-110)+'px', top:(s.ghost.y-70)+'px', target: s.overCol ? 'Drop in '+S[s.overCol].label : 'Drag to a column' } : null;
+
+    return {
+      ...this.adminVals(s, role, scopedStores, isAdmin), adminNav, hasAdminNav: wide && adminNav.length>0,
+      isLogin: s.screen==='login', isApp: s.screen!=='login', isBoard: s.screen==='board', isNew: s.screen==='new', isReports: s.screen==='reports' && isAdmin,
+      isWide: wide, isNarrow: !wide, listMode: n<760, tableMode: n>=760,
+      boardRef:this.boardRef, sheet, ghost, closeSheet:()=>this.setState({sheetId:null}), stopProp:e=>e.stopPropagation(),
+      sheetAlign: n<640?'flex-end':'center', sheetPad: n<640?'0':'20px', sheetRadius: n<640?'16px 16px 0 0':'14px',
+      boardHint: n<1024 ? 'Hold a card to drag it or move it' : 'Live · refreshes every 30s', loginCols: n>=900 ? '1fr 1fr' : '1fr', formCols: n>=640 ? '1fr 1fr' : '1fr', kpiCols: n>=1000 ? 'repeat(4,minmax(0,1fr))' : 'repeat(2,minmax(0,1fr))',
+      colWidth: n<640 ? '82vw' : density==='compact' ? '232px' : '272px',
+      nav, userName:this.userName(), userInitials:initials(this.userName()), roleLabel:ROLE_LABELS[role],
+      scopeLabel: role==='super_admin' ? 'All stores' : role==='admin' ? scopedStores.length+' stores' : 'Balepet',
+      q:s.q, storeFilter:s.storeFilter, techFilter:s.techFilter, showCancelled:s.showCancelled, storeOptions:scopedStores, techOptions:s.users.filter(u=>u.role==='technician'&&u.active&&u.stores.some(x=>scopedStores.includes(x))).map(u=>u.name), modelOptions:s.models.filter(m=>m.active).map(m=>m.manufacturer+' '+m.name),
+      cancelBg: s.showCancelled?'#fef2f2':'#fff', cancelBorder: s.showCancelled?'#fca5a5':'#e4e4e7', cancelColor: s.showCancelled?'#9c1717':'#3f3f46',
+      hasFilters: !!(s.q||s.storeFilter||s.techFilter||s.showCancelled),
+      onQ:e=>this.setState({q:e.target.value}), onStore:e=>this.setState({storeFilter:e.target.value}), onTech:e=>this.setState({techFilter:e.target.value}),
+      toggleCancelled:()=>this.setState(x=>({showCancelled:!x.showCancelled})), clearFilters:()=>this.setState({q:'',storeFilter:'',techFilter:'',showCancelled:false}),
+      columns, onDragEnd:()=>this.setState({dragId:null, overCol:null}),
+      detail, closeDetail:()=>this.setState({detailId:null}), cannotAssign: !(isAdmin||role==='service_manager'),
+      onAssign:e=>{ const v=e.target.value; this.update(dt.id,x=>({...x,tech:v})); this.say(v?'Assigned to '+v+'.':'Technician unassigned.'); },
+      otp:s.otp, onOtp:e=>this.setState({otp:e.target.value.replace(/\D/g,'')}),
+      onVerify:()=>{ if (s.otp.length!==6){ this.say('Enter the 6-digit code the customer received.', true); return; } this.move(dt.id,'delivered','OTP verified'); this.setState({otp:''}); },
+      onResend:()=>this.say('A new code has been sent to '+dt.phone+'.'),
+      catalogue: [...s.parts,...s.services].filter(c=>c.active).map(c=>({id:c.id, optionLabel:c.type+' · '+c.name+' — '+inr(c.cost)})), addItem:s.addItem, onAddItem:e=>this.setState({addItem:e.target.value}),
+      onAddLine:()=>{ const c = [...s.parts,...s.services].find(x=>x.id===s.addItem); if(!c) return; this.update(dt.id,x=>({...x,items:[...x.items,{lid:'l'+Date.now(),...c,qty:1}]})); this.setState({addItem:''}); },
+      pending:s.pending, pendingComment:s.pendingComment, onPendingComment:e=>this.setState({pendingComment:e.target.value}),
+      cancelPending:()=>this.setState({pending:null}), confirmPending:e=>{ e.preventDefault(); const p=s.pending; this.setState({pending:null}); this.move(p.id,p.to,s.pendingComment.trim()); },
+      toast:s.toast, toastBg: s.toastErr?'#b91c1c':'#18181b',
+      kpis:[{label:'Open tickets',value:openCount},{label:'Completed / delivered',value:doneList.length},{label:'Avg. days to complete',value:avg},{label:'Delivered revenue',value:inr(revenue).replace(/\.00$/,'')}],
+      statusChips: Object.keys(S).map(k=>{ const on=s.statusFilter.includes(k); return {label:S[k].label, dot:S[k].color, bg:on?S[k].bg:'#fff', color:on?S[k].color:'#52525b', border:on?S[k].color:'#e4e4e7',
+        onClick:()=>this.setState(x=>({statusFilter: on ? x.statusFilter.filter(y=>y!==k) : [...x.statusFilter,k]}))}; }),
+      reportRows, reportCount: reportRows.length+' tickets', onExport:()=>this.say('Export is wired to /api/reports in the app.'),
+      form:s.form, f:{store:setF('store'),customer:setF('customer'),phone:setF('phone'),alt:setF('alt'),model:setF('model'),serial:setF('serial'),issue:setF('issue'),eta:setF('eta')},
+      notCreated: !created, created,
+      onCreate:e=>{ e.preventDefault(); const f=s.form; const id='t'+s.seq; const t={id,num:'SS-'+String(s.seq).padStart(5,'0'),store:f.store,customer:f.customer,phone:f.phone,model:f.model,serial:f.serial,issue:f.issue,status:'open',tech:'',createdAt:new Date(now),eta:f.eta?new Date(f.eta):null,items:[],history:[]};
+        this.setState(x=>({tickets:[t,...x.tickets], seq:x.seq+1, createdId:id, form:{store:'',customer:'',phone:'',alt:'',model:'',serial:'',issue:'',eta:''}})); },
+      openCreated:()=>this.setState({detailId:s.createdId, screen:'board', createdId:null}), resetNew:()=>this.setState({createdId:null}),
+      goNew:()=>this.setState({screen:'new', createdId:null}), goBoard:()=>this.setState({screen:'board'}),
+      loginEmail:s.loginEmail, onLoginEmail:e=>this.setState({loginEmail:e.target.value}), pwType:s.pwVisible?'text':'password', pwLabel:s.pwVisible?'Hide':'Show',
+      togglePw:()=>this.setState(x=>({pwVisible:!x.pwVisible})), onLogin:e=>{ e.preventDefault(); this.setState({screen:'board'}); }, onForgot:e=>{ e.preventDefault(); this.say('A reset link would be emailed to you.'); },
+      onLogout:()=>this.setState({screen:'login', detailId:null}),
+      loginPreview:[{num:'SS-01036',title:'Brother GS 1700 · Farah Khan',...S.in_progress,indent:'0px'},{num:'SS-01022',title:'Brother JA1400 · Meena Kumari',...S.completed,indent:'28px'},{num:'SS-01017',title:'Singer 4423 · Nandini S',...S.delivered,indent:'56px'}]
+    };
+  }
+}
+
+</script>
+</body>
+</html>

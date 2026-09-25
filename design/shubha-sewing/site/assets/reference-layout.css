@@ -1,0 +1,57 @@
+/* Reference-led Home and Shop composition. Shared brand palette retained. */
+.reference-hero{min-height:470px}
+.reference-hero .hero-copy{padding-top:48px;padding-bottom:40px;max-width:610px}
+.reference-hero .hero-copy h1{font-size:clamp(48px,4.4vw,66px);letter-spacing:-2.5px;line-height:1.02;margin-bottom:24px}
+.reference-hero .hero-copy .serif{display:inline-block;font-family:'Segoe Script','Brush Script MT',Georgia,serif;font-size:1.18em;font-weight:400;letter-spacing:-3px;line-height:1.3}
+.reference-hero .hero-copy p{font-size:18px;line-height:1.5;max-width:340px;margin-bottom:0}
+.reference-hero>img{object-position:65% 42%}
+.reference-hero:after{background:linear-gradient(90deg,rgba(249,246,240,.92),rgba(249,246,240,.68) 30%,transparent 58%)}
+.reference-categories{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));padding-top:32px;padding-bottom:32px}
+.reference-category{border:0;border-right:1px solid var(--line);background:transparent;padding:0 14px;display:flex;flex-direction:column;align-items:center;text-align:center;color:var(--ink);min-width:0}
+.reference-category:last-child{border-right:0}
+.icon-disc{width:72px;height:72px;flex-shrink:0;border-radius:50%;background:var(--sand);display:grid;place-items:center}
+.icon-disc svg{width:40px;height:40px}
+.reference-category .icon-disc{margin-bottom:12px}
+.reference-category strong{font-size:15px;line-height:1.4;font-weight:500;margin-bottom:4px}
+.reference-category>span:last-child{font-size:12px;color:var(--muted);line-height:1.5}
+.reference-category:hover strong,.reference-category[aria-pressed=true] strong{color:var(--red)}
+.reference-category[aria-pressed=true] .icon-disc{outline:1px solid var(--red);outline-offset:3px}
+.reference-collection{padding-top:20px;padding-bottom:48px}
+.reference-heading{margin-bottom:30px;align-items:center}
+.reference-heading h2{font-size:30px;font-weight:500;letter-spacing:-.8px;margin:0;padding-bottom:16px;position:relative}
+.reference-heading h2:after{content:'';position:absolute;width:48px;height:2px;background:var(--red);bottom:0;left:0}
+.reference-heading .textlink{color:var(--red);border-color:var(--red);font-size:13px}
+.reference-heading .textlink span{margin-left:18px}
+.reference-reset{background:none;border:0;border-bottom:1px solid var(--red)}
+.products.reference-products{grid-template-columns:repeat(4,minmax(0,1fr));gap:20px}
+.reference-product{background:#fff;border:1px solid rgba(222,223,216,.3);border-radius:10px;overflow:hidden;display:flex;flex-direction:column}
+.reference-product .product-image{aspect-ratio:1.08;background:linear-gradient(#fff,#faf9f6);padding:8px}
+.reference-product .product-image img{width:100%;height:100%;object-fit:contain}
+.reference-product-info{padding:0 14px 12px;display:flex;flex-direction:column;flex:1}
+.reference-product h3{font-size:14px;line-height:1.4;font-weight:600;letter-spacing:-.2px;margin:8px 0 2px}
+.reference-product p{font-size:12px;line-height:1.5;margin:0 0 14px}
+.reference-product .price{display:block;font-size:14px;font-weight:600;margin-top:auto;margin-bottom:12px}
+.reference-actions{display:flex;gap:10px;align-items:center}
+.reference-product button.reference-add{flex:1;border:0;background:var(--sand);border-radius:24px;color:var(--ink);font-size:12px;padding:8px 10px;min-height:38px}
+.reference-product button.reference-add:hover{background:var(--ink);color:var(--paper)}
+.reference-product button.reference-save{border:0;padding:6px;background:none;width:38px;height:38px;display:grid;place-items:center;border-radius:50%}
+.reference-save svg{width:23px;height:23px}
+.reference-save[aria-pressed=true]{color:var(--red)}
+.reference-save[aria-pressed=true] svg{fill:var(--red)}
+.reference-benefits{background:#fff}
+.reference-benefits>.wrap{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));padding-top:30px;padding-bottom:30px;gap:0}
+.reference-benefit{display:flex;align-items:center;gap:14px;border-right:1px solid var(--line);padding:0 18px}
+.reference-benefit:first-child{padding-left:0}.reference-benefit:last-child{padding-right:0;border:0}
+.reference-benefit .icon-disc{width:58px;height:58px}.reference-benefit svg{width:32px;height:32px}
+.reference-benefit strong{display:block;font-size:12px;font-weight:600;margin-bottom:4px}
+.reference-benefit>span>span{display:block;font-size:11px;line-height:1.6;color:var(--muted)}
+.reference-collection .toolbar{padding:8px 0;margin-bottom:16px}
+@media(max-width:1000px) and (min-width:801px){.reference-benefit{gap:9px;padding:0 10px}.reference-benefit .icon-disc{width:42px;height:42px}.reference-category strong{font-size:14px}}
+@media(max-width:800px){
+ .reference-hero{min-height:620px}.reference-hero .hero-copy{padding-top:32px;padding-bottom:30px}.reference-hero .hero-copy h1{font-size:46px;letter-spacing:-2px;margin-bottom:14px}.reference-hero .hero-copy p{font-size:15px;max-width:285px}
+ .reference-hero>img{height:51%;object-position:66% center}.reference-hero:after{background:linear-gradient(#f4eee5 0%,#f4eee5 43%,transparent 63%)}
+ .reference-categories{grid-template-columns:1fr 1fr;gap:26px 0;padding-top:30px;padding-bottom:30px}.reference-category:nth-child(2){border-right:0}.reference-category{padding:0 8px}.reference-category strong{font-size:13px}.reference-category>span:last-child{font-size:11px}.icon-disc{width:60px;height:60px}.icon-disc svg{width:35px;height:35px}
+ .products.reference-products{grid-template-columns:1fr 1fr;gap:14px}.reference-heading{gap:12px}.reference-heading h2{font-size:24px}.reference-heading .textlink{font-size:11px;white-space:normal;text-align:right}.reference-heading .textlink span{margin-left:5px}.reference-collection{padding-top:14px;padding-bottom:36px}
+ .reference-product-info{padding:0 10px 10px}.reference-product h3{font-size:13px}.reference-product p{font-size:11px}.reference-product .price{font-size:13px}.reference-actions{gap:4px}.reference-product button.reference-add{font-size:11px;padding:8px 5px}.reference-product button.reference-save{width:32px;height:38px;padding:4px;flex-shrink:0}
+ .reference-benefits>.wrap{grid-template-columns:1fr 1fr;gap:24px 0}.reference-benefit{padding:0 10px;gap:8px}.reference-benefit:nth-child(2){border:0;padding-right:0}.reference-benefit:nth-child(3){padding-left:0}.reference-benefit .icon-disc{width:42px;height:42px}.reference-benefit svg{width:27px;height:27px}.reference-benefit strong{font-size:11px}.reference-benefit>span>span{font-size:10px}
+}

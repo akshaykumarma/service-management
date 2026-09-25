@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div style="border:1px solid oklch(88% 0.015 80);background:#fff;border-radius:16px;overflow:hidden;display:flex;flex-direction:column;height:100%" style-hover="border-color:oklch(64% 0.17 45)">
+  <div style="position:relative;aspect-ratio:1.1;background:repeating-linear-gradient(135deg, oklch(93% 0.02 75) 0px, oklch(93% 0.02 75) 10px, oklch(90% 0.025 75) 10px, oklch(90% 0.025 75) 20px);display:flex;align-items:center;justify-content:center;padding:14px;text-align:center">
+    <sc-if value="{{ item.tag }}" hint-placeholder-val="{{ false }}">
+      <span style="position:absolute;top:12px;left:12px;background:oklch(20% 0.015 90);color:#fff;font-size:10px;font-weight:600;letter-spacing:.5px;padding:5px 10px;border-radius:12px">{{ item.tag }}</span>
+    </sc-if>
+    <span style="font-family:Consolas,Menlo,monospace;font-size:10px;letter-spacing:.4px;text-transform:uppercase;color:oklch(46% 0.02 85);line-height:1.6">{{ item.brand }} {{ item.name }}<br>product photo</span>
+  </div>
+  <div style="padding:16px;display:flex;flex-direction:column;flex:1">
+    <span style="font-size:11px;color:oklch(46% 0.02 85);margin-bottom:4px">{{ item.category }}</span>
+    <h3 style="font-size:15px;font-weight:600;letter-spacing:-.01em;margin:0 0 8px">{{ item.brand }} {{ item.name }}</h3>
+    <span style="font-size:15px;font-weight:700;margin-top:auto;margin-bottom:14px">{{ item.priceLabel }}</span>
+    <div style="display:flex;gap:10px;align-items:center">
+      <button onClick="{{ item.onAdd }}" style="flex:1;border:0;background:oklch(93% 0.02 75);color:oklch(20% 0.015 90);border-radius:22px;font-size:12px;font-weight:600;padding:10px 12px;cursor:pointer" style-hover="background:oklch(20% 0.015 90);color:#fff">Add to cart</button>
+      <button onClick="{{ item.onToggleSave }}" aria-pressed="{{ item.saved }}" aria-label="Save to wishlist" style="width:38px;height:38px;flex-shrink:0;border-radius:50%;border:1px solid {{ item.saveBorder }};background:none;display:flex;align-items:center;justify-content:center;cursor:pointer">
+        <span style="width:14px;height:14px;border-radius:50%;border:2px solid {{ item.saveColor }};background:{{ item.saveFill }}"></span>
+      </button>
+    </div>
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;item&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;{name:string,brand:string,category:string,tag:string,priceLabel:string,saved:boolean,onAdd:Function,onToggleSave:Function}&quot;}}"></script>
+</body>
+</html>

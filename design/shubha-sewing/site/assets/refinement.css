@@ -1,0 +1,17 @@
+/* Refinement layer: original palette, section order, grids and spacing tokens retained. */
+body{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+h1,h2{text-wrap:balance}h2{letter-spacing:-.045em}p{line-height:1.75}
+.eyebrow{font-size:10px;letter-spacing:2px}
+nav a{position:relative;padding:5px 0}nav a.active:after{content:'';position:absolute;bottom:0;left:0;width:18px;height:1px;background:var(--red)}
+.btn{font-size:12px;letter-spacing:.35px;font-weight:500}
+.textlink{font-size:12px;letter-spacing:.15px;border-bottom-color:var(--line)}.textlink:hover{border-bottom-color:var(--ink)}
+.hero-copy{max-width:660px}.hero-copy h1{font-size:clamp(48px,4.8vw,70px);letter-spacing:-.055em;line-height:1.06}
+.hero-copy h1 .serif{letter-spacing:-.055em}.hero-copy p{max-width:320px;font-size:14px}.hero-note{font-size:10px;letter-spacing:1.2px}
+.product-image{background:var(--sand)}.product-image img{width:82%;height:82%}
+.product h3{font-size:16px;font-weight:500;letter-spacing:-.3px;margin-top:18px}.product p{font-size:12px;margin-top:3px}
+.product .row{padding-top:12px;border-top:1px solid var(--line);align-items:center}.product .price{font-size:13px;font-variant-numeric:tabular-nums}
+.product button{font-size:11px;padding:7px 0;border-bottom:0}.product button:hover{color:var(--red)}
+.home-detail{margin:0;aspect-ratio:1.1;overflow:hidden;background:var(--sand)}.home-detail .editorial{display:block;width:100%;height:100%;object-fit:cover;transform:scale(1.38);transform-origin:68% 43%}
+.studio-intro{display:grid;grid-template-columns:1fr 1fr;column-gap:70px;align-items:end}.studio-intro .eyebrow{grid-column:1/-1}.studio-intro h2{margin:0}.studio-intro p{font-size:14px;max-width:440px}
+.studio-card h3{font-size:18px;font-weight:400;letter-spacing:-.3px;line-height:1.4}.studio-meta{font-size:10px;letter-spacing:.5px}.studio-watch{font-size:11px}.studio-channel{display:inline-block;margin-top:30px}
+@media(max-width:800px){.hero-copy h1{font-size:47px;letter-spacing:-2px}.hero-copy p{max-width:330px}.product .row{display:flex;gap:8px;flex-wrap:wrap}.studio-intro{display:block}.studio-intro h2{margin-bottom:16px}}

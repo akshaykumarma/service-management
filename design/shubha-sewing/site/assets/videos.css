@@ -1,0 +1,18 @@
+/* Only video-section selectors: existing site rules are untouched. */
+.studio-intro{margin-bottom:30px}
+.studio-intro h2{margin-bottom:16px}
+.studio-intro p{margin-bottom:0}
+.studio-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:30px 20px}
+.studio-card{min-width:0}
+.studio-link{display:block}
+.studio-image{position:relative;display:block;aspect-ratio:16/9;overflow:hidden;background:var(--sand)}
+.studio-image img{display:block;width:100%;height:100%;object-fit:cover}
+.studio-play{position:absolute;left:16px;bottom:16px;width:40px;height:40px;display:grid;place-items:center;border:1px solid var(--paper);background:var(--paper);color:var(--ink);border-radius:50%}
+.studio-play svg{width:13px;height:13px;margin-left:2px;fill:currentColor}
+.studio-link:hover .studio-play,.studio-link:focus-visible .studio-play{background:var(--ink);color:var(--paper)}
+.studio-link:hover h3,.studio-link:focus-visible h3{color:var(--red)}
+.studio-meta{display:flex;gap:12px;justify-content:space-between;color:var(--muted);font-size:11px;letter-spacing:1px;margin:16px 0 8px}
+.studio-card h3{font-size:19px;line-height:1.4;margin-bottom:12px}
+.studio-watch{font-size:12px;color:var(--muted)}
+.studio-demo{font-size:12px;margin:30px 0 0;padding-top:20px;border-top:1px solid var(--line);max-width:none}
+@media(max-width:800px){.studio-grid{grid-template-columns:1fr;gap:30px}.studio-card h3{max-width:530px}}
