@@ -63,6 +63,17 @@ const TRANSITION_ERROR_MESSAGES: Record<string, string> = {
   role_not_permitted: "Your role doesn't permit this status change.",
 };
 
+function ageLabel(daysOpen: number): string {
+  return daysOpen === 0 ? "New" : `${daysOpen}d`;
+}
+
+function ageTier(daysOpen: number): "fresh" | "normal" | "warm" | "hot" {
+  if (daysOpen === 0) return "fresh";
+  if (daysOpen <= 3) return "normal";
+  if (daysOpen <= 7) return "warm";
+  return "hot";
+}
+
 function TicketCardItem({ ticket }: { ticket: TicketCard }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: ticket.id,
@@ -89,11 +100,15 @@ function TicketCardItem({ ticket }: { ticket: TicketCard }) {
         className="board-card__link"
         onClick={(e) => isDragging && e.preventDefault()}
       >
-        <strong>{ticket.ticketNumber}</strong>
-        <div>{ticket.customerName}</div>
-        <div>{ticket.machineModel}</div>
-        <div>Created {formatDate(ticket.createdAt)}</div>
-        <div>{ticket.daysOpen} day(s) open</div>
+        <div className="board-card__top">
+          <span className="board-card__num">{ticket.ticketNumber}</span>
+          <span className={`board-card__age board-card__age--${ageTier(ticket.daysOpen)}`}>
+            {ageLabel(ticket.daysOpen)}
+          </span>
+        </div>
+        <div className="board-card__customer">{ticket.customerName}</div>
+        <div className="board-card__model">{ticket.machineModel}</div>
+        <div className="board-card__footer">Created {formatDate(ticket.createdAt)}</div>
       </a>
     </li>
   );

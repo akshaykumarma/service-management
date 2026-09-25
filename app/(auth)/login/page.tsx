@@ -49,7 +49,8 @@ export default function LoginPage() {
 
   return (
     <main>
-      <h1>Log in</h1>
+      <h1>Log in to Service Desk</h1>
+      <p className="auth-shell__subtitle">Tickets, delivery and billing for every store.</p>
       <form onSubmit={handleSubmit} noValidate>
         <div>
           <label htmlFor="email" className="required">

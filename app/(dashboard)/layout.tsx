@@ -12,9 +12,9 @@ export default async function DashboardGroupLayout({ children }: { children: Rea
   }
 
   return (
-    <>
+    <div className="app-shell">
       <NavHeader name={session.user.name} role={session.user.role} />
       {children}
-    </>
+    </div>
   );
 }
