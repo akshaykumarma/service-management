@@ -108,6 +108,7 @@ describe("POST/PATCH /api/admin/stores", () => {
         cookie,
         body: {
           name: "Koramangala",
+          storeCode: "KOR",
           address: "123 Main St",
           primaryContact: "Ravi",
           whatsappNumber: "+919876543210",
@@ -128,6 +129,7 @@ describe("POST/PATCH /api/admin/stores", () => {
         cookie,
         body: {
           name: "No Tax Store",
+          storeCode: "NTS",
           address: "123 Main St",
           primaryContact: "Ravi",
           whatsappNumber: "+919876543210",
@@ -139,13 +141,59 @@ describe("POST/PATCH /api/admin/stores", () => {
     expect(body.store.taxRate).toBe(0);
   });
 
+  it("400s missing_required_field when storeCode is absent (post-v1, mandatory per-store ticket-number prefix)", async () => {
+    const cookie = await superAdminCookie();
+    const res = await storesPOST(
+      jsonRequest("/api/admin/stores", {
+        method: "POST",
+        cookie,
+        body: { name: "X", address: "A", primaryContact: "B", whatsappNumber: "+919876543210", taxRate: 18 },
+      }),
+    );
+    expect(res.status).toBe(400);
+    expect((await res.json()).error.field).toBe("storeCode");
+  });
+
+  it("400s invalid_store_code for anything but exactly 3 letters", async () => {
+    const cookie = await superAdminCookie();
+    const res = await storesPOST(
+      jsonRequest("/api/admin/stores", {
+        method: "POST",
+        cookie,
+        body: { name: "X", storeCode: "AB1", address: "A", primaryContact: "B", whatsappNumber: "+919876543210", taxRate: 18 },
+      }),
+    );
+    expect(res.status).toBe(400);
+    expect((await res.json()).error.code).toBe("invalid_store_code");
+  });
+
+  it("409s store_code_already_registered for a code another store already has (case-insensitively)", async () => {
+    const cookie = await superAdminCookie();
+    await storesPOST(
+      jsonRequest("/api/admin/stores", {
+        method: "POST",
+        cookie,
+        body: { name: "X", storeCode: "ABC", address: "A", primaryContact: "B", whatsappNumber: "+919876543210", taxRate: 18 },
+      }),
+    );
+    const res = await storesPOST(
+      jsonRequest("/api/admin/stores", {
+        method: "POST",
+        cookie,
+        body: { name: "Y", storeCode: "abc", address: "A", primaryContact: "B", whatsappNumber: "+919876543210", taxRate: 18 },
+      }),
+    );
+    expect(res.status).toBe(409);
+    expect((await res.json()).error.code).toBe("store_code_already_registered");
+  });
+
   it("400s invalid_tax_rate outside [0, 100]", async () => {
     const cookie = await superAdminCookie();
     const res = await storesPOST(
       jsonRequest("/api/admin/stores", {
         method: "POST",
         cookie,
-        body: { name: "X", address: "A", primaryContact: "B", whatsappNumber: "+919876543210", taxRate: 150 },
+        body: { name: "X", storeCode: "ABC", address: "A", primaryContact: "B", whatsappNumber: "+919876543210", taxRate: 150 },
       }),
     );
     expect(res.status).toBe(400);
@@ -158,7 +206,7 @@ describe("POST/PATCH /api/admin/stores", () => {
       jsonRequest("/api/admin/stores", {
         method: "POST",
         cookie,
-        body: { name: "X", address: "A", primaryContact: "B", whatsappNumber: "+919876543210", taxRate: 18 },
+        body: { name: "X", storeCode: "ABC", address: "A", primaryContact: "B", whatsappNumber: "+919876543210", taxRate: 18 },
       }),
     );
     const { store } = await createRes.json();
@@ -177,7 +225,7 @@ describe("POST/PATCH /api/admin/stores", () => {
       jsonRequest("/api/admin/stores", {
         method: "POST",
         cookie,
-        body: { name: "Y", address: "A", primaryContact: "B", whatsappNumber: "not-a-number", taxRate: 18 },
+        body: { name: "Y", storeCode: "WYE", address: "A", primaryContact: "B", whatsappNumber: "not-a-number", taxRate: 18 },
       }),
     );
     expect(res.status).toBe(400);
@@ -231,7 +279,14 @@ describe("POST/PATCH /api/admin/stores", () => {
       jsonRequest("/api/admin/stores", {
         method: "POST",
         cookie,
-        body: { name: "Admin-Created Store", address: "A", primaryContact: "B", whatsappNumber: "+919876543210", taxRate: 18 },
+        body: {
+          name: "Admin-Created Store",
+          storeCode: "ADM",
+          address: "A",
+          primaryContact: "B",
+          whatsappNumber: "+919876543210",
+          taxRate: 18,
+        },
       }),
     );
     expect(createRes.status).toBe(201);

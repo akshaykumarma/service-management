@@ -8,7 +8,15 @@ let counter = 0;
 export async function createStore(
   nameOrOpts?:
     | string
-    | { name?: string; active?: boolean; whatsappNumber?: string; address?: string; primaryContact?: string; taxRate?: string },
+    | {
+        name?: string;
+        storeCode?: string;
+        active?: boolean;
+        whatsappNumber?: string;
+        address?: string;
+        primaryContact?: string;
+        taxRate?: string;
+      },
 ): Promise<typeof stores.$inferSelect> {
   counter += 1;
   const opts = typeof nameOrOpts === "string" ? { name: nameOrOpts } : (nameOrOpts ?? {});
@@ -16,6 +24,10 @@ export async function createStore(
     .insert(stores)
     .values({
       name: opts.name ?? `Test Store ${counter}`,
+      // Base-36 keeps this a real 3-character code (this app's own creation rule) for
+      // every counter value up to 36^3 - 1 — comfortably more than one test run ever
+      // creates — while staying unique per call without callers needing to think about it.
+      storeCode: opts.storeCode ?? counter.toString(36).toUpperCase().padStart(3, "0"),
       // Defaults to a usable, active store with a valid contact number: 007-admin-console
       // introduced active/whatsappNumber as real gates on store usability, but almost
       // every existing test across 002-006 just needs "a store that works" and predates

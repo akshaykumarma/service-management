@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import PasswordInput from "@/components/password-input";
 import Modal from "@/components/modal";
+import { DEFAULT_TECHNICIAN_PASSWORD } from "@/lib/auth/password-policy";
 
 interface StaffUser {
   id: string;
@@ -374,17 +375,21 @@ export default function TeamPageClient({ callerRole }: { callerRole: "super_admi
             )}
             {!editingUser && (
               <div>
-                <label htmlFor="password" className="required">
-                  Password
+                <label htmlFor="password" className={formRole === "technician" ? undefined : "required"}>
+                  Password{formRole === "technician" ? " (optional)" : ""}
                 </label>
                 <PasswordInput
                   id="password"
                   autoComplete="new-password"
-                  required
+                  required={formRole !== "technician"}
                   value={formPassword}
                   onChange={setFormPassword}
                 />
-                <small>{PASSWORD_HINT}</small>
+                <small>
+                  {formRole === "technician"
+                    ? `Leave blank to use the default password (${DEFAULT_TECHNICIAN_PASSWORD}). ${PASSWORD_HINT}`
+                    : PASSWORD_HINT}
+                </small>
               </div>
             )}
             {formError && (

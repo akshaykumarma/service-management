@@ -52,6 +52,12 @@ detail page's Intake information, right after Machine model. Mandatory only goin
 forward: tickets created before this requirement existed may have `serialNumber: null`,
 so `GET`/detail responses still type it as `string | null`.
 
+**Deviation** (post-v1, per direct product feedback): `ticketNumber`'s prefix is the
+ticket's own store's `storeCode` (`007-admin-console`'s mandatory 3-letter field,
+`specs/007-admin-console/contracts/admin-console-api.md`), not a flat `SVC` shared by
+every store — so the format is `{storeCode}-{year}-{5-digit store+year-scoped sequence}`,
+e.g. `BAL-2026-00001`, rather than `SVC-2026-00001` for every store as originally specced.
+
 **Responses**:
 - `201 { "ticket": { "id", "ticketNumber", "status": "open", "createdAt", ... }, "history": { "found": boolean, "entries": [...] } }` —
   `history` is the FR-007/FR-008 lookup result, returned inline so the creator sees it

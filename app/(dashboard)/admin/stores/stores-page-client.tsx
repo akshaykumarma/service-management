@@ -6,6 +6,7 @@ import Modal from "@/components/modal";
 interface Store {
   id: string;
   name: string;
+  storeCode: string;
   address: string | null;
   primaryContact: string | null;
   whatsappNumber: string | null;
@@ -26,6 +27,8 @@ const STORE_ERROR_MESSAGES: Record<string, string> = {
   invalid_tax_rate: "Tax rate must be between 0 and 100.",
   invalid_whatsapp_number: "WhatsApp number must be in international format, e.g. +919876543210.",
   whatsapp_number_required_to_activate: "A valid WhatsApp number is required before this store can be activated.",
+  invalid_store_code: "Store code must be exactly 3 letters.",
+  store_code_already_registered: "That store code is already in use by another store.",
 };
 
 export default function StoresPageClient({ callerRole }: { callerRole: "super_admin" | "admin" }) {
@@ -40,6 +43,7 @@ export default function StoresPageClient({ callerRole }: { callerRole: "super_ad
   const [modalOpen, setModalOpen] = useState(false);
   const [editingStore, setEditingStore] = useState<Store | null>(null);
   const [formName, setFormName] = useState("");
+  const [formStoreCode, setFormStoreCode] = useState("");
   const [formAddress, setFormAddress] = useState("");
   const [formPrimaryContact, setFormPrimaryContact] = useState("");
   const [formWhatsapp, setFormWhatsapp] = useState("");
@@ -60,6 +64,7 @@ export default function StoresPageClient({ callerRole }: { callerRole: "super_ad
   function openCreateModal() {
     setEditingStore(null);
     setFormName("");
+    setFormStoreCode("");
     setFormAddress("");
     setFormPrimaryContact("");
     setFormWhatsapp("");
@@ -71,6 +76,7 @@ export default function StoresPageClient({ callerRole }: { callerRole: "super_ad
   function openEditModal(store: Store) {
     setEditingStore(store);
     setFormName(store.name);
+    setFormStoreCode(store.storeCode);
     setFormAddress(store.address ?? "");
     setFormPrimaryContact(store.primaryContact ?? "");
     setFormWhatsapp(store.whatsappNumber ?? "");
@@ -83,13 +89,16 @@ export default function StoresPageClient({ callerRole }: { callerRole: "super_ad
     e.preventDefault();
     setFormError(null);
     setSubmitting(true);
-    const payload = {
+    const payload: Record<string, unknown> = {
       name: formName,
       address: formAddress,
       primaryContact: formPrimaryContact,
       whatsappNumber: formWhatsapp,
       taxRate: Number(formTaxRate),
     };
+    // Immutable once set — the API ignores storeCode on PATCH anyway, but this keeps the
+    // create-only intent explicit here too.
+    if (!editingStore) payload.storeCode = formStoreCode.toUpperCase();
     const res = editingStore
       ? await fetch(`/api/admin/stores/${editingStore.id}`, {
           method: "PATCH",
@@ -200,6 +209,7 @@ export default function StoresPageClient({ callerRole }: { callerRole: "super_ad
             <thead>
               <tr>
                 <th scope="col">Name</th>
+                <th scope="col">Store code</th>
                 <th scope="col">Address</th>
                 <th scope="col">Primary contact</th>
                 <th scope="col">WhatsApp number</th>
@@ -215,6 +225,7 @@ export default function StoresPageClient({ callerRole }: { callerRole: "super_ad
                 return (
                   <tr key={store.id} aria-label={store.name}>
                     <td>{store.name}</td>
+                    <td>{store.storeCode}</td>
                     <td>{store.address}</td>
                     <td>{store.primaryContact}</td>
                     <td>{store.whatsappNumber ?? "—"}</td>
@@ -289,6 +300,21 @@ export default function StoresPageClient({ callerRole }: { callerRole: "super_ad
                 Name
               </label>
               <input id="storeName" required value={formName} onChange={(e) => setFormName(e.target.value)} />
+            </div>
+            <div>
+              <label htmlFor="storeCode" className={editingStore ? undefined : "required"}>
+                Store code{editingStore ? " (cannot be changed here)" : ""}
+              </label>
+              <input
+                id="storeCode"
+                required={!editingStore}
+                disabled={!!editingStore}
+                maxLength={3}
+                style={{ textTransform: "uppercase" }}
+                value={formStoreCode}
+                onChange={(e) => setFormStoreCode(e.target.value)}
+              />
+              {!editingStore && <small>Exactly 3 letters — used as this store&apos;s ticket number prefix.</small>}
             </div>
             <div>
               <label htmlFor="storeAddress" className="required">

@@ -147,6 +147,7 @@ import { GET as usersGET, POST as usersPOST } from "@/app/api/auth/users/route";
 import { PATCH as userPATCH } from "@/app/api/auth/users/[id]/route";
 import { POST as resetPasswordPOST } from "@/app/api/auth/users/[id]/reset-password/route";
 import { createStore } from "../helpers/factories";
+import { DEFAULT_TECHNICIAN_PASSWORD } from "@/lib/auth/password-policy";
 
 async function loginAs(email: string, password: string) {
   const res = await loginPOST(jsonRequest("/api/auth/login", { method: "POST", body: { email, password } }));
@@ -198,6 +199,50 @@ describe("POST /api/auth/users", () => {
           role: "service_manager",
           storeIds: [store.id],
           password: "lowercase1",
+        },
+      }),
+    );
+    expect(res.status).toBe(400);
+    expect((await res.json()).error.code).toBe("invalid_password");
+  });
+
+  it("creates a Technician with no password given, defaulting to DEFAULT_TECHNICIAN_PASSWORD (post-v1 product feedback)", async () => {
+    const superAdmin = await createUser({ role: "super_admin", password: "Correct123!" });
+    const store = await createStore();
+    const cookie = await loginAs(superAdmin.email, "Correct123!");
+
+    const res = await usersPOST(
+      jsonRequest("/api/auth/users", {
+        method: "POST",
+        cookie,
+        body: {
+          name: "New Tech",
+          email: "newtech@example.com",
+          role: "technician",
+          storeIds: [store.id],
+        },
+      }),
+    );
+    expect(res.status).toBe(201);
+
+    const techCookie = await loginAs("newtech@example.com", DEFAULT_TECHNICIAN_PASSWORD);
+    expect(techCookie).toBeTruthy();
+  });
+
+  it("still requires a password for a Service Manager (the optional-password default is Technician-only)", async () => {
+    const superAdmin = await createUser({ role: "super_admin", password: "Correct123!" });
+    const store = await createStore();
+    const cookie = await loginAs(superAdmin.email, "Correct123!");
+
+    const res = await usersPOST(
+      jsonRequest("/api/auth/users", {
+        method: "POST",
+        cookie,
+        body: {
+          name: "New SM",
+          email: "nopasswordsm@example.com",
+          role: "service_manager",
+          storeIds: [store.id],
         },
       }),
     );

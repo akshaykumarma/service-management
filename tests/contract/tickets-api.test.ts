@@ -85,7 +85,9 @@ describe("POST /api/tickets", () => {
     expect(res.status).toBe(201);
     const body = await res.json();
     expect(body.ticket.status).toBe("open");
-    expect(body.ticket.ticketNumber).toMatch(/^SVC-\d{4}-\d{5}$/);
+    // Deviation (post-v1, per direct product feedback): the prefix is this ticket's own
+    // store's storeCode, not a flat "SVC" (lib/tickets/ticket-number.ts).
+    expect(body.ticket.ticketNumber).toMatch(new RegExp(`^${store.storeCode}-\\d{4}-\\d{5}$`));
     expect(body.history.found).toBe(false);
   });
 

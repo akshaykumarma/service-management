@@ -5,8 +5,17 @@ import { stores } from "@/lib/db/schema";
 export type StoreError =
   | "invalid_tax_rate"
   | "invalid_whatsapp_number"
+  | "invalid_store_code"
+  | "store_code_already_registered"
   | "whatsapp_number_required_to_activate"
   | "not_found";
+
+// Post-v1 product feedback: every store gets a mandatory 3-letter code, used as the
+// ticket-number prefix in place of the old flat "SVC" (lib/tickets/ticket-number.ts).
+// Letters only (no digits/punctuation) since it reads as a short mnemonic, not an id.
+export function isValidStoreCode(value: unknown): value is string {
+  return typeof value === "string" && /^[A-Za-z]{3}$/.test(value);
+}
 
 /**
  * E.164-style format check only (`research.md` §4) — a store's WhatsApp number is
@@ -23,6 +32,7 @@ export function isValidTaxRate(value: unknown): value is number {
 
 export async function createStore(input: {
   name: string;
+  storeCode: string;
   address: string;
   primaryContact: string;
   whatsappNumber: string;
@@ -31,10 +41,17 @@ export async function createStore(input: {
   if (!isValidTaxRate(input.taxRate)) return { error: "invalid_tax_rate" };
   if (!isValidWhatsAppNumber(input.whatsappNumber)) return { error: "invalid_whatsapp_number" };
 
+  const normalizedStoreCode = typeof input.storeCode === "string" ? input.storeCode.toUpperCase() : input.storeCode;
+  if (!isValidStoreCode(normalizedStoreCode)) return { error: "invalid_store_code" };
+
+  const existingCode = await db.select().from(stores).where(eq(stores.storeCode, normalizedStoreCode)).limit(1);
+  if (existingCode.length > 0) return { error: "store_code_already_registered" };
+
   const [store] = await db
     .insert(stores)
     .values({
       name: input.name,
+      storeCode: normalizedStoreCode,
       address: input.address,
       primaryContact: input.primaryContact,
       whatsappNumber: input.whatsappNumber,

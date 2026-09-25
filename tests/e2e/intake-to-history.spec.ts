@@ -22,11 +22,13 @@ test.describe("Intake to history", () => {
     await page.getByLabel("Issue description").fill("Playwright end-to-end intake test");
     await page.getByRole("button", { name: "Create ticket" }).click();
 
-    await expect(page.getByRole("heading", { name: /ticket created: svc-\d{4}-\d{5}/i })).toBeVisible();
+    // The prefix is the selected store's own storeCode (post-v1 product feedback), not a
+    // fixed "SVC" — only the -{year}-{5-digit sequence} shape is checked here.
+    await expect(page.getByRole("heading", { name: /ticket created: [a-z0-9]+-\d{4}-\d{5}/i })).toBeVisible();
     await expect(page.getByText(/no prior service history/i)).toBeVisible();
 
     await page.getByRole("link", { name: "View full ticket" }).click();
     await expect(page).toHaveURL(/\/tickets\/[0-9a-f-]+$/);
-    await expect(page.getByRole("heading", { name: /SVC-\d{4}-\d{5}/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /[a-z0-9]+-\d{4}-\d{5}/i })).toBeVisible();
   });
 });

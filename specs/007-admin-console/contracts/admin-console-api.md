@@ -41,13 +41,26 @@ always `200`; failures are in the body (FR-004), same pattern as `004`'s parts i
 
 ## `GET /api/admin/stores` / `POST /api/admin/stores`
 
-**Request (POST)**: `{ "name", "address", "primaryContact", "whatsappNumber", "taxRate": number }`
+**Request (POST)**: `{ "name", "storeCode", "address", "primaryContact", "whatsappNumber", "taxRate": number }`
 — created with `active: false` by default; must be explicitly activated (see below) once
 `whatsappNumber` validates.
+
+**Deviation** (post-v1, per direct product feedback): `storeCode` — exactly 3 letters,
+unique across stores (case-insensitively; stored uppercased) — is a new mandatory field.
+It's the prefix `lib/tickets/ticket-number.ts` uses for every ticket created at this store
+(`{storeCode}-{year}-{5-digit sequence}`), replacing the old flat `SVC` prefix used by
+every store. Immutable once set — not accepted by `PATCH` below. Every store that predates
+this field was backfilled by migration `0014` from the first 3 letters of its own name,
+disambiguated with a numeric suffix wherever two existing stores' names collided on the
+same 3 letters (so a handful of legacy rows have a code longer than 3 characters — only
+ever possible for pre-migration data, never for a store created through this endpoint).
 
 **Responses**:
 - `201 { "store": {...}, "active": false } }`
 - `400 { code: "invalid_tax_rate" }` — outside `[0, 100]`
+- `400 { code: "missing_required_field", field: "storeCode" }` — absent/blank
+- `400 { code: "invalid_store_code" }` — not exactly 3 letters
+- `409 { code: "store_code_already_registered" }` — another store already has this code
 
 ---
 
@@ -56,6 +69,7 @@ always `200`; failures are in the body (FR-004), same pattern as `004`'s parts i
 Edits fields and/or toggles `active`.
 
 **Request**: any subset of `{ "name", "address", "primaryContact", "whatsappNumber", "taxRate", "active": boolean }`
+— `storeCode` is immutable and not accepted here (silently ignored if sent).
 
 **Responses**:
 - `200 { "store": {...} }`

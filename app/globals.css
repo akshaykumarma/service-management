@@ -644,6 +644,12 @@ button.app-header__menu-toggle {
   box-shadow: var(--shadow-sm);
   font-size: 0.85rem;
   transition: box-shadow 0.15s ease, border-color 0.15s ease;
+  /* dnd-kit's PointerSensor unifies mouse/touch/pen, but on a touchscreen the browser's
+     own native scroll/pan gesture still wins over it by default — the board never
+     dragged on mobile because of this. touch-action: none hands all touch handling on
+     the card to JS instead, letting the drag actually start; the board's own background
+     (outside the cards) still scrolls normally. */
+  touch-action: none;
 }
 
 .board-card:hover {

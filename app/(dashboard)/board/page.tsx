@@ -61,6 +61,7 @@ const STATUS_LABELS: Record<string, string> = {
 const TRANSITION_ERROR_MESSAGES: Record<string, string> = {
   invalid_transition: "That status change isn't allowed from the current status.",
   role_not_permitted: "Your role doesn't permit this status change.",
+  comment_required: "A comment is required for this transition. Drag the card again to provide one.",
 };
 
 function ageLabel(daysOpen: number): string {
@@ -280,6 +281,11 @@ export default function BoardPage() {
         await attemptTransition(ticketId, toStatus, provided);
         return;
       }
+      // Cancelled, left blank, or the browser silently blocked the prompt (e.g. after
+      // "Prevent this page from creating additional dialogs" is ticked) — previously this
+      // reverted the card with no feedback at all, which looked exactly like "the drag
+      // didn't work." Surface the same message the ticket detail page's own form shows.
+      setError(TRANSITION_ERROR_MESSAGES.comment_required ?? "A comment is required for this transition.");
     } else {
       setError(TRANSITION_ERROR_MESSAGES[body.error.code] ?? "Could not update status.");
     }

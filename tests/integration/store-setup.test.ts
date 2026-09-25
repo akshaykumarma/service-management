@@ -21,7 +21,14 @@ describe("Store setup flowing into billing (User Story 2)", () => {
       jsonRequest("/api/admin/stores", {
         method: "POST",
         cookie,
-        body: { name: "Koramangala", address: "1 Main St", primaryContact: "Ravi", whatsappNumber: "+919876543210", taxRate: 18 },
+        body: {
+          name: "Koramangala",
+          storeCode: "KOR",
+          address: "1 Main St",
+          primaryContact: "Ravi",
+          whatsappNumber: "+919876543210",
+          taxRate: 18,
+        },
       }),
     );
     const { store } = await createRes.json();

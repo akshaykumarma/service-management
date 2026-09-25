@@ -4,7 +4,7 @@ import { db } from "@/lib/db/client";
 import { stores, users, userStores } from "@/lib/db/schema";
 import { hashPassword } from "@/lib/auth/auth.config";
 import { isValidEmail } from "@/lib/auth/email-validation";
-import { isValidPassword } from "@/lib/auth/password-policy";
+import { DEFAULT_TECHNICIAN_PASSWORD, isValidPassword } from "@/lib/auth/password-policy";
 import { isValidUsername } from "@/lib/auth/username-validation";
 import { requireAuthenticatedSession } from "@/lib/auth/require-session";
 import { AccessDeniedError, getScopedStoreIds, requireAdminOrAbove } from "@/lib/auth/rbac";
@@ -116,7 +116,13 @@ export async function POST(request: NextRequest) {
   // password relayed by the Super Admin): the Super Admin now sets the account's initial
   // password directly, so there's no "relay this" step. Same complexity rule as
   // password-reset (lib/auth/password-policy.ts) — one policy, not a stricter one here.
-  if (!isValidPassword(password)) {
+  //
+  // Deviation (post-v1, per direct product feedback): a Technician's password is optional
+  // at creation — an omitted/blank one falls back to DEFAULT_TECHNICIAN_PASSWORD rather
+  // than being rejected. Every other role still requires an explicit password.
+  const isBlank = password === undefined || password === null || password === "";
+  const effectivePassword = isBlank && role === "technician" ? DEFAULT_TECHNICIAN_PASSWORD : password;
+  if (!isValidPassword(effectivePassword)) {
     return NextResponse.json(
       {
         error: {
@@ -184,7 +190,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const passwordHash = await hashPassword(password);
+  const passwordHash = await hashPassword(effectivePassword);
 
   const created = await db.transaction(async (tx) => {
     const [user] = await tx

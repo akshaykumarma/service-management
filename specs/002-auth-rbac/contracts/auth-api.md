@@ -142,6 +142,12 @@ self-service reset (`lib/auth/password-policy.ts`: 8+ characters, an uppercase l
 lowercase letter, and a special character). The response no longer carries a
 `temporaryPassword`.
 
+**Deviation** (post-v1, per direct product feedback): for `role: "technician"` only,
+`password` is optional — an absent/blank one falls back to a fixed default
+(`DEFAULT_TECHNICIAN_PASSWORD` in `lib/auth/password-policy.ts`, currently `Password@123`),
+rather than being rejected. Every other role is unaffected and still requires an explicit
+password meeting the complexity rule above.
+
 **Responses**:
 - `201 { "user": { "id", "name", "email", "username", "role", "active": true, "storeIds" } }`
 - `400 { code: "invalid_password" }` — `password` fails the complexity rule

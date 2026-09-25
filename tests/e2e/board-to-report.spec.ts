@@ -1,5 +1,12 @@
 import { test, expect } from "@playwright/test";
 
+// See tests/e2e/configure-new-store.spec.ts for why this is random rather than
+// Date.now()-derived.
+function randomStoreCode(): string {
+  const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  return Array.from({ length: 3 }, () => letters[Math.floor(Math.random() * letters.length)]).join("");
+}
+
 test.describe("Board to report end-to-end (006-dashboard-reporting, US1-US5)", () => {
   test("a ticket created and completed today is visible on the board and counted in today's report", async ({ page }) => {
     await page.goto("/login");
@@ -12,6 +19,7 @@ test.describe("Board to report end-to-end (006-dashboard-reporting, US1-US5)", (
     await page.goto("/admin/stores");
     await page.getByRole("button", { name: "Add store" }).click();
     await page.getByLabel("Name", { exact: true }).fill(storeName);
+    await page.getByLabel("Store code").fill(randomStoreCode());
     await page.getByLabel("Address").fill("1 Report Street");
     await page.getByLabel("Primary contact").fill("Report Contact");
     await page.getByLabel("WhatsApp number").fill("+919876500001");

@@ -41,6 +41,13 @@ export const ticketStatusEnum = pgEnum("ticket_status", [
 export const stores = pgTable("stores", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
+  // Post-v1 product feedback: a 3-character code identifying the store, used as the
+  // ticket-number prefix (lib/tickets/ticket-number.ts) in place of the old flat "SVC"
+  // prefix. Mandatory on every new store (also enforced in app/api/admin/stores/route.ts).
+  // The migration that added this column (0014) backfilled every pre-existing row before
+  // adding the NOT NULL constraint this declares, so there was never a null-valued state
+  // this schema needed to describe.
+  storeCode: text("store_code").notNull(),
   taxRate: numeric("tax_rate", { precision: 5, scale: 2 }).notNull().default("0"),
   whatsappNumber: text("whatsapp_number"),
   address: text("address"),
@@ -53,7 +60,9 @@ export const stores = pgTable("stores", {
   active: boolean("active").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}, (table) => ({
+  storeCodeUnique: uniqueIndex("stores_store_code_unique_idx").on(table.storeCode),
+}));
 
 export const machineModels = pgTable("machine_models", {
   id: uuid("id").primaryKey().defaultRandom(),

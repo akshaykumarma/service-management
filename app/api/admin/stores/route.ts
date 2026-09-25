@@ -5,12 +5,13 @@ import { requireAdminOrAbove, AccessDeniedError } from "@/lib/auth/rbac";
 import { createStore, listStores } from "@/lib/admin/stores";
 import type { stores } from "@/lib/db/schema";
 
-const REQUIRED_FIELDS = ["name", "address", "primaryContact", "whatsappNumber"] as const;
+const REQUIRED_FIELDS = ["name", "storeCode", "address", "primaryContact", "whatsappNumber"] as const;
 
 function serializeStore(row: typeof stores.$inferSelect) {
   return {
     id: row.id,
     name: row.name,
+    storeCode: row.storeCode,
     address: row.address,
     primaryContact: row.primaryContact,
     whatsappNumber: row.whatsappNumber,
@@ -64,6 +65,7 @@ export async function POST(request: NextRequest) {
 
   const result = await createStore({
     name: payload.name,
+    storeCode: payload.storeCode,
     address: payload.address,
     primaryContact: payload.primaryContact,
     whatsappNumber: payload.whatsappNumber,
@@ -74,7 +76,8 @@ export async function POST(request: NextRequest) {
   });
 
   if ("error" in result) {
-    return NextResponse.json({ error: { code: result.error } }, { status: 400 });
+    const status = result.error === "store_code_already_registered" ? 409 : 400;
+    return NextResponse.json({ error: { code: result.error } }, { status });
   }
 
   return NextResponse.json({ store: serializeStore(result.store) }, { status: 201 });
