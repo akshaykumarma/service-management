@@ -61,16 +61,14 @@ export default function NavHeader({ name, role }: NavHeaderProps) {
             Reports
           </a>
         )}
-        {showAdminSection && (
-          <a href="/team" className={navClass("/team")}>
-            Team
-          </a>
-        )}
       </nav>
       {showAdminSection && (
         <>
           <div className="app-sidebar__section-label">Admin</div>
           <nav className="app-sidebar__nav" aria-label="Admin">
+            <a href="/team" className={navClass("/team")}>
+              Team
+            </a>
             <a href="/admin/stores" className={navClass("/admin/stores")}>
               Stores
             </a>
