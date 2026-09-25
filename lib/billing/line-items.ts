@@ -1,7 +1,6 @@
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { tickets, parts, services, ticketLineItems } from "@/lib/db/schema";
-import { isBillLocked } from "@/lib/billing/completed-lock";
 import { calculateBill, type Bill } from "@/lib/billing/bill-calculation";
 import { isValidTaxRate } from "@/lib/admin/stores";
 
@@ -11,17 +10,22 @@ export type LineItemError =
   | "invalid_tax_rate"
   | "item_inactive"
   | "ticket_status_invalid"
-  | "bill_locked"
   | "not_found";
 
 const EDITABLE_STATUSES = ["in_progress", "on_hold"] as const;
 
+// Deviation (post-v1, per direct product feedback): the bill used to lock permanently
+// the first time a ticket ever reached Completed (FR-015, checked against status_history),
+// even across a later backward transition — a ticket moved back to In Progress stayed
+// uneditable forever. Product feedback reversed this: editability now depends only on the
+// ticket's *current* status, exactly like every other write this app gates on status
+// (see status-transitions.ts). Completed itself was never in EDITABLE_STATUSES, so it's
+// still correctly blocked while a ticket sits there — it just isn't permanent anymore.
 async function checkTicketWritable(ticketId: string): Promise<{ ticket: typeof tickets.$inferSelect } | { error: LineItemError }> {
   const rows = await db.select().from(tickets).where(eq(tickets.id, ticketId)).limit(1);
   const ticket = rows[0];
   if (!ticket) return { error: "not_found" };
 
-  if (await isBillLocked(ticketId)) return { error: "bill_locked" };
   if (!EDITABLE_STATUSES.includes(ticket.status as (typeof EDITABLE_STATUSES)[number])) {
     return { error: "ticket_status_invalid" };
   }

@@ -10,7 +10,6 @@ import { updateTicketTaxRate } from "@/lib/billing/line-items";
 const STATUS_CODE_FOR_ERROR: Record<string, number> = {
   invalid_tax_rate: 400,
   ticket_status_invalid: 409,
-  bill_locked: 409,
   not_found: 404,
 };
 

@@ -54,8 +54,18 @@ outcome (FR-013), not an error status for partial success
 ## `POST /api/tickets/:ticketId/line-items`
 
 Adds a part or service to a ticket. **Requires**: caller's store scope includes this
-ticket (`assertAccess`); ticket status is `in_progress` or `on_hold`; the ticket's
-Completed-lock (`data-model.md`) is not yet true.
+ticket (`assertAccess`); ticket status is `in_progress` or `on_hold`.
+
+**Deviation** (post-v1, per direct product feedback: "unable to update/add part or service
+after moving the ticket from complete to in progress"): this spec's original FR-015 locked
+the bill permanently the first time a ticket ever reached "Completed" ( `data-model.md`'s
+Completed-lock, checked against `status_history` regardless of current status), even across
+a later backward transition — so a ticket moved back to In Progress stayed uneditable
+forever. Reversed: editability now depends only on the ticket's *current* status, exactly
+like every other write this endpoint already gated on status. Reaching Completed again
+re-blocks it, so this is symmetric, not a one-way "ever unlocked" flag. `bill_locked` is no
+longer a real response — a ticket sitting at `completed` gets `ticket_status_invalid`
+instead, the same code an `open`/`cancelled`/`delivered` ticket already got.
 
 **Request**: `{ "itemType": "part | service", "itemId": "uuid", "quantity": number }`
 
@@ -63,18 +73,15 @@ Completed-lock (`data-model.md`) is not yet true.
 - `201 { "lineItem": { "id", "nameSnapshot", "quantity", "unitCostSnapshot", "lineTotal" }, "bill": { "subtotal", "taxAmount", "total" } }`
 - `400 { code: "invalid_quantity" }` — zero or negative (FR-002)
 - `400 { code: "item_inactive" }` — the referenced catalogue entry is deactivated (FR-012)
-- `409 { code: "ticket_status_invalid" }` — ticket is `open`, `cancelled`, or `delivered`
-  (not `in_progress`/`on_hold`) — FR-001
-- `409 { code: "bill_locked" }` — ticket has already reached "Completed" at some point,
-  regardless of current status (FR-015, this spec's clarification)
+- `409 { code: "ticket_status_invalid" }` — ticket is `open`, `cancelled`, `delivered`, or
+  `completed` (not `in_progress`/`on_hold`) — FR-001
 
 ---
 
 ## `PATCH /api/tickets/:ticketId/line-items/:lineItemId`
 
 Changes a line item's quantity (recomputes `lineTotal` from the existing
-`unitCostSnapshot` — never re-reads the catalogue). Same status/lock preconditions as
-above.
+`unitCostSnapshot` — never re-reads the catalogue). Same status precondition as above.
 
 **Request**: `{ "quantity": number }`
 
@@ -84,6 +91,6 @@ above.
 
 ## `DELETE /api/tickets/:ticketId/line-items/:lineItemId`
 
-Removes a line item. Same status/lock preconditions.
+Removes a line item. Same status precondition.
 
-**Responses**: `200 { "bill": {...recalculated...} }` · `409 { code: "bill_locked" }` as above
+**Responses**: `200 { "bill": {...recalculated...} }` · `409 { code: "ticket_status_invalid" }` as above

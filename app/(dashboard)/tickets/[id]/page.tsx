@@ -127,13 +127,11 @@ const LINE_ITEM_ERROR_MESSAGES: Record<string, string> = {
   invalid_unit_cost: "Price must be zero or a positive number.",
   item_inactive: "That catalogue item is no longer active.",
   ticket_status_invalid: "Parts/services can only be added while the ticket is In Progress or On Hold.",
-  bill_locked: "This ticket's bill is locked — it has already reached Completed.",
 };
 
 const TAX_RATE_ERROR_MESSAGES: Record<string, string> = {
   invalid_tax_rate: "Tax rate must be between 0 and 100.",
   ticket_status_invalid: "The tax rate can only be changed while the ticket is In Progress or On Hold.",
-  bill_locked: "This ticket's bill is locked — it has already reached Completed.",
 };
 
 export default function TicketDetailPage() {

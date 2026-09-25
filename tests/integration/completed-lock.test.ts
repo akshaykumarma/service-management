@@ -6,10 +6,10 @@ import { POST as partsPOST } from "@/app/api/catalogue/parts/route";
 import { POST as lineItemsPOST } from "@/app/api/tickets/[id]/line-items/route";
 import { PATCH as statusPATCH } from "@/app/api/tickets/[id]/status/route";
 
-describe("Completed-lock persists across a backward transition (FR-015, the compound cross-spec case)", () => {
+describe("Bill editability tracks the ticket's current status, not its history (post-v1, reverses FR-015)", () => {
   beforeEach(resetDb);
 
-  it("still refuses line-item changes after a Completed ticket is moved backward to In Progress", async () => {
+  it("blocks line-item changes while Completed, allows them again once moved backward to In Progress, and re-blocks on re-reaching Completed", async () => {
     const store = await createStore();
     const superAdmin = await createUser({ role: "super_admin", password: "Correct123!" });
     const superAdminCookie = await loginAs(superAdmin.email, "Correct123!");
@@ -22,15 +22,19 @@ describe("Completed-lock persists across a backward transition (FR-015, the comp
     const admin = await createUser({ role: "admin", storeIds: [store.id], password: "Correct123!" });
     const ticket = await createTicket({ storeId: store.id, createdBy: sm.id, status: "in_progress" });
     const cookie = await loginAs(sm.email, "Correct123!");
+    const adminCookie = await loginAs(admin.email, "Correct123!");
 
-    await lineItemsPOST(
-      jsonRequest(`/api/tickets/${ticket.id}/line-items`, {
-        method: "POST",
-        cookie,
-        body: { itemType: "part", itemId: part.id, quantity: 1 },
-      }),
-      { params: { id: ticket.id } },
-    );
+    const addLineItem = () =>
+      lineItemsPOST(
+        jsonRequest(`/api/tickets/${ticket.id}/line-items`, {
+          method: "POST",
+          cookie,
+          body: { itemType: "part", itemId: part.id, quantity: 1 },
+        }),
+        { params: { id: ticket.id } },
+      );
+
+    await addLineItem();
 
     // Move it to Completed via 003-ticket-lifecycle's own status endpoint.
     await statusPATCH(
@@ -38,21 +42,13 @@ describe("Completed-lock persists across a backward transition (FR-015, the comp
       { params: { id: ticket.id } },
     );
 
-    const stillLockedRes = await lineItemsPOST(
-      jsonRequest(`/api/tickets/${ticket.id}/line-items`, {
-        method: "POST",
-        cookie,
-        body: { itemType: "part", itemId: part.id, quantity: 1 },
-      }),
-      { params: { id: ticket.id } },
-    );
-    expect(stillLockedRes.status).toBe(409);
-    expect((await stillLockedRes.json()).error.code).toBe("bill_locked");
+    const lockedRes = await addLineItem();
+    expect(lockedRes.status).toBe(409);
+    expect((await lockedRes.json()).error.code).toBe("ticket_status_invalid");
 
     // Admin moves it BACKWARD to In Progress (003's own Delivered/backward rules —
     // here just a plain backward move, which only needs a comment, not Admin-only,
     // but using Admin to mirror quickstart.md's own worked example).
-    const adminCookie = await loginAs(admin.email, "Correct123!");
     const backwardRes = await statusPATCH(
       jsonRequest(`/api/tickets/${ticket.id}/status`, {
         method: "PATCH",
@@ -63,16 +59,20 @@ describe("Completed-lock persists across a backward transition (FR-015, the comp
     );
     expect(backwardRes.status).toBe(200);
 
-    // The lock does NOT lift on backward transition — this is the whole point of FR-015.
-    const stillLockedAfterBackwardRes = await lineItemsPOST(
-      jsonRequest(`/api/tickets/${ticket.id}/line-items`, {
-        method: "POST",
-        cookie,
-        body: { itemType: "part", itemId: part.id, quantity: 1 },
-      }),
+    // Reversed from the original FR-015: the bill is editable again once the ticket has
+    // left Completed, per direct product feedback ("unable to update/add part or service
+    // after moving the ticket from complete to in progress").
+    const unlockedRes = await addLineItem();
+    expect(unlockedRes.status).toBe(201);
+
+    // Reaching Completed again re-blocks it — the rule tracks current status, so it's
+    // symmetric, not a one-way "ever unlocked" flag either.
+    await statusPATCH(
+      jsonRequest(`/api/tickets/${ticket.id}/status`, { method: "PATCH", cookie, body: { toStatus: "completed" } }),
       { params: { id: ticket.id } },
     );
-    expect(stillLockedAfterBackwardRes.status).toBe(409);
-    expect((await stillLockedAfterBackwardRes.json()).error.code).toBe("bill_locked");
+    const reLockedRes = await addLineItem();
+    expect(reLockedRes.status).toBe(409);
+    expect((await reLockedRes.json()).error.code).toBe("ticket_status_invalid");
   });
 });

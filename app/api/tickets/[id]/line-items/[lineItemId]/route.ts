@@ -12,7 +12,6 @@ const STATUS_CODE_FOR_ERROR: Record<string, number> = {
   invalid_unit_cost: 400,
   item_inactive: 400,
   ticket_status_invalid: 409,
-  bill_locked: 409,
   not_found: 404,
 };
 

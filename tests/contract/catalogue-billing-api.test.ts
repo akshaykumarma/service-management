@@ -178,7 +178,7 @@ describe("POST /api/tickets/:ticketId/line-items", () => {
     expect(body.bill.subtotal).toBe(200);
   });
 
-  it("409s with bill_locked once the ticket has ever reached Completed", async () => {
+  it("409s with ticket_status_invalid while the ticket is Completed (post-v1: current status, not history — see completed-lock.test.ts)", async () => {
     const store = await createStore();
     const superAdmin = await createUser({ role: "super_admin", password: "Correct123!" });
     const superAdminCookie = await loginAs(superAdmin.email, "Correct123!");
@@ -189,9 +189,6 @@ describe("POST /api/tickets/:ticketId/line-items", () => {
 
     const sm = await createUser({ role: "service_manager", storeIds: [store.id], password: "Correct123!" });
     const ticket = await createTicket({ storeId: store.id, createdBy: sm.id, status: "completed" });
-    const { db } = await import("@/lib/db/client");
-    const { statusHistory } = await import("@/lib/db/schema");
-    await db.insert(statusHistory).values({ ticketId: ticket.id, fromStatus: "in_progress", toStatus: "completed", actorId: sm.id });
 
     const cookie = await loginAs(sm.email, "Correct123!");
     const res = await lineItemsPOST(
@@ -203,7 +200,7 @@ describe("POST /api/tickets/:ticketId/line-items", () => {
       { params: { id: ticket.id } },
     );
     expect(res.status).toBe(409);
-    expect((await res.json()).error.code).toBe("bill_locked");
+    expect((await res.json()).error.code).toBe("ticket_status_invalid");
   });
 });
 
@@ -403,7 +400,7 @@ describe("PATCH /api/tickets/:ticketId/tax-rate", () => {
     expect((await res.json()).error.code).toBe("invalid_tax_rate");
   });
 
-  it("409s with bill_locked once the ticket has reached Completed", async () => {
+  it("409s with ticket_status_invalid once the ticket has reached Completed (post-v1: current status, not history — see completed-lock.test.ts)", async () => {
     const store = await createStore();
     const sm = await createUser({ role: "service_manager", storeIds: [store.id], password: "Correct123!" });
     const ticket = await createTicket({ storeId: store.id, createdBy: sm.id, status: "in_progress" });
@@ -420,6 +417,6 @@ describe("PATCH /api/tickets/:ticketId/tax-rate", () => {
       { params: { id: ticket.id } },
     );
     expect(res.status).toBe(409);
-    expect((await res.json()).error.code).toBe("bill_locked");
+    expect((await res.json()).error.code).toBe("ticket_status_invalid");
   });
 });
