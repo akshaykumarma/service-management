@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuthenticatedSession } from "@/lib/auth/require-session";
 import { requireSameOrigin } from "@/lib/auth/csrf";
-import { requireSuperAdmin, AccessDeniedError } from "@/lib/auth/rbac";
+import { requireAdminOrAbove, AccessDeniedError } from "@/lib/auth/rbac";
 import { updateMachineModel } from "@/lib/admin/machine-models";
 
 export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
@@ -12,7 +12,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
 
   try {
-    requireSuperAdmin(sessionOrResponse.user);
+    requireAdminOrAbove(sessionOrResponse.user);
   } catch (err) {
     if (err instanceof AccessDeniedError) {
       return NextResponse.json({ error: { code: "forbidden", message: err.message } }, { status: 403 });

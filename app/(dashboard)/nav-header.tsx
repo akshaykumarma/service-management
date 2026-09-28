@@ -69,7 +69,6 @@ export default function NavHeader({ name, role }: NavHeaderProps) {
   }
 
   const showAdminSection = role === "admin" || role === "super_admin";
-  const showSuperAdminOnly = role === "super_admin";
 
   const navLinks = (
     <>
@@ -83,12 +82,8 @@ export default function NavHeader({ name, role }: NavHeaderProps) {
             <NavLink href="/reports" label="Reports" dotKey="reports" />
             <NavLink href="/team" label="Team" dotKey="team" />
             <NavLink href="/admin/stores" label="Stores" dotKey="stores" />
-            {showSuperAdminOnly && (
-              <>
-                <NavLink href="/admin/machine-models" label="Machine models" dotKey="machine-models" />
-                <NavLink href="/admin/catalogue" label="Catalogue" dotKey="catalogue" />
-              </>
-            )}
+            <NavLink href="/admin/machine-models" label="Machine models" dotKey="machine-models" />
+            <NavLink href="/admin/catalogue" label="Catalogue" dotKey="catalogue" />
           </nav>
         </>
       )}

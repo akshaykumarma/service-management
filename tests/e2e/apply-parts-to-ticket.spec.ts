@@ -11,9 +11,10 @@ test.describe("Apply parts to ticket", () => {
     // Ensure a catalogue part exists to select (idempotent-ish: unique name per run).
     const partName = `E2E Part ${Date.now()}`;
     await page.goto("/admin/catalogue");
-    await page.getByLabel("Name", { exact: true }).first().fill(partName);
-    await page.getByLabel("Unit cost", { exact: true }).first().fill("150");
-    await page.getByRole("button", { name: "Add part" }).click();
+    await page.getByRole("button", { name: "+ Add part" }).click();
+    await page.getByLabel("Name", { exact: true }).fill(partName);
+    await page.getByLabel("Unit cost", { exact: true }).fill("150");
+    await page.getByRole("button", { name: "Add part", exact: true }).click();
     await expect(page.getByText(partName)).toBeVisible();
 
     // Create a ticket, then move it to In Progress via the API-backed status control.

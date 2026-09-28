@@ -49,14 +49,54 @@ describe("POST /api/catalogue/parts", () => {
     expect((await res.json()).error.code).toBe("duplicate_name");
   });
 
-  it("403s for a non-Super-Admin caller", async () => {
-    const admin = await createUser({ role: "admin", password: "Correct123!" });
-    const cookie = await loginAs(admin.email, "Correct123!");
+  it("403s for a caller below Admin", async () => {
+    const sm = await createUser({ role: "service_manager", password: "Correct123!" });
+    const cookie = await loginAs(sm.email, "Correct123!");
 
     const res = await partsPOST(
       jsonRequest("/api/catalogue/parts", { method: "POST", cookie, body: { name: "X", unitCost: 10 } }),
     );
     expect(res.status).toBe(403);
+  });
+
+  it("lets an Admin create and edit a part, same as a Super Admin (post-v1 product feedback)", async () => {
+    const admin = await createUser({ role: "admin", password: "Correct123!" });
+    const cookie = await loginAs(admin.email, "Correct123!");
+
+    const createRes = await partsPOST(
+      jsonRequest("/api/catalogue/parts", {
+        method: "POST",
+        cookie,
+        body: { name: "Admin-Created Part", unitCost: 120 },
+      }),
+    );
+    expect(createRes.status).toBe(201);
+    const { part } = await createRes.json();
+
+    const patchRes = await partPATCH(
+      jsonRequest(`/api/catalogue/parts/${part.id}`, { method: "PATCH", cookie, body: { name: "Renamed by Admin" } }),
+      { params: { id: part.id } },
+    );
+    expect(patchRes.status).toBe(200);
+    expect((await patchRes.json()).part.name).toBe("Renamed by Admin");
+  });
+
+  it("409s with duplicate_name when a PATCH rename collides with another active part", async () => {
+    const superAdmin = await createUser({ role: "super_admin", password: "Correct123!" });
+    const cookie = await loginAs(superAdmin.email, "Correct123!");
+
+    await partsPOST(jsonRequest("/api/catalogue/parts", { method: "POST", cookie, body: { name: "Taken", unitCost: 10 } }));
+    const createRes = await partsPOST(
+      jsonRequest("/api/catalogue/parts", { method: "POST", cookie, body: { name: "Other", unitCost: 10 } }),
+    );
+    const { part } = await createRes.json();
+
+    const res = await partPATCH(
+      jsonRequest(`/api/catalogue/parts/${part.id}`, { method: "PATCH", cookie, body: { name: "Taken" } }),
+      { params: { id: part.id } },
+    );
+    expect(res.status).toBe(409);
+    expect((await res.json()).error.code).toBe("duplicate_name");
   });
 });
 
@@ -140,6 +180,38 @@ describe("POST /api/catalogue/services and GET/PATCH", () => {
       { params: { id: created.id } },
     );
     expect(patchRes.status).toBe(200);
+  });
+
+  it("403s for a caller below Admin", async () => {
+    const sm = await createUser({ role: "service_manager", password: "Correct123!" });
+    const cookie = await loginAs(sm.email, "Correct123!");
+
+    const res = await servicesPOST(
+      jsonRequest("/api/catalogue/services", { method: "POST", cookie, body: { name: "X", unitCost: 10 } }),
+    );
+    expect(res.status).toBe(403);
+  });
+
+  it("lets an Admin create and edit a service, same as a Super Admin (post-v1 product feedback)", async () => {
+    const admin = await createUser({ role: "admin", password: "Correct123!" });
+    const cookie = await loginAs(admin.email, "Correct123!");
+
+    const createRes = await servicesPOST(
+      jsonRequest("/api/catalogue/services", {
+        method: "POST",
+        cookie,
+        body: { name: "Admin-Created Service", unitCost: 300 },
+      }),
+    );
+    expect(createRes.status).toBe(201);
+    const { service } = await createRes.json();
+
+    const patchRes = await servicePATCH(
+      jsonRequest(`/api/catalogue/services/${service.id}`, { method: "PATCH", cookie, body: { name: "Renamed by Admin" } }),
+      { params: { id: service.id } },
+    );
+    expect(patchRes.status).toBe(200);
+    expect((await patchRes.json()).service.name).toBe("Renamed by Admin");
   });
 });
 

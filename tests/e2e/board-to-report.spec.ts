@@ -31,9 +31,10 @@ test.describe("Board to report end-to-end (006-dashboard-reporting, US1-US5)", (
 
     const partName = `E2E Report Part ${Date.now()}`;
     await page.goto("/admin/catalogue");
-    await page.getByLabel("Name", { exact: true }).first().fill(partName);
-    await page.getByLabel("Unit cost", { exact: true }).first().fill("300");
-    await page.getByRole("button", { name: "Add part" }).click();
+    await page.getByRole("button", { name: "+ Add part" }).click();
+    await page.getByLabel("Name", { exact: true }).fill(partName);
+    await page.getByLabel("Unit cost", { exact: true }).fill("300");
+    await page.getByRole("button", { name: "Add part", exact: true }).click();
     await expect(page.getByText(partName)).toBeVisible();
 
     await page.goto("/tickets/new");

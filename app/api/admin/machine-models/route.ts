@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuthenticatedSession } from "@/lib/auth/require-session";
 import { requireSameOrigin } from "@/lib/auth/csrf";
-import { requireSuperAdmin, AccessDeniedError } from "@/lib/auth/rbac";
+import { requireAdminOrAbove, AccessDeniedError } from "@/lib/auth/rbac";
 import { createMachineModel, listActiveMachineModels } from "@/lib/admin/machine-models";
 
 function serializeMachineModel(row: { id: string; name: string; manufacturer: string; category: string | null; active: boolean }) {
@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
   if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
 
   try {
-    requireSuperAdmin(sessionOrResponse.user);
+    requireAdminOrAbove(sessionOrResponse.user);
   } catch (err) {
     if (err instanceof AccessDeniedError) {
       return NextResponse.json({ error: { code: "forbidden", message: err.message } }, { status: 403 });
@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
   if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
 
   try {
-    requireSuperAdmin(sessionOrResponse.user);
+    requireAdminOrAbove(sessionOrResponse.user);
   } catch (err) {
     if (err instanceof AccessDeniedError) {
       return NextResponse.json({ error: { code: "forbidden", message: err.message } }, { status: 403 });

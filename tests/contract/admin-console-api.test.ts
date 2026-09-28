@@ -45,13 +45,57 @@ describe("POST/PATCH /api/admin/machine-models", () => {
     expect((await res.json()).error.code).toBe("duplicate_name");
   });
 
-  it("403s for a non-Super-Admin caller", async () => {
-    const admin = await createUser({ role: "admin", password: "Correct123!" });
-    const cookie = await loginAs(admin.email, "Correct123!");
+  it("403s for a caller below Admin", async () => {
+    const sm = await createUser({ role: "service_manager", password: "Correct123!" });
+    const cookie = await loginAs(sm.email, "Correct123!");
     const res = await machineModelsPOST(
       jsonRequest("/api/admin/machine-models", { method: "POST", cookie, body: { name: "X", manufacturer: "Y" } }),
     );
     expect(res.status).toBe(403);
+  });
+
+  it("lets an Admin create and edit a machine model, same as a Super Admin (post-v1 product feedback)", async () => {
+    const admin = await createUser({ role: "admin", password: "Correct123!" });
+    const cookie = await loginAs(admin.email, "Correct123!");
+
+    const createRes = await machineModelsPOST(
+      jsonRequest("/api/admin/machine-models", {
+        method: "POST",
+        cookie,
+        body: { name: "Admin-Created Model", manufacturer: "LG" },
+      }),
+    );
+    expect(createRes.status).toBe(201);
+    const { machineModel } = await createRes.json();
+
+    const patchRes = await machineModelPATCH(
+      jsonRequest(`/api/admin/machine-models/${machineModel.id}`, {
+        method: "PATCH",
+        cookie,
+        body: { name: "Renamed by Admin" },
+      }),
+      { params: { id: machineModel.id } },
+    );
+    expect(patchRes.status).toBe(200);
+    expect((await patchRes.json()).machineModel.name).toBe("Renamed by Admin");
+  });
+
+  it("409s duplicate_name when a PATCH rename collides with another active model", async () => {
+    const cookie = await superAdminCookie();
+    await machineModelsPOST(
+      jsonRequest("/api/admin/machine-models", { method: "POST", cookie, body: { name: "Taken", manufacturer: "Y" } }),
+    );
+    const createRes = await machineModelsPOST(
+      jsonRequest("/api/admin/machine-models", { method: "POST", cookie, body: { name: "Other", manufacturer: "Y" } }),
+    );
+    const { machineModel } = await createRes.json();
+
+    const res = await machineModelPATCH(
+      jsonRequest(`/api/admin/machine-models/${machineModel.id}`, { method: "PATCH", cookie, body: { name: "Taken" } }),
+      { params: { id: machineModel.id } },
+    );
+    expect(res.status).toBe(409);
+    expect((await res.json()).error.code).toBe("duplicate_name");
   });
 
   it("200s a PATCH deactivating a model", async () => {

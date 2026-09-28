@@ -2,12 +2,14 @@
 
 Per constitution Principle III. Common error shape as in prior contracts. Every endpoint
 below requires Super Admin (`assertAccess`) — FR-001, FR-005, FR-011 — **except**
-`GET`/`POST /api/admin/stores` and `PATCH /api/admin/stores/:id`, widened to Admin-or-above
-(post-v1, per direct product feedback: "Admin and super admin should be able to edit the
-stores table"). An Admin gets full parity with a Super Admin here — every store, not just
-their own — since a store isn't scoped data the way staff accounts are. Deciding *who* is
-an Admin of a store stays Super-Admin-only: `POST`/`DELETE .../admins(/:userId)` are
-unchanged.
+`GET`/`POST /api/admin/stores`, `PATCH /api/admin/stores/:id`, and every endpoint below
+under Machine Models, all widened to Admin-or-above (post-v1, per direct product feedback:
+"Admin and super admin should be able to edit the stores table", later extended to "...be
+able to edit and add the new models/parts/services"). An Admin gets full parity with a
+Super Admin on all of these — every store/model, not just their own — since none of this
+is scoped data the way staff accounts are. Deciding *who* is an Admin of a store stays
+Super-Admin-only: `POST`/`DELETE .../admins(/:userId)` are unchanged. Notification
+templates (a separate contract) are unaffected and remain Super-Admin-only.
 
 ---
 
@@ -23,10 +25,16 @@ unchanged.
 
 ## `PATCH /api/admin/machine-models/:id`
 
-`{ "active": false }` deactivates (no delete endpoint, consistent with `004`'s catalogue
-precedent).
+**Deviation** (post-v1, per direct product feedback): the admin UI previously only ever
+sent `{ "active": false }` here (no Edit control existed) — `name`/`manufacturer`/
+`category` were always accepted by this endpoint but never exercised. Now that Edit is a
+real UI feature, a rename is checked against `isDuplicateActiveName` the same way
+`POST` already is (a model can't be renamed onto another active model's name); renaming a
+model to its own current name is never a collision.
 
-**Responses**: `200 { "machineModel": {...} }` · `404`
+**Request**: any subset of `{ "name", "manufacturer", "category": "string | null", "active": boolean }`
+
+**Responses**: `200 { "machineModel": {...} }` · `404` · `409 { code: "duplicate_name" }`
 
 ---
 

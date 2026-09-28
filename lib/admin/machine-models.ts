@@ -39,6 +39,13 @@ export async function updateMachineModel(
   const existing = await db.select().from(machineModels).where(eq(machineModels.id, id)).limit(1);
   if (existing.length === 0) return { error: "not_found" };
 
+  // Same collision check createMachineModel already applies — a rename can just as easily
+  // land on another active model's name as a create can. Renaming a model to its own
+  // current name is not a collision.
+  if (patch.name !== undefined && patch.name !== existing[0].name && (await isDuplicateActiveName(patch.name))) {
+    return { error: "duplicate_name" };
+  }
+
   const [updated] = await db
     .update(machineModels)
     .set({

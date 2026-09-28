@@ -60,7 +60,7 @@ describe("Catalogue maintenance by Super Admin (User Story 2)", () => {
     expect(body.failed[1].row).toBe(4); // duplicate "Belt" name against row 2's successful import
   });
 
-  it("denies catalogue mutation to a Service Manager or Admin", async () => {
+  it("denies catalogue mutation to a Service Manager (Admin is allowed, per post-v1 product feedback)", async () => {
     const sm = await createUser({ role: "service_manager", password: "Correct123!" });
     const cookie = await loginAs(sm.email, "Correct123!");
 

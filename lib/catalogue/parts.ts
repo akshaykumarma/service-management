@@ -50,6 +50,13 @@ export async function updatePart(
     return { error: "invalid_unit_cost" };
   }
 
+  // Same collision check createPart already applies — a rename can just as easily land on
+  // another active part's name as a create can. Renaming a part to its own current name is
+  // not a collision.
+  if (patch.name !== undefined && patch.name !== existing[0].name && (await isDuplicateActiveName(patch.name))) {
+    return { error: "duplicate_name" };
+  }
+
   const [updated] = await db
     .update(parts)
     .set({
