@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   DndContext,
   KeyboardSensor,
@@ -25,6 +25,8 @@ interface TicketCard {
   status: string;
   createdAt: string;
   daysOpen: number;
+  storeName: string;
+  technicianName: string | null;
 }
 
 interface StoreOption {
@@ -73,6 +75,16 @@ function ageTier(daysOpen: number): "fresh" | "normal" | "warm" | "hot" {
   if (daysOpen <= 3) return "normal";
   if (daysOpen <= 7) return "warm";
   return "hot";
+}
+
+// A stable color per technician name (List view's technician avatars) — no identity/photo
+// data exists to pick from, just a deterministic hash so the same name always renders the
+// same color across reloads.
+const AVATAR_COLORS = ["#2563eb", "#7c3aed", "#0d9488", "#ea580c", "#be123c", "#0891b2", "#4d7c0f"];
+function avatarColor(name: string): string {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
+  return AVATAR_COLORS[hash % AVATAR_COLORS.length];
 }
 
 function TicketCardItem({ ticket }: { ticket: TicketCard }) {
@@ -165,6 +177,16 @@ export default function BoardPage() {
   const [machineModelFilter, setMachineModelFilter] = useState("");
   const [technicianFilter, setTechnicianFilter] = useState("");
   const [moreFiltersOpen, setMoreFiltersOpen] = useState(false);
+
+  // List view (post-v1 product feedback: a table alternative to the Kanban board). Kanban
+  // stays the default drag-and-drop surface; List is an additional view over the exact
+  // same (already role/store-scoped) `tickets` state, never a second fetch.
+  const [viewMode, setViewMode] = useState<"board" | "list">("list");
+  const [listSearch, setListSearch] = useState("");
+  const [listSortDir, setListSortDir] = useState<"asc" | "desc">("desc");
+  const [listPage, setListPage] = useState(1);
+  const [listPageSize, setListPageSize] = useState(10);
+  const listSearchInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetch("/api/stores")
@@ -263,6 +285,19 @@ export default function BoardPage() {
     return () => clearInterval(interval);
   }, [load]);
 
+  // Cmd/Ctrl+K focuses the List view's search box, matching the shortcut hinted in its
+  // own placeholder text.
+  useEffect(() => {
+    function handleShortcut(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k" && listSearchInputRef.current) {
+        e.preventDefault();
+        listSearchInputRef.current.focus();
+      }
+    }
+    window.addEventListener("keydown", handleShortcut);
+    return () => window.removeEventListener("keydown", handleShortcut);
+  }, []);
+
   async function attemptTransition(ticketId: string, toStatus: string, comment: string | null) {
     const res = await fetch(`/api/tickets/${ticketId}/status`, {
       method: "PATCH",
@@ -315,150 +350,434 @@ export default function BoardPage() {
     { label: "Waiting 7+ days", value: activeTickets.filter((t) => t.daysOpen >= 7).length, dot: "#f43f5e", bg: "#fff0f2" },
   ];
 
+  // List view's own KPI row (post-v1 product feedback) — "Ready for Pickup"/"Completed"
+  // here match this app's own "completed" (bill locked, awaiting customer pickup) and
+  // "delivered" (handed over, OTP-verified) statuses respectively, not a new distinction.
+  const listKpis = [
+    { label: "Open", value: tickets.filter((t) => t.status === "open").length, dot: "#52525b", bg: "#f4f4f5" },
+    { label: "In Progress", value: tickets.filter((t) => t.status === "in_progress").length, dot: "#2563eb", bg: "#eaf0fe" },
+    { label: "On Hold", value: tickets.filter((t) => t.status === "on_hold").length, dot: "#b45309", bg: "#fdf1e0" },
+    { label: "Ready for Pickup", value: tickets.filter((t) => t.status === "completed").length, dot: "#15803d", bg: "#e8f5ec" },
+    { label: "Completed", value: tickets.filter((t) => t.status === "delivered").length, dot: "#6d28d9", bg: "#efe8fc" },
+  ];
+
+  const searchedTickets = listSearch.trim()
+    ? tickets.filter((t) => {
+        const q = listSearch.trim().toLowerCase();
+        return (
+          t.ticketNumber.toLowerCase().includes(q) ||
+          t.customerName.toLowerCase().includes(q) ||
+          t.machineModel.toLowerCase().includes(q) ||
+          t.storeName.toLowerCase().includes(q) ||
+          (t.technicianName ?? "").toLowerCase().includes(q)
+        );
+      })
+    : tickets;
+
+  const sortedTickets = [...searchedTickets].sort((a, b) => {
+    const diff = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+    return listSortDir === "asc" ? diff : -diff;
+  });
+
+  const listTotalPages = Math.max(1, Math.ceil(sortedTickets.length / listPageSize));
+  const listCurrentPage = Math.min(listPage, listTotalPages);
+  const listPageStart = (listCurrentPage - 1) * listPageSize;
+  const pagedTickets = sortedTickets.slice(listPageStart, listPageStart + listPageSize);
+  const listRangeStart = sortedTickets.length === 0 ? 0 : listPageStart + 1;
+  const listRangeEnd = Math.min(listPageStart + listPageSize, sortedTickets.length);
+
   return (
     <main>
-      <h1>Board</h1>
-
-      <div className="board-kpis">
-        {boardKpis.map((kpi) => (
-          <div className="board-kpi" key={kpi.label}>
-            <span className="board-kpi__icon" style={{ background: kpi.bg }} aria-hidden="true">
-              <span className="board-kpi__dot" style={{ background: kpi.dot }} />
-            </span>
-            <div>
-              <div className="board-kpi__label">{kpi.label}</div>
-              <div className="board-kpi__value">{kpi.value}</div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <section aria-labelledby="filters-heading" className="board-toolbar">
-        <div className="board-toolbar__row">
-          <h2 id="filters-heading" className="board-toolbar__heading">
-            Filters
-          </h2>
-
-          <MultiSelectDropdown
-            id="storeFilter"
-            label="Store(s)"
-            placeholder="All stores"
-            options={storeOptions.map((s) => ({ id: s.id, label: s.name }))}
-            selected={selectedStoreIds}
-            onChange={setSelectedStoreIds}
-          />
-
-          <MultiSelectDropdown
-            id="statusFilter"
-            label="Status"
-            placeholder="All statuses"
-            options={ALL_STATUSES.map((s) => ({ id: s, label: STATUS_LABELS[s] }))}
-            selected={selectedStatuses}
-            onChange={setSelectedStatuses}
-          />
-
-          <SearchableSelect
-            id="technicianFilter"
-            label="Technician"
-            placeholder="All technicians"
-            options={technicianOptions.map((t) => ({ id: t.id, label: t.name }))}
-            value={technicianFilter}
-            onChange={setTechnicianFilter}
-          />
-
-          <label className="board-toolbar__checkbox" htmlFor="includeCancelled">
-            <input
-              id="includeCancelled"
-              type="checkbox"
-              checked={includeCancelled}
-              onChange={(e) => setIncludeCancelled(e.target.checked)}
-            />
-            Include cancelled
-          </label>
-
-          <div className="board-toolbar__spacer" />
-
-          <button
-            type="button"
-            className="board-toolbar__more-toggle"
-            aria-expanded={moreFiltersOpen}
-            aria-controls="board-more-filters"
-            onClick={() => setMoreFiltersOpen((prev) => !prev)}
-          >
-            More filters
-            {moreFiltersActiveCount > 0 && <span className="board-toolbar__badge">{moreFiltersActiveCount}</span>}
-            <span aria-hidden="true">{moreFiltersOpen ? "▴" : "▾"}</span>
-          </button>
-
-          {totalActiveFilterCount > 0 && (
-            <button type="button" className="board-toolbar__clear" onClick={clearAllFilters}>
-              Clear filters
-            </button>
-          )}
+      <div className="list-page-header">
+        <div>
+          <h1>Board</h1>
+          <p className="list-page-header__subtitle">Track and manage service tickets across all stores</p>
         </div>
-
-        {moreFiltersOpen && (
-          <div id="board-more-filters" className="board-toolbar__more">
-            <div className="board-toolbar__field">
-              <label htmlFor="dateFrom">Created from</label>
-              <input id="dateFrom" type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
-            </div>
-            <div className="board-toolbar__field">
-              <label htmlFor="dateTo">Created to</label>
-              <input id="dateTo" type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
-            </div>
-            <div className="board-toolbar__field">
-              <label htmlFor="ticketIdFilter">Ticket ID</label>
-              <input id="ticketIdFilter" value={ticketIdFilter} onChange={(e) => setTicketIdFilter(e.target.value)} />
-            </div>
-            <div className="board-toolbar__field">
-              <label htmlFor="customerNameFilter">Customer name</label>
-              <input
-                id="customerNameFilter"
-                value={customerNameFilter}
-                onChange={(e) => setCustomerNameFilter(e.target.value)}
-              />
-            </div>
-            <div className="board-toolbar__field">
-              <label htmlFor="customerPhoneFilter">Customer mobile number</label>
-              <input
-                id="customerPhoneFilter"
-                value={customerPhoneFilter}
-                onChange={(e) => setCustomerPhoneFilter(e.target.value)}
-              />
-            </div>
-            <div className="board-toolbar__field">
-              <label htmlFor="machineModelFilter">Machine model</label>
-              <input
-                id="machineModelFilter"
-                value={machineModelFilter}
-                onChange={(e) => setMachineModelFilter(e.target.value)}
-              />
-            </div>
+        {viewMode === "list" && (
+          <div className="list-page-header__search">
+            <input
+              ref={listSearchInputRef}
+              type="search"
+              placeholder="Search tickets, customer, model, store... (⌘K)"
+              value={listSearch}
+              onChange={(e) => {
+                setListSearch(e.target.value);
+                setListPage(1);
+              }}
+              aria-label="Search tickets"
+            />
           </div>
         )}
-      </section>
+      </div>
 
-      {error && (
-        <p role="alert" aria-live="assertive">
-          {error}
-        </p>
+      <div className="board-view-toggle" role="group" aria-label="Board view">
+        <button type="button" aria-pressed={viewMode === "board"} onClick={() => setViewMode("board")}>
+          Board
+        </button>
+        <button type="button" aria-pressed={viewMode === "list"} onClick={() => setViewMode("list")}>
+          List
+        </button>
+      </div>
+
+      {viewMode === "board" ? (
+        <>
+          <div className="board-kpis">
+            {boardKpis.map((kpi) => (
+              <div className="board-kpi" key={kpi.label}>
+                <span className="board-kpi__icon" style={{ background: kpi.bg }} aria-hidden="true">
+                  <span className="board-kpi__dot" style={{ background: kpi.dot }} />
+                </span>
+                <div>
+                  <div className="board-kpi__label">{kpi.label}</div>
+                  <div className="board-kpi__value">{kpi.value}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <section aria-labelledby="filters-heading" className="board-toolbar">
+            <div className="board-toolbar__row">
+              <h2 id="filters-heading" className="board-toolbar__heading">
+                Filters
+              </h2>
+
+              <MultiSelectDropdown
+                id="storeFilter"
+                label="Store(s)"
+                placeholder="All stores"
+                options={storeOptions.map((s) => ({ id: s.id, label: s.name }))}
+                selected={selectedStoreIds}
+                onChange={setSelectedStoreIds}
+              />
+
+              <MultiSelectDropdown
+                id="statusFilter"
+                label="Status"
+                placeholder="All statuses"
+                options={ALL_STATUSES.map((s) => ({ id: s, label: STATUS_LABELS[s] }))}
+                selected={selectedStatuses}
+                onChange={setSelectedStatuses}
+              />
+
+              <SearchableSelect
+                id="technicianFilter"
+                label="Technician"
+                placeholder="All technicians"
+                options={technicianOptions.map((t) => ({ id: t.id, label: t.name }))}
+                value={technicianFilter}
+                onChange={setTechnicianFilter}
+              />
+
+              <label className="board-toolbar__checkbox" htmlFor="includeCancelled">
+                <input
+                  id="includeCancelled"
+                  type="checkbox"
+                  checked={includeCancelled}
+                  onChange={(e) => setIncludeCancelled(e.target.checked)}
+                />
+                Include cancelled
+              </label>
+
+              <div className="board-toolbar__spacer" />
+
+              <button
+                type="button"
+                className="board-toolbar__more-toggle"
+                aria-expanded={moreFiltersOpen}
+                aria-controls="board-more-filters"
+                onClick={() => setMoreFiltersOpen((prev) => !prev)}
+              >
+                More filters
+                {moreFiltersActiveCount > 0 && <span className="board-toolbar__badge">{moreFiltersActiveCount}</span>}
+                <span aria-hidden="true">{moreFiltersOpen ? "▴" : "▾"}</span>
+              </button>
+
+              {totalActiveFilterCount > 0 && (
+                <button type="button" className="board-toolbar__clear" onClick={clearAllFilters}>
+                  Clear filters
+                </button>
+              )}
+            </div>
+
+            {moreFiltersOpen && (
+              <div id="board-more-filters" className="board-toolbar__more">
+                <div className="board-toolbar__field">
+                  <label htmlFor="dateFrom">Created from</label>
+                  <input id="dateFrom" type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+                </div>
+                <div className="board-toolbar__field">
+                  <label htmlFor="dateTo">Created to</label>
+                  <input id="dateTo" type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+                </div>
+                <div className="board-toolbar__field">
+                  <label htmlFor="ticketIdFilter">Ticket ID</label>
+                  <input id="ticketIdFilter" value={ticketIdFilter} onChange={(e) => setTicketIdFilter(e.target.value)} />
+                </div>
+                <div className="board-toolbar__field">
+                  <label htmlFor="customerNameFilter">Customer name</label>
+                  <input
+                    id="customerNameFilter"
+                    value={customerNameFilter}
+                    onChange={(e) => setCustomerNameFilter(e.target.value)}
+                  />
+                </div>
+                <div className="board-toolbar__field">
+                  <label htmlFor="customerPhoneFilter">Customer mobile number</label>
+                  <input
+                    id="customerPhoneFilter"
+                    value={customerPhoneFilter}
+                    onChange={(e) => setCustomerPhoneFilter(e.target.value)}
+                  />
+                </div>
+                <div className="board-toolbar__field">
+                  <label htmlFor="machineModelFilter">Machine model</label>
+                  <input
+                    id="machineModelFilter"
+                    value={machineModelFilter}
+                    onChange={(e) => setMachineModelFilter(e.target.value)}
+                  />
+                </div>
+              </div>
+            )}
+          </section>
+
+          {error && (
+            <p role="alert" aria-live="assertive">
+              {error}
+            </p>
+          )}
+
+          {loaded && tickets.length === 0 && <p>No tickets match the current view.</p>}
+
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <div aria-label="Kanban board" className="board">
+              {columns.map((column) => (
+                <BoardColumn
+                  key={column.status}
+                  status={column.status}
+                  label={column.label}
+                  tickets={tickets.filter((t) => t.status === column.status)}
+                />
+              ))}
+            </div>
+          </DndContext>
+        </>
+      ) : (
+        <>
+          <div className="board-kpis">
+            {listKpis.map((kpi) => (
+              <div className="board-kpi" key={kpi.label}>
+                <span className="board-kpi__icon" style={{ background: kpi.bg }} aria-hidden="true">
+                  <span className="board-kpi__dot" style={{ background: kpi.dot }} />
+                </span>
+                <div>
+                  <div className="board-kpi__label">{kpi.label}</div>
+                  <div className="board-kpi__value">{kpi.value}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <section aria-labelledby="list-filters-heading" className="list-filterbar">
+            <h2 id="list-filters-heading" className="sr-only">
+              Filters
+            </h2>
+
+            <div className="list-filterbar__field">
+              <MultiSelectDropdown
+                id="listStoreFilter"
+                label="Store(s)"
+                placeholder="All stores"
+                options={storeOptions.map((s) => ({ id: s.id, label: s.name }))}
+                selected={selectedStoreIds}
+                onChange={setSelectedStoreIds}
+              />
+            </div>
+
+            <div className="list-filterbar__field">
+              <MultiSelectDropdown
+                id="listStatusFilter"
+                label="Status"
+                placeholder="All statuses"
+                options={ALL_STATUSES.map((s) => ({ id: s, label: STATUS_LABELS[s] }))}
+                selected={selectedStatuses}
+                onChange={setSelectedStatuses}
+              />
+            </div>
+
+            <div className="list-filterbar__field">
+              <SearchableSelect
+                id="listTechnicianFilter"
+                label="Technician"
+                placeholder="All technicians"
+                options={technicianOptions.map((t) => ({ id: t.id, label: t.name }))}
+                value={technicianFilter}
+                onChange={setTechnicianFilter}
+              />
+            </div>
+
+            <div className="list-filterbar__field">
+              <span className="list-filterbar__label">Created date</span>
+              <div className="list-filterbar__daterange">
+                <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} aria-label="Start date" />
+                <span aria-hidden="true">–</span>
+                <input
+                  type="date"
+                  value={dateTo}
+                  onChange={(e) => setDateTo(e.target.value)}
+                  aria-label="End date (defaults to today)"
+                />
+              </div>
+            </div>
+
+            <div className="list-filterbar__actions">
+              {totalActiveFilterCount > 0 && (
+                <button type="button" className="list-filterbar__clear" onClick={clearAllFilters}>
+                  Clear
+                </button>
+              )}
+              <button type="button" className="list-filterbar__apply" onClick={load}>
+                Apply filters
+              </button>
+            </div>
+          </section>
+
+          {error && (
+            <p role="alert" aria-live="assertive">
+              {error}
+            </p>
+          )}
+
+          {loaded && tickets.length === 0 && <p>No tickets match the current view.</p>}
+
+          {loaded && tickets.length > 0 && (
+            <section aria-labelledby="ticket-list-heading" className="list-table-section">
+              <div className="section-header">
+                <h2 id="ticket-list-heading">Service tickets ({sortedTickets.length})</h2>
+              </div>
+
+              {sortedTickets.length === 0 ? (
+                <p>No tickets match your search.</p>
+              ) : (
+                <>
+                  <div className="table-scroll">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Ticket ID</th>
+                          <th>Customer</th>
+                          <th>Model</th>
+                          <th>Store</th>
+                          <th>Technician</th>
+                          <th>Status</th>
+                          <th>
+                            <button
+                              type="button"
+                              className="list-table__sort"
+                              onClick={() => setListSortDir((d) => (d === "desc" ? "asc" : "desc"))}
+                            >
+                              Created date <span aria-hidden="true">{listSortDir === "desc" ? "↓" : "↑"}</span>
+                            </button>
+                          </th>
+                          <th>Age</th>
+                          <th>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {pagedTickets.map((ticket) => (
+                          <tr key={ticket.id} data-ticket-id={ticket.id} data-status={ticket.status}>
+                            <td>
+                              <a href={`/tickets/${ticket.id}`} className="list-table__ticket-link">
+                                {ticket.ticketNumber}
+                              </a>
+                            </td>
+                            <td>{ticket.customerName}</td>
+                            <td>{ticket.machineModel}</td>
+                            <td>{ticket.storeName}</td>
+                            <td>
+                              <span className="list-table__technician">
+                                {ticket.technicianName ? (
+                                  <>
+                                    <span
+                                      className="avatar-dot"
+                                      style={{ background: avatarColor(ticket.technicianName) }}
+                                      aria-hidden="true"
+                                    >
+                                      {ticket.technicianName.charAt(0).toUpperCase()}
+                                    </span>
+                                    {ticket.technicianName}
+                                  </>
+                                ) : (
+                                  <>
+                                    <span className="avatar-dot avatar-dot--empty" aria-hidden="true" />
+                                    Unassigned
+                                  </>
+                                )}
+                              </span>
+                            </td>
+                            <td>
+                              <span className={`status-pill status-${ticket.status}`}>{STATUS_LABELS[ticket.status]}</span>
+                            </td>
+                            <td>{formatDate(ticket.createdAt)}</td>
+                            <td>
+                              <span className={`age-pill age-pill--${ageTier(ticket.daysOpen)}`}>
+                                {ageLabel(ticket.daysOpen)}
+                              </span>
+                            </td>
+                            <td>
+                              <a href={`/tickets/${ticket.id}`} className="list-table__view-link">
+                                View
+                              </a>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="list-pagination">
+                    <select
+                      value={listPageSize}
+                      onChange={(e) => {
+                        setListPageSize(Number(e.target.value));
+                        setListPage(1);
+                      }}
+                      aria-label="Rows per page"
+                    >
+                      <option value={10}>10</option>
+                      <option value={25}>25</option>
+                      <option value={50}>50</option>
+                    </select>
+                    <span>
+                      {listRangeStart}-{listRangeEnd} of {sortedTickets.length} tickets
+                    </span>
+                    <div className="list-pagination__spacer" />
+                    <button
+                      type="button"
+                      className="list-pagination__page-btn"
+                      disabled={listCurrentPage <= 1}
+                      onClick={() => setListPage((p) => Math.max(1, p - 1))}
+                      aria-label="Previous page"
+                    >
+                      ‹
+                    </button>
+                    <span className="list-pagination__current">{listCurrentPage}</span>
+                    <button
+                      type="button"
+                      className="list-pagination__page-btn"
+                      disabled={listCurrentPage >= listTotalPages}
+                      onClick={() => setListPage((p) => Math.min(listTotalPages, p + 1))}
+                      aria-label="Next page"
+                    >
+                      ›
+                    </button>
+                  </div>
+                </>
+              )}
+            </section>
+          )}
+        </>
       )}
-
-      {loaded && tickets.length === 0 && <p>No tickets match the current view.</p>}
-
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <div aria-label="Kanban board" className="board">
-          {columns.map((column) => (
-            <BoardColumn
-              key={column.status}
-              status={column.status}
-              label={column.label}
-              tickets={tickets.filter((t) => t.status === column.status)}
-            />
-          ))}
-        </div>
-      </DndContext>
     </main>
   );
 }

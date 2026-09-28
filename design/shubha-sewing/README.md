@@ -35,8 +35,11 @@ tested behavior for a visual-only pass):
 
 - Ticket detail stays a full page at `/tickets/[id]`, not the mock's right-side slide-over
   panel.
-- Board cards don't show a store name or technician avatar — that data isn't in the
-  board API's card shape; adding it needs a schema/API change, not just a restyle.
+- Kanban board cards still don't show a store name or technician avatar (that would touch
+  the card's own compact layout, not just add data). `GET /api/tickets` does now resolve
+  and return `storeName`/`technicianName` (post-v1 product feedback, batched the same way
+  `lib/reporting/ticket-details.ts` already did for Reports) — the List view's table below
+  uses them; the Kanban card view simply doesn't render them.
 - The login screen's decorative right-hand hero panel (ticket-preview cards / gradient
   scene) was skipped both times — the shared `AuthLayout` covers login, forgot-password,
   and reset-password, and building a real per-screen split layout for one screen's
@@ -45,3 +48,24 @@ tested behavior for a visual-only pass):
 - The board KPI row (Active tickets / In progress / Ready for pickup / Waiting 7+ days)
   is computed client-side from the same already-fetched, already-scoped ticket list the
   columns render — no new endpoint.
+
+### List view (post-v1 product feedback, a second design-tool iteration)
+
+A third mock (not yet added as its own `.dc.html` — described directly by the product
+feedback and a reference screenshot) asked for the board to look like a filterable ticket
+table with KPI stat cards, rather than Kanban columns. Rather than replace the
+drag-and-drop board (a tested, WCAG-required interaction — `tests/e2e/drag-and-drop.spec.ts`),
+`app/(dashboard)/board/page.tsx` now has a Board/List toggle: List (the new table view) is
+the default, Board (unchanged Kanban) is one click away. Deliberate scope trims:
+
+- No `priority` field — the mock's Priority column doesn't correspond to anything in the
+  data model; adding one is a separate feature, not part of this restyle.
+- No fabricated KPI deltas/sparklines — the mock's stat cards show trend arrows and mini
+  charts, but there's no historical-snapshot data to compute them from honestly. The List
+  view's 5 KPI cards show only real, current counts.
+- No bulk-select checkboxes, "Columns" picker, or Export/notification-bell buttons in the
+  table header — none of those have a backing feature yet, and shipping inert controls
+  that look functional isn't better than leaving them out.
+- The "Apply filters" button reuses the same filter state the Kanban toolbar already
+  live-applies on change; it's a UI affordance for parity with the mock, not a true
+  deferred-until-Apply filter pipeline.

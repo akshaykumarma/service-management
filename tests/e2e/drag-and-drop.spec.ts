@@ -24,6 +24,9 @@ test.describe("Drag-and-drop status updates on the board (006-dashboard-reportin
     const ticketId = await createTicketAndGetId(page, "E2E DnD");
 
     await page.goto("/board");
+    // List is now the board's default view (post-v1 product feedback); switch to the
+    // Kanban view before exercising drag-and-drop.
+    await page.getByRole("button", { name: "Board", exact: true }).click();
     const card = page.locator(`li[data-ticket-id="${ticketId}"]`);
     await expect(card).toBeVisible();
     await expect(card).toHaveAttribute("data-status", "open");
@@ -52,6 +55,9 @@ test.describe("Drag-and-drop status updates on the board (006-dashboard-reportin
     const ticketId = await createTicketAndGetId(page, "E2E DnD Comment");
 
     await page.goto("/board");
+    // List is now the board's default view (post-v1 product feedback); switch to the
+    // Kanban view before exercising drag-and-drop.
+    await page.getByRole("button", { name: "Board", exact: true }).click();
     const card = page.locator(`li[data-ticket-id="${ticketId}"]`);
     await expect(card).toBeVisible();
     await expect(card).toHaveAttribute("data-status", "open");
@@ -86,6 +92,9 @@ test.describe("Drag-and-drop status updates on the board (006-dashboard-reportin
     const ticketId = await createTicketAndGetId(page, "E2E DnD Invalid");
 
     await page.goto("/board");
+    // List is now the board's default view (post-v1 product feedback); switch to the
+    // Kanban view before exercising drag-and-drop.
+    await page.getByRole("button", { name: "Board", exact: true }).click();
     const card = page.locator(`li[data-ticket-id="${ticketId}"]`);
     await expect(card).toBeVisible();
     await expect(card).toHaveAttribute("data-status", "open");

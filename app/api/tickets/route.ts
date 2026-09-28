@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { db } from "@/lib/db/client";
-import { statusHistory, stores, tickets, ticketPhotos } from "@/lib/db/schema";
+import { statusHistory, stores, tickets, ticketPhotos, users } from "@/lib/db/schema";
 import { requireAuthenticatedSession } from "@/lib/auth/require-session";
 import { requireSameOrigin } from "@/lib/auth/csrf";
 import { assertAccess, AccessDeniedError } from "@/lib/auth/rbac";
@@ -162,7 +162,31 @@ export async function GET(request: NextRequest) {
   // delivered ticket is still fully visible via Reports' own date range.
   const visible = rows.filter((t) => t.status !== "delivered" || isCurrentMonth(t.updatedAt));
 
-  return NextResponse.json({ tickets: visible.map(toTicketCard) });
+  // storeName/technicianName back the List view's table columns (the Kanban view doesn't
+  // use them) — resolved the same batched way lib/reporting/ticket-details.ts already
+  // does for Reports, rather than a per-ticket N+1 lookup.
+  const storeIdsInView = [...new Set(visible.map((t) => t.storeId))];
+  const technicianIdsInView = [...new Set(visible.map((t) => t.assignedTechnicianId).filter((id): id is string => id !== null))];
+
+  const [storeRows, technicianRows] = await Promise.all([
+    storeIdsInView.length > 0
+      ? db.select({ id: stores.id, name: stores.name }).from(stores).where(inArray(stores.id, storeIdsInView))
+      : Promise.resolve([] as { id: string; name: string }[]),
+    technicianIdsInView.length > 0
+      ? db.select({ id: users.id, name: users.name }).from(users).where(inArray(users.id, technicianIdsInView))
+      : Promise.resolve([] as { id: string; name: string }[]),
+  ]);
+  const storeNameById = new Map(storeRows.map((s) => [s.id, s.name]));
+  const technicianNameById = new Map(technicianRows.map((t) => [t.id, t.name]));
+
+  const cards = visible.map((t) => ({
+    ...toTicketCard(t),
+    storeId: t.storeId,
+    storeName: storeNameById.get(t.storeId) ?? t.storeId,
+    technicianName: t.assignedTechnicianId ? technicianNameById.get(t.assignedTechnicianId) ?? null : null,
+  }));
+
+  return NextResponse.json({ tickets: cards });
 }
 
 function isCurrentMonth(date: Date): boolean {

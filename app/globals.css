@@ -988,6 +988,317 @@ button.board-toolbar__clear:hover {
   border-top: 1px solid var(--color-border);
 }
 
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* --- Board page header + view toggle (List view, post-v1 product feedback) --- */
+
+.list-page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.list-page-header h1 {
+  margin-bottom: 4px;
+}
+
+.list-page-header__subtitle {
+  margin: 0 0 20px;
+  color: var(--color-text-muted);
+  font-size: 0.9rem;
+}
+
+.list-page-header__search input {
+  width: 320px;
+  max-width: 60vw;
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+}
+
+.board-view-toggle {
+  display: inline-flex;
+  background: var(--color-surface-subtle);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: 3px;
+  margin-bottom: 16px;
+  gap: 2px;
+}
+
+.board-view-toggle button {
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 6px 18px;
+  border-radius: 999px;
+  box-shadow: none;
+}
+
+.board-view-toggle button:hover:not([aria-pressed="true"]) {
+  background: transparent;
+  color: var(--color-text);
+}
+
+.board-view-toggle button[aria-pressed="true"] {
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: var(--shadow-sm);
+}
+
+/* --- List view's own filter bar (visually distinct from the Kanban toolbar above: a
+   batch "Apply filters" action rather than live filtering) --- */
+
+.list-filterbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 14px 18px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow-card);
+}
+
+.list-filterbar__field {
+  min-width: 170px;
+}
+
+.list-filterbar__label {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  margin-bottom: 4px;
+}
+
+.list-filterbar__daterange {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.list-filterbar__daterange input {
+  padding: 7px 10px;
+  font-size: 0.85rem;
+}
+
+.list-filterbar__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+
+button.list-filterbar__clear {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  color: var(--color-text-muted);
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 9px 6px;
+}
+
+button.list-filterbar__clear:hover {
+  text-decoration: underline;
+  background: transparent;
+}
+
+button.list-filterbar__apply {
+  background: var(--color-text);
+  color: #fff;
+  border: none;
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 9px 18px;
+  box-shadow: var(--shadow-sm);
+}
+
+button.list-filterbar__apply:hover {
+  background: #000;
+}
+
+/* --- Ticket list table (List view) --- */
+
+.list-table-section {
+  margin-top: 8px;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--pill-accent, var(--color-text));
+  white-space: nowrap;
+}
+
+.status-pill::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--pill-accent, var(--color-text-muted));
+  flex-shrink: 0;
+}
+
+.status-pill.status-open {
+  --pill-accent: #52525b;
+}
+.status-pill.status-in_progress {
+  --pill-accent: var(--color-info);
+}
+.status-pill.status-on_hold {
+  --pill-accent: var(--color-warning);
+}
+.status-pill.status-completed {
+  --pill-accent: var(--color-success);
+}
+.status-pill.status-delivered {
+  --pill-accent: var(--color-done);
+}
+.status-pill.status-cancelled {
+  --pill-accent: var(--color-danger);
+}
+
+.age-pill {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: var(--color-bg);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.age-pill--fresh {
+  background: var(--color-success-bg);
+  color: var(--color-success);
+}
+
+.age-pill--warm {
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+}
+
+.age-pill--hot {
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+}
+
+.list-table__technician {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.avatar-dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.avatar-dot--empty {
+  width: 8px;
+  height: 8px;
+  margin: 0 7px;
+  background: var(--color-border);
+}
+
+.list-table__ticket-link {
+  font-family: var(--font-mono);
+  font-weight: 600;
+}
+
+button.list-table__sort {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  color: inherit;
+  font: inherit;
+  text-transform: inherit;
+  letter-spacing: inherit;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+button.list-table__sort:hover {
+  background: transparent;
+  text-decoration: underline;
+}
+
+.list-table__view-link {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.list-pagination {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 14px;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.list-pagination select {
+  padding: 5px 8px;
+  font-size: 0.85rem;
+  width: auto;
+}
+
+.list-pagination__spacer {
+  flex: 1 1 auto;
+}
+
+button.list-pagination__page-btn {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  box-shadow: none;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.list-pagination__current {
+  background: var(--color-text);
+  color: #fff;
+  border-radius: var(--radius-sm);
+  padding: 5px 11px;
+  font-weight: 600;
+}
+
 /* --- Multi-select dropdown (checkbox popover) --- */
 
 .multiselect {
@@ -1465,6 +1776,7 @@ button.modal-panel__close:hover {
      row instead of a fixed min-width so they read as a clean stacked list. */
   .board-toolbar__field,
   .list-toolbar__field,
+  .list-filterbar__field,
   .multiselect,
   .searchable-select {
     min-width: 0;
@@ -1473,6 +1785,17 @@ button.modal-panel__close:hover {
 
   .board-toolbar {
     position: static;
+  }
+
+  .list-filterbar__actions {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .list-page-header__search,
+  .list-page-header__search input {
+    width: 100%;
+    max-width: none;
   }
 
   dl {
