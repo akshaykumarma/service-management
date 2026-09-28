@@ -133,9 +133,11 @@ function BoardColumn({
       data-over={isOver}
       className={`board-column status-${status}`}
     >
-      <h2 id={`column-${status}-heading`}>
-        {label} ({tickets.length})
-      </h2>
+      <div className="board-column__accent-bar" aria-hidden="true" />
+      <div className="board-column__head">
+        <h2 id={`column-${status}-heading`}>{label}</h2>
+        <span className="board-column__count">{tickets.length}</span>
+      </div>
       <ul>
         {tickets.map((ticket) => (
           <TicketCardItem key={ticket.id} ticket={ticket} />
@@ -303,9 +305,33 @@ export default function BoardPage() {
     attemptTransition(ticket.id, toStatus, null);
   }
 
+  // Derived client-side from the same (already filtered/scoped) ticket list the columns
+  // render — no separate endpoint, so these always agree with what's actually on screen.
+  const activeTickets = tickets.filter((t) => t.status !== "delivered" && t.status !== "cancelled");
+  const boardKpis = [
+    { label: "Active tickets", value: activeTickets.length, dot: "#7c3aed", bg: "#f3efff" },
+    { label: "In progress", value: tickets.filter((t) => t.status === "in_progress").length, dot: "#0ea5e9", bg: "#e8f6fe" },
+    { label: "Ready for pickup", value: tickets.filter((t) => t.status === "completed").length, dot: "#10b981", bg: "#e7f9f1" },
+    { label: "Waiting 7+ days", value: activeTickets.filter((t) => t.daysOpen >= 7).length, dot: "#f43f5e", bg: "#fff0f2" },
+  ];
+
   return (
     <main>
       <h1>Board</h1>
+
+      <div className="board-kpis">
+        {boardKpis.map((kpi) => (
+          <div className="board-kpi" key={kpi.label}>
+            <span className="board-kpi__icon" style={{ background: kpi.bg }} aria-hidden="true">
+              <span className="board-kpi__dot" style={{ background: kpi.dot }} />
+            </span>
+            <div>
+              <div className="board-kpi__label">{kpi.label}</div>
+              <div className="board-kpi__value">{kpi.value}</div>
+            </div>
+          </div>
+        ))}
+      </div>
 
       <section aria-labelledby="filters-heading" className="board-toolbar">
         <div className="board-toolbar__row">

@@ -15,6 +15,16 @@ const ROLE_LABELS: Record<NavHeaderProps["role"], string> = {
   technician: "Technician",
 };
 
+// Per-item accent dot color, matching the design's per-screen identity color.
+const NAV_DOT: Record<string, string> = {
+  board: "#a78bfa",
+  reports: "#34d399",
+  team: "#fbbf24",
+  stores: "#f472b6",
+  "machine-models": "#22d3ee",
+  catalogue: "#a3e635",
+};
+
 function initials(name: string) {
   return name
     .split(" ")
@@ -47,39 +57,36 @@ export default function NavHeader({ name, role }: NavHeaderProps) {
     router.refresh();
   }
 
+  function NavLink({ href, label, dotKey }: { href: string; label: string; dotKey: string }) {
+    return (
+      <a href={href} className={navClass(href)}>
+        <span className="app-sidebar__nav-icon" aria-hidden="true">
+          <span className="app-sidebar__nav-dot" style={{ background: NAV_DOT[dotKey] }} />
+        </span>
+        {label}
+      </a>
+    );
+  }
+
   const showAdminSection = role === "admin" || role === "super_admin";
   const showSuperAdminOnly = role === "super_admin";
 
   const navLinks = (
     <>
       <nav className="app-sidebar__nav" aria-label="Main">
-        <a href="/board" className={navClass("/board")}>
-          Board
-        </a>
-        {showAdminSection && (
-          <a href="/reports" className={navClass("/reports")}>
-            Reports
-          </a>
-        )}
+        <NavLink href="/board" label="Board" dotKey="board" />
+        {showAdminSection && <NavLink href="/reports" label="Reports" dotKey="reports" />}
       </nav>
       {showAdminSection && (
         <>
           <div className="app-sidebar__section-label">Admin</div>
           <nav className="app-sidebar__nav" aria-label="Admin">
-            <a href="/team" className={navClass("/team")}>
-              Team
-            </a>
-            <a href="/admin/stores" className={navClass("/admin/stores")}>
-              Stores
-            </a>
+            <NavLink href="/team" label="Team" dotKey="team" />
+            <NavLink href="/admin/stores" label="Stores" dotKey="stores" />
             {showSuperAdminOnly && (
               <>
-                <a href="/admin/machine-models" className={navClass("/admin/machine-models")}>
-                  Machine models
-                </a>
-                <a href="/admin/catalogue" className={navClass("/admin/catalogue")}>
-                  Catalogue
-                </a>
+                <NavLink href="/admin/machine-models" label="Machine models" dotKey="machine-models" />
+                <NavLink href="/admin/catalogue" label="Catalogue" dotKey="catalogue" />
               </>
             )}
           </nav>
@@ -108,7 +115,10 @@ export default function NavHeader({ name, role }: NavHeaderProps) {
       {/* Desktop: a fixed left sidebar (>860px, see globals.css). */}
       <aside className="app-sidebar">
         <a href="/board" className="app-sidebar__brand">
-          <img src="/logo.png" alt="Shubha Sewing" />
+          <span className="app-sidebar__brand-badge">
+            <img src="/logo.png" alt="Shubha Sewing" />
+          </span>
+          <span className="app-sidebar__brand-tag">Service</span>
         </a>
         <div className="app-sidebar__new">
           <button type="button" className="app-sidebar__new-btn" onClick={() => router.push("/tickets/new")}>
@@ -121,7 +131,7 @@ export default function NavHeader({ name, role }: NavHeaderProps) {
 
       {/* Mobile/tablet: a sticky top bar whose hamburger opens the same nav as a dropdown. */}
       <div className="app-topbar">
-        <a href="/board">
+        <a href="/board" className="app-topbar__brand-badge">
           <img src="/logo.png" alt="Shubha Sewing" />
         </a>
         <div className="app-topbar__spacer" />
