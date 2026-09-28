@@ -51,4 +51,34 @@ describe("Kanban board role/store scoping (User Story 1)", () => {
     });
     expect(card.daysOpen).toBe(0);
   });
+
+  it("only shows Delivered tickets from the current month, per post-v1 product feedback (older ones stay in Reports)", async () => {
+    const { db } = await import("@/lib/db/client");
+    const { tickets } = await import("@/lib/db/schema");
+    const { eq } = await import("drizzle-orm");
+
+    const store = await createStore();
+    const sm = await createUser({ role: "service_manager", storeIds: [store.id], password: "Correct123!" });
+    const cookie = await loginAs(sm.email, "Correct123!");
+
+    const thisMonthDelivered = await createTicket({ storeId: store.id, createdBy: sm.id, status: "delivered" });
+    const lastMonthDelivered = await createTicket({ storeId: store.id, createdBy: sm.id, status: "delivered" });
+    const lastMonthCompleted = await createTicket({ storeId: store.id, createdBy: sm.id, status: "completed" });
+
+    // Backdate updatedAt (this codebase's own "when did this ticket last change status"
+    // signal, per lib/board/card-shape.ts's identical use of it for daysOpen) on the two
+    // "last month" tickets to actually land outside the current calendar month.
+    const lastMonth = new Date();
+    lastMonth.setUTCMonth(lastMonth.getUTCMonth() - 1);
+    await db.update(tickets).set({ updatedAt: lastMonth }).where(eq(tickets.id, lastMonthDelivered.id));
+    await db.update(tickets).set({ updatedAt: lastMonth }).where(eq(tickets.id, lastMonthCompleted.id));
+
+    const res = await ticketsGET(jsonRequest("/api/tickets", { cookie }));
+    const ids = (await res.json()).tickets.map((t: { id: string }) => t.id);
+
+    expect(ids).toContain(thisMonthDelivered.id);
+    expect(ids).not.toContain(lastMonthDelivered.id);
+    // Non-Delivered statuses are unaffected by this rule regardless of how old they are.
+    expect(ids).toContain(lastMonthCompleted.id);
+  });
 });

@@ -21,6 +21,14 @@ of) everything above. For a `technician` caller this is redundant with their own
 filter (`lib/board/ticket-query.ts`); it's meant for a Service Manager/Admin/Super Admin
 picking a technician from `GET /api/technicians` below.
 
+**Deviation** (post-v1, per direct product feedback): a `Delivered` ticket is only
+included if it was delivered within the current calendar month (its own `updatedAt`,
+UTC — the same "last status change" signal `lib/board/card-shape.ts`'s `daysOpen` already
+relies on for this exact status), regardless of `status[]`/date filters. This keeps the
+board's Delivered column from accumulating every delivery ever made; an older one is
+still fully visible via `GET /api/reports/tickets`, which keeps its own unrestricted date
+range. No other status is affected.
+
 **Responses**:
 - `200 { "tickets": [{ "id", "ticketNumber", "customerName", "machineModel", "status", "createdAt", "daysOpen" }] }`
   — empty array (not an error) when nothing matches (FR-016)

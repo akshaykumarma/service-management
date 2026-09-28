@@ -152,5 +152,20 @@ export async function GET(request: NextRequest) {
     includeCancelled: params.get("includeCancelled") === "true",
   });
 
-  return NextResponse.json({ tickets: rows.map(toTicketCard) });
+  // Deviation (post-v1, per direct product feedback): this endpoint backs the board's
+  // Kanban columns (not the Reports table, which is GET /api/reports/tickets and keeps
+  // every historical ticket), so an older delivered ticket would otherwise sit in the
+  // Delivered column forever. A ticket's `updatedAt` is only ever touched by a status
+  // change (lib/tickets/status-transitions.ts), so — same precedent as this ticket's
+  // own board-card daysOpen calculation (lib/board/card-shape.ts) — it doubles as "when
+  // this ticket was delivered." Every other status/filter is unaffected; an older
+  // delivered ticket is still fully visible via Reports' own date range.
+  const visible = rows.filter((t) => t.status !== "delivered" || isCurrentMonth(t.updatedAt));
+
+  return NextResponse.json({ tickets: visible.map(toTicketCard) });
+}
+
+function isCurrentMonth(date: Date): boolean {
+  const now = new Date();
+  return date.getUTCFullYear() === now.getUTCFullYear() && date.getUTCMonth() === now.getUTCMonth();
 }
