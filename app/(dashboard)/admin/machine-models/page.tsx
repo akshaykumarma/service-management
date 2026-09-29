@@ -127,6 +127,9 @@ export default function MachineModelsPage() {
         <div>
           <label htmlFor="csvImport">Bulk import from CSV (columns: name,manufacturer,category)</label>
           <input id="csvImport" type="file" accept=".csv" onChange={handleImport} />
+          <a href="/samples/machine-models-sample.csv" download="machine-models-sample.csv">
+            Download sample CSV
+          </a>
         </div>
         {importResult && (
           <p role="status">

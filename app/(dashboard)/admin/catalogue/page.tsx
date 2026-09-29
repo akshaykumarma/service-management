@@ -224,6 +224,9 @@ export default function CataloguePage() {
         <div>
           <label htmlFor="csvImport">Bulk import parts from CSV (columns: name,sku,unit_cost,category)</label>
           <input id="csvImport" type="file" accept=".csv" onChange={handleImport} />
+          <a href="/samples/parts-sample.csv" download="parts-sample.csv">
+            Download sample CSV
+          </a>
         </div>
         {importResult && (
           <p role="status">
