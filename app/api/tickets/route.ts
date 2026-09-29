@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { eq, inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { statusHistory, stores, tickets, ticketPhotos, users } from "@/lib/db/schema";
 import { requireAuthenticatedSession } from "@/lib/auth/require-session";
@@ -155,12 +155,28 @@ export async function GET(request: NextRequest) {
   // Deviation (post-v1, per direct product feedback): this endpoint backs the board's
   // Kanban columns (not the Reports table, which is GET /api/reports/tickets and keeps
   // every historical ticket), so an older delivered ticket would otherwise sit in the
-  // Delivered column forever. A ticket's `updatedAt` is only ever touched by a status
-  // change (lib/tickets/status-transitions.ts), so — same precedent as this ticket's
-  // own board-card daysOpen calculation (lib/board/card-shape.ts) — it doubles as "when
-  // this ticket was delivered." Every other status/filter is unaffected; an older
+  // Delivered column forever — only this month's deliveries are shown. "When it was
+  // delivered" is its latest status_history row into "delivered" (same lookup as
+  // lib/billing/invoice-pdf.ts), not `updatedAt`, which a technician reassignment or a
+  // delivery-override phone correction also bumps; `updatedAt` is only the fallback
+  // for a ticket with no such row. Every other status/filter is unaffected; an older
   // delivered ticket is still fully visible via Reports' own date range.
-  const visible = rows.filter((t) => t.status !== "delivered" || isCurrentMonth(t.updatedAt));
+  const deliveredIds = rows.filter((t) => t.status === "delivered").map((t) => t.id);
+  const deliveredRows =
+    deliveredIds.length > 0
+      ? await db
+          .select({ ticketId: statusHistory.ticketId, createdAt: statusHistory.createdAt })
+          .from(statusHistory)
+          .where(and(inArray(statusHistory.ticketId, deliveredIds), eq(statusHistory.toStatus, "delivered")))
+      : [];
+  const deliveredAtById = new Map<string, Date>();
+  for (const row of deliveredRows) {
+    const prev = deliveredAtById.get(row.ticketId);
+    if (!prev || row.createdAt > prev) deliveredAtById.set(row.ticketId, row.createdAt);
+  }
+  const visible = rows.filter(
+    (t) => t.status !== "delivered" || isCurrentMonth(deliveredAtById.get(t.id) ?? t.updatedAt),
+  );
 
   // storeName/technicianName back the List view's table columns (the Kanban view doesn't
   // use them) — resolved the same batched way lib/reporting/ticket-details.ts already
@@ -189,7 +205,11 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({ tickets: cards });
 }
 
+// Calendar months are the stores' own (India, UTC+5:30), not UTC's — otherwise a
+// delivery made before 05:30 IST on the 1st would count toward the previous month.
+const BUSINESS_TIME_ZONE = "Asia/Kolkata";
+const yearMonthFormat = new Intl.DateTimeFormat("en-CA", { timeZone: BUSINESS_TIME_ZONE, year: "numeric", month: "2-digit" });
+
 function isCurrentMonth(date: Date): boolean {
-  const now = new Date();
-  return date.getUTCFullYear() === now.getUTCFullYear() && date.getUTCMonth() === now.getUTCMonth();
+  return yearMonthFormat.format(date) === yearMonthFormat.format(new Date());
 }

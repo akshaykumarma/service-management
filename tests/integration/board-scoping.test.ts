@@ -68,8 +68,9 @@ describe("Kanban board role/store scoping (User Story 1)", () => {
     // Backdate updatedAt (this codebase's own "when did this ticket last change status"
     // signal, per lib/board/card-shape.ts's identical use of it for daysOpen) on the two
     // "last month" tickets to actually land outside the current calendar month.
-    const lastMonth = new Date();
-    lastMonth.setUTCMonth(lastMonth.getUTCMonth() - 1);
+    // 40 days back always lands in an earlier calendar month (setUTCMonth(-1) can
+    // overflow back into the current month on the 29th–31st).
+    const lastMonth = new Date(Date.now() - 40 * 24 * 60 * 60 * 1000);
     await db.update(tickets).set({ updatedAt: lastMonth }).where(eq(tickets.id, lastMonthDelivered.id));
     await db.update(tickets).set({ updatedAt: lastMonth }).where(eq(tickets.id, lastMonthCompleted.id));
 
@@ -80,5 +81,31 @@ describe("Kanban board role/store scoping (User Story 1)", () => {
     expect(ids).not.toContain(lastMonthDelivered.id);
     // Non-Delivered statuses are unaffected by this rule regardless of how old they are.
     expect(ids).toContain(lastMonthCompleted.id);
+  });
+
+  it("dates a Delivered ticket by its delivery status_history row, not a later updatedAt bump (e.g. technician reassignment)", async () => {
+    const { db } = await import("@/lib/db/client");
+    const { statusHistory } = await import("@/lib/db/schema");
+
+    const store = await createStore();
+    const sm = await createUser({ role: "service_manager", storeIds: [store.id], password: "Correct123!" });
+    const cookie = await loginAs(sm.email, "Correct123!");
+
+    // updatedAt is "now" (as after a reassignment), but the delivery itself was last month.
+    const oldDelivery = await createTicket({ storeId: store.id, createdBy: sm.id, status: "delivered" });
+    const lastMonth = new Date(Date.now() - 40 * 24 * 60 * 60 * 1000);
+    await db.insert(statusHistory).values({
+      ticketId: oldDelivery.id,
+      fromStatus: "completed",
+      toStatus: "delivered",
+      actorId: sm.id,
+      comment: null,
+      createdAt: lastMonth,
+    });
+
+    const res = await ticketsGET(jsonRequest("/api/tickets", { cookie }));
+    const ids = (await res.json()).tickets.map((t: { id: string }) => t.id);
+
+    expect(ids).not.toContain(oldDelivery.id);
   });
 });
