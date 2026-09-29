@@ -3,6 +3,8 @@ import { asc, desc, eq } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { deliveryOverrides, notifications, otpVerifications, statusHistory, tickets, ticketPhotos, ticketLineItems, users } from "@/lib/db/schema";
 import { requireAuthenticatedSession } from "@/lib/auth/require-session";
+import { requireSameOrigin } from "@/lib/auth/csrf";
+import { editTicketDetails } from "@/lib/tickets/edit-details";
 import { assertTicketAccess, AccessDeniedError } from "@/lib/auth/rbac";
 import { calculateBill } from "@/lib/billing/bill-calculation";
 import { hasUnconfirmedFailedNotification, needsOtpOverride } from "@/lib/notifications/alerts";
@@ -130,4 +132,56 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     notificationLog,
     otpOutcome,
   });
+}
+
+const EDIT_ERROR_STATUS: Record<string, number> = {
+  ticket_locked: 409,
+  phone_locked_during_delivery: 409,
+  missing_required_field: 400,
+  invalid_field: 400,
+};
+
+/**
+ * Edits the ticket's intake details (post-v1 product feedback) — see
+ * lib/tickets/edit-details.ts for the rules. A Technician can view but not edit them,
+ * matching the other Service-Manager-and-up actions on this page (e.g. assignment).
+ */
+export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
+  const csrfResponse = requireSameOrigin(request);
+  if (csrfResponse) return csrfResponse;
+
+  const sessionOrResponse = await requireAuthenticatedSession(request);
+  if (sessionOrResponse instanceof NextResponse) return sessionOrResponse;
+  const caller = sessionOrResponse.user;
+
+  const [ticket] = await db.select().from(tickets).where(eq(tickets.id, params.id)).limit(1);
+  if (!ticket) {
+    return NextResponse.json({ error: { code: "not_found", message: "No such ticket." } }, { status: 404 });
+  }
+  try {
+    await assertTicketAccess(caller, ticket);
+  } catch (err) {
+    if (err instanceof AccessDeniedError) {
+      return NextResponse.json({ error: { code: "not_found", message: "No such ticket." } }, { status: 404 });
+    }
+    throw err;
+  }
+
+  if (caller.role === "technician") {
+    return NextResponse.json(
+      { error: { code: "forbidden", message: "Technicians cannot edit ticket details." } },
+      { status: 403 },
+    );
+  }
+
+  const payload = await request.json();
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    return NextResponse.json({ error: { code: "invalid_body" } }, { status: 400 });
+  }
+
+  const result = await editTicketDetails(ticket, payload, caller.id);
+  if ("error" in result) {
+    return NextResponse.json({ error: result.error }, { status: EDIT_ERROR_STATUS[result.error.code] ?? 400 });
+  }
+  return NextResponse.json({ ticket: result.ticket });
 }

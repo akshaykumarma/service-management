@@ -35,6 +35,7 @@ test.describe("Apply parts to ticket", () => {
     await page.getByLabel("New status").selectOption("in_progress");
     await page.getByRole("button", { name: "Update status" }).click();
 
+    await page.getByRole("tab", { name: /Parts & billing/ }).click();
     await page.getByLabel("Item type").selectOption("part");
     await page.getByLabel("Catalogue item").selectOption({ label: partName });
     await page.getByLabel("Quantity").fill("1");

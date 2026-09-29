@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { formatDate, formatDateTime } from "@/lib/format/date";
 import SearchableSelect from "@/components/searchable-select";
@@ -11,6 +11,7 @@ interface TicketDetail {
   status: string;
   customerName: string;
   customerPhone: string;
+  customerAltPhone: string | null;
   machineModel: string;
   serialNumber: string | null;
   issueDescription: string;
@@ -23,15 +24,6 @@ interface TicketDetail {
 interface TechnicianOption {
   id: string;
   name: string;
-}
-
-interface HistoryEntryRow {
-  fromStatus: string | null;
-  toStatus: string;
-  actorId: string;
-  actorName: string;
-  comment: string | null;
-  createdAt: string;
 }
 
 interface LineItem {
@@ -64,20 +56,14 @@ interface ServiceHistoryEntry {
   id: string;
   ticketNumber: string;
   status: string;
+  machineModel: string;
+  issueDescription: string;
   createdAt: string;
 }
 
 interface ServiceHistory {
   found: boolean;
   entries: ServiceHistoryEntry[];
-}
-
-interface NotificationLogEntry {
-  type: string;
-  channel: string;
-  recipientPhone: string;
-  status: string;
-  sentAt: string;
 }
 
 type OtpOutcome =
@@ -122,6 +108,48 @@ interface CatalogueItem {
 
 const ALL_STATUSES = ["open", "in_progress", "on_hold", "completed", "delivered", "cancelled"];
 
+const STATUS_LABELS: Record<string, string> = {
+  open: "Open",
+  in_progress: "In progress",
+  on_hold: "On hold",
+  completed: "Completed",
+  delivered: "Delivered",
+  cancelled: "Cancelled",
+};
+
+// Mirrors lib/tickets/edit-details.ts: closed tickets' intake details are locked.
+const DETAILS_LOCKED_STATUSES = new Set(["delivered", "cancelled"]);
+
+const EDIT_DETAILS_ERROR_MESSAGES: Record<string, string> = {
+  ticket_locked: "Details can't be edited once a ticket is Delivered or Cancelled.",
+  phone_locked_during_delivery:
+    'A delivery code has been sent to the current phone number. Use "Correct phone & retry" in Delivery instead.',
+  forbidden: "Your role can't edit ticket details.",
+};
+
+const DETAIL_FIELD_NAMES: Record<string, string> = {
+  customerName: "customer name",
+  customerPhone: "phone",
+  machineModel: "machine model",
+  serialNumber: "serial number",
+  issueDescription: "issue",
+};
+
+type DetailsDraft = {
+  customerName: string;
+  customerPhone: string;
+  customerAltPhone: string;
+  machineModel: string;
+  serialNumber: string;
+  issueDescription: string;
+};
+
+type Tab = "overview" | "billing" | "activity";
+
+function formatINR(value: number): string {
+  return `₹${value.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
 const LINE_ITEM_ERROR_MESSAGES: Record<string, string> = {
   invalid_quantity: "Quantity must be a positive whole number.",
   invalid_unit_cost: "Price must be zero or a positive number.",
@@ -137,7 +165,6 @@ const TAX_RATE_ERROR_MESSAGES: Record<string, string> = {
 export default function TicketDetailPage() {
   const params = useParams<{ id: string }>();
   const [ticket, setTicket] = useState<TicketDetail | null>(null);
-  const [statusHistory, setStatusHistory] = useState<HistoryEntryRow[]>([]);
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
   const [bill, setBill] = useState<Bill | null>(null);
   const [notificationAlert, setNotificationAlert] = useState<NotificationAlert | null>(null);
@@ -182,7 +209,14 @@ export default function TicketDetailPage() {
   const [assigningTechnician, setAssigningTechnician] = useState(false);
 
   const [serviceHistory, setServiceHistory] = useState<ServiceHistory | null>(null);
-  const [notificationLog, setNotificationLog] = useState<NotificationLogEntry[]>([]);
+  const [tab, setTab] = useState<Tab>("overview");
+  const [editingDetails, setEditingDetails] = useState(false);
+  const [detailsDraft, setDetailsDraft] = useState<DetailsDraft | null>(null);
+  const [detailsError, setDetailsError] = useState<string | null>(null);
+  const [savingDetails, setSavingDetails] = useState(false);
+  // The last status the server reported — the status picker is re-seeded only when this
+  // changes, so the 30-second poll never clobbers a selection the user is making.
+  const lastLoadedStatus = useRef<string | null>(null);
   const [otpOutcome, setOtpOutcome] = useState<OtpOutcome>(null);
   const [auditTrail, setAuditTrail] = useState<AuditTrailEntry[]>([]);
 
@@ -196,13 +230,15 @@ export default function TicketDetailPage() {
     setTicket(body.ticket);
     setTaxRateInput(Number(body.ticket.taxRate).toString());
     setTechnicianSelection(body.ticket.assignedTechnicianId ?? "");
-    setStatusHistory(body.statusHistory);
+    if (lastLoadedStatus.current !== body.ticket.status) {
+      lastLoadedStatus.current = body.ticket.status;
+      setToStatus(body.ticket.status);
+    }
     setLineItems(body.lineItems);
     setBill(body.bill);
     setNotificationAlert(body.notificationAlert);
     setDelivery(body.delivery);
     setServiceHistory(body.serviceHistory);
-    setNotificationLog(body.notificationLog);
     setOtpOutcome(body.otpOutcome);
 
     const auditRes = await fetch(`/api/tickets/${params.id}/audit-trail`);
@@ -490,7 +526,6 @@ export default function TicketDetailPage() {
         body: JSON.stringify({ toStatus, comment: comment || null }),
       });
       if (res.ok) {
-        setToStatus("");
         setComment("");
         await load();
         return;
@@ -504,6 +539,47 @@ export default function TicketDetailPage() {
       setStatusError(messages[body.error.code] ?? "Could not update status.");
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  function startEditingDetails() {
+    if (!ticket) return;
+    setDetailsError(null);
+    setDetailsDraft({
+      customerName: ticket.customerName,
+      customerPhone: ticket.customerPhone,
+      customerAltPhone: ticket.customerAltPhone ?? "",
+      machineModel: ticket.machineModel,
+      serialNumber: ticket.serialNumber ?? "",
+      issueDescription: ticket.issueDescription,
+    });
+    setEditingDetails(true);
+  }
+
+  async function handleSaveDetails(e: React.FormEvent) {
+    e.preventDefault();
+    if (!detailsDraft) return;
+    setDetailsError(null);
+    setSavingDetails(true);
+    try {
+      const res = await fetch(`/api/tickets/${params.id}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(detailsDraft),
+      });
+      if (res.ok) {
+        setEditingDetails(false);
+        await load();
+        return;
+      }
+      const body = await res.json();
+      setDetailsError(
+        body.error.code === "missing_required_field"
+          ? `Please fill in the ${DETAIL_FIELD_NAMES[body.error.field] ?? body.error.field}.`
+          : (EDIT_DETAILS_ERROR_MESSAGES[body.error.code] ?? "Could not save the details."),
+      );
+    } finally {
+      setSavingDetails(false);
     }
   }
 
@@ -523,450 +599,577 @@ export default function TicketDetailPage() {
     );
   }
 
-  return (
-    <main>
-      <h1>{ticket.ticketNumber}</h1>
-      <section aria-labelledby="intake-heading">
-        <h2 id="intake-heading">Intake information</h2>
-        <dl>
-          <dt>Customer</dt>
-          <dd>{ticket.customerName}</dd>
-          <dt>Phone</dt>
-          <dd>{ticket.customerPhone}</dd>
-          <dt>Machine model</dt>
-          <dd>{ticket.machineModel}</dd>
-          <dt>Serial number</dt>
-          <dd>{ticket.serialNumber ?? "—"}</dd>
-          <dt>Issue</dt>
-          <dd>{ticket.issueDescription}</dd>
-          <dt>Status</dt>
-          <dd>{ticket.status}</dd>
-        </dl>
-        {ticket.status === "delivered" && (
-          <p>
-            <a href={`/api/tickets/${ticket.id}/invoice`}>Download invoice</a>
-          </p>
-        )}
-      </section>
+  const canEditDetails = role !== null && role !== "technician" && !DETAILS_LOCKED_STATUSES.has(ticket.status);
+  const showDelivery = ticket.status === "completed" || delivery?.activeAttempt || delivery?.locked || otpOutcome !== null;
+  const tabs: { id: Tab; label: string }[] = [
+    { id: "overview", label: "Overview" },
+    { id: "billing", label: `Parts & billing${lineItems.length ? ` (${lineItems.length})` : ""}` },
+    { id: "activity", label: `Activity${auditTrail.length ? ` (${auditTrail.length})` : ""}` },
+  ];
 
-      <section aria-labelledby="technician-heading">
-        <h2 id="technician-heading">Assigned technician</h2>
-        {canAssignTechnician ? (
-          <form onSubmit={handleAssignTechnician} noValidate>
-            <SearchableSelect
-              id="technicianSelection"
-              label="Technician"
-              placeholder="Unassigned"
-              options={technicianOptions.map((t) => ({ id: t.id, label: t.name }))}
-              value={technicianSelection}
-              onChange={setTechnicianSelection}
-            />
-            {assignTechnicianError && (
-              <p role="alert" aria-live="assertive">
-                {assignTechnicianError}
-              </p>
-            )}
-            <button type="submit" disabled={assigningTechnician}>
-              Save assignment
-            </button>
-          </form>
-        ) : (
-          <p>{ticket.assignedTechnicianName ?? "Unassigned"}</p>
+  return (
+    <main className="ticket-page">
+      <header className="ticket-header">
+        <div className="ticket-header__main">
+          <div className="ticket-header__meta">
+            <span className="ticket-header__number">{ticket.ticketNumber}</span>
+            <span className={`status-pill status-${ticket.status}`}>{STATUS_LABELS[ticket.status] ?? ticket.status}</span>
+          </div>
+          <h1>{ticket.customerName}</h1>
+          <p className="ticket-header__sub">
+            {ticket.machineModel}
+            {ticket.serialNumber ? ` · SN ${ticket.serialNumber}` : ""} · Received {formatDate(ticket.createdAt)}
+          </p>
+        </div>
+        {ticket.status === "delivered" && (
+          <a className="button-link" href={`/api/tickets/${ticket.id}/invoice`}>
+            Download invoice
+          </a>
         )}
-      </section>
+      </header>
 
       {notificationAlert?.failed && (
-        <section aria-labelledby="notification-alert-heading" role="alert" aria-live="assertive">
-          <h2 id="notification-alert-heading">Notification delivery failed</h2>
-          <p>The WhatsApp notification to this customer failed to send. Follow up manually, then confirm below.</p>
+        <div className="ticket-alert" role="alert" aria-live="assertive">
+          <div>
+            <strong>WhatsApp notification failed.</strong> Follow up with the customer manually, then confirm.
+          </div>
           <button type="button" onClick={handleConfirmNotification} disabled={confirmingNotification}>
             Confirm manual follow-up
           </button>
-        </section>
+        </div>
       )}
 
-      <section aria-labelledby="status-change-heading">
-        <h2 id="status-change-heading">Change status</h2>
-        <form onSubmit={handleStatusChange} noValidate>
-          <div>
-            <label htmlFor="toStatus" className="required">
-              New status
-            </label>
-            <select id="toStatus" required value={toStatus} onChange={(e) => setToStatus(e.target.value)}>
-              <option value="">Select a status</option>
-              {ALL_STATUSES.filter((s) => s !== ticket.status).map((s) => (
-                <option key={s} value={s}>
-                  {s.replace("_", " ")}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label htmlFor="comment">Comment (required for backward moves, On Hold, or Cancelled)</label>
-            <textarea id="comment" value={comment} onChange={(e) => setComment(e.target.value)} />
-          </div>
-          {statusError && (
-            <p role="alert" aria-live="assertive">
-              {statusError}
-            </p>
-          )}
-          <button type="submit" disabled={submitting || !toStatus}>
-            Update status
+      <div className="ticket-tabs" role="tablist" aria-label="Ticket sections">
+        {tabs.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            role="tab"
+            id={`tab-${t.id}`}
+            aria-selected={tab === t.id}
+            aria-controls={`panel-${t.id}`}
+            onClick={() => setTab(t.id)}
+          >
+            {t.label}
           </button>
-        </form>
-      </section>
+        ))}
+      </div>
 
-      {(ticket.status === "completed" || delivery?.activeAttempt || delivery?.locked) && (
-        <section aria-labelledby="delivery-heading">
-          <h2 id="delivery-heading">Delivery verification</h2>
-          {delivery?.locked ? (
-            <>
-              <p role="alert" aria-live="assertive">
-                Entry is locked (3 incorrect attempts, or the code and its resend both expired). An Admin or Super
-                Admin must start a new attempt.
-              </p>
-              {reinitiateError && (
-                <p role="alert" aria-live="assertive">
-                  {reinitiateError}
-                </p>
-              )}
-              <button type="button" onClick={handleReinitiate} disabled={reinitiating}>
-                Start new attempt
-              </button>
-            </>
-          ) : !delivery?.activeAttempt ? (
-            <>
-              <p>Send a one-time WhatsApp code to the customer to confirm delivery.</p>
-              {deliverError && (
-                <p role="alert" aria-live="assertive">
-                  {deliverError}
-                </p>
-              )}
-              <button type="button" onClick={handleStartDelivery} disabled={startingDelivery}>
-                Start delivery verification
-              </button>
-            </>
-          ) : (
-            <>
-              <form onSubmit={handleVerifyCode} noValidate>
-                <div>
-                  <label htmlFor="otpCode" className="required">
-                    One-time code
-                  </label>
-                  <input
-                    id="otpCode"
-                    inputMode="numeric"
-                    required
-                    value={otpCode}
-                    onChange={(e) => setOtpCode(e.target.value)}
-                  />
-                </div>
-                {verifyError && (
-                  <p role="alert" aria-live="assertive">
-                    {verifyError}
-                  </p>
+      {tab === "overview" && (
+        <div className="ticket-grid" role="tabpanel" id="panel-overview" aria-labelledby="tab-overview">
+          <div className="ticket-grid__main">
+            <section className="card" aria-labelledby="details-heading">
+              <div className="card__header">
+                <h2 id="details-heading">Customer &amp; machine</h2>
+                {canEditDetails && !editingDetails && (
+                  <button type="button" onClick={startEditingDetails}>
+                    Edit details
+                  </button>
                 )}
-                <button type="submit" disabled={verifying || !otpCode}>
-                  Verify code
-                </button>
-              </form>
-              {resendMessage && <p aria-live="polite">{resendMessage}</p>}
-              <button type="button" onClick={handleResendCode} disabled={resending}>
-                Resend code
-              </button>
-            </>
-          )}
+              </div>
+              {editingDetails && detailsDraft ? (
+                <form onSubmit={handleSaveDetails} noValidate className="details-form">
+                  <div>
+                    <label htmlFor="editCustomerName" className="required">
+                      Customer name
+                    </label>
+                    <input
+                      id="editCustomerName"
+                      value={detailsDraft.customerName}
+                      onChange={(e) => setDetailsDraft({ ...detailsDraft, customerName: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="editCustomerPhone" className="required">
+                      Phone
+                    </label>
+                    <input
+                      id="editCustomerPhone"
+                      value={detailsDraft.customerPhone}
+                      onChange={(e) => setDetailsDraft({ ...detailsDraft, customerPhone: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="editCustomerAltPhone">Alternate phone</label>
+                    <input
+                      id="editCustomerAltPhone"
+                      value={detailsDraft.customerAltPhone}
+                      onChange={(e) => setDetailsDraft({ ...detailsDraft, customerAltPhone: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="editMachineModel" className="required">
+                      Machine model
+                    </label>
+                    <input
+                      id="editMachineModel"
+                      value={detailsDraft.machineModel}
+                      onChange={(e) => setDetailsDraft({ ...detailsDraft, machineModel: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="editSerialNumber" className="required">
+                      Serial number
+                    </label>
+                    <input
+                      id="editSerialNumber"
+                      value={detailsDraft.serialNumber}
+                      onChange={(e) => setDetailsDraft({ ...detailsDraft, serialNumber: e.target.value })}
+                    />
+                  </div>
+                  <div className="details-form__wide">
+                    <label htmlFor="editIssueDescription" className="required">
+                      Issue
+                    </label>
+                    <textarea
+                      id="editIssueDescription"
+                      rows={3}
+                      value={detailsDraft.issueDescription}
+                      onChange={(e) => setDetailsDraft({ ...detailsDraft, issueDescription: e.target.value })}
+                    />
+                  </div>
+                  {detailsError && (
+                    <p role="alert" aria-live="assertive" className="details-form__wide form-error">
+                      {detailsError}
+                    </p>
+                  )}
+                  <div className="details-form__wide card__actions">
+                    <button type="button" onClick={() => setEditingDetails(false)} disabled={savingDetails}>
+                      Cancel
+                    </button>
+                    <button type="submit" disabled={savingDetails}>
+                      Save details
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <dl className="detail-list">
+                  <dt>Customer</dt>
+                  <dd>{ticket.customerName}</dd>
+                  <dt>Phone</dt>
+                  <dd>
+                    {ticket.customerPhone}
+                    {ticket.customerAltPhone ? ` · alt ${ticket.customerAltPhone}` : ""}
+                  </dd>
+                  <dt>Machine model</dt>
+                  <dd>{ticket.machineModel}</dd>
+                  <dt>Serial number</dt>
+                  <dd className="mono">{ticket.serialNumber ?? "—"}</dd>
+                  <dt>Issue</dt>
+                  <dd>{ticket.issueDescription}</dd>
+                  <dt>Status</dt>
+                  <dd>{STATUS_LABELS[ticket.status] ?? ticket.status}</dd>
+                  <dt>Received</dt>
+                  <dd>{formatDateTime(ticket.createdAt)}</dd>
+                </dl>
+              )}
+            </section>
 
-          {isAdminOrAbove && delivery?.sendFailed && (
-            <div aria-labelledby="correct-phone-heading">
-              <h3 id="correct-phone-heading">OTP send failed</h3>
-              <p>The one-time code could not be sent to the customer&apos;s phone. Correct the number and retry.</p>
-              <form onSubmit={handleCorrectPhone} noValidate>
+            <section className="card" aria-labelledby="service-history-heading">
+              <h2 id="service-history-heading">Service history</h2>
+              {serviceHistory?.found ? (
+                <ul className="history-list">
+                  {serviceHistory.entries.map((entry) => (
+                    <li key={entry.id}>
+                      <a href={`/tickets/${entry.id}`}>{entry.ticketNumber}</a>
+                      <span className={`status-pill status-${entry.status}`}>
+                        {STATUS_LABELS[entry.status] ?? entry.status}
+                      </span>
+                      <span className="history-list__date">{formatDate(entry.createdAt)}</span>
+                      <span className="history-list__issue">{entry.issueDescription}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="muted">No earlier tickets for this serial number and phone number.</p>
+              )}
+            </section>
+          </div>
+
+          <div className="ticket-grid__side">
+            <section className="card" aria-labelledby="status-change-heading">
+              <h2 id="status-change-heading">Status</h2>
+              <form onSubmit={handleStatusChange} noValidate>
                 <div>
-                  <label htmlFor="correctedPhone" className="required">
-                    Corrected phone number
-                  </label>
-                  <input
-                    id="correctedPhone"
-                    required
-                    value={correctedPhone}
-                    onChange={(e) => setCorrectedPhone(e.target.value)}
-                  />
+                  <label htmlFor="toStatus">New status</label>
+                  <select id="toStatus" value={toStatus} onChange={(e) => setToStatus(e.target.value)}>
+                    {ALL_STATUSES.map((s) => (
+                      <option key={s} value={s}>
+                        {STATUS_LABELS[s]}
+                        {s === ticket.status ? " (current)" : ""}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-                {correctPhoneError && (
-                  <p role="alert" aria-live="assertive">
-                    {correctPhoneError}
-                  </p>
-                )}
-                <button type="submit" disabled={correctingPhone || !correctedPhone}>
-                  Correct phone &amp; retry
-                </button>
-              </form>
-            </div>
-          )}
-
-          {isAdminOrAbove && delivery?.canOverride && (
-            <div aria-labelledby="override-heading">
-              <h3 id="override-heading">Override to Delivered</h3>
-              <p>The corrected number also failed to receive the code. Override with a recorded reason instead.</p>
-              <form onSubmit={handleOverride} noValidate>
                 <div>
-                  <label htmlFor="overrideReason" className="required">
-                    Reason
-                  </label>
+                  <label htmlFor="comment">Comment</label>
                   <textarea
-                    id="overrideReason"
-                    required
-                    value={overrideReason}
-                    onChange={(e) => setOverrideReason(e.target.value)}
+                    id="comment"
+                    rows={2}
+                    placeholder="Required for backward moves, On hold, or Cancelled"
+                    value={comment}
+                    onChange={(e) => setComment(e.target.value)}
                   />
                 </div>
-                {overrideError && (
-                  <p role="alert" aria-live="assertive">
-                    {overrideError}
+                {statusError && (
+                  <p role="alert" aria-live="assertive" className="form-error">
+                    {statusError}
                   </p>
                 )}
-                <button type="submit" disabled={overriding || !overrideReason}>
-                  Override to Delivered
+                <button type="submit" disabled={submitting || !toStatus || toStatus === ticket.status}>
+                  Update status
                 </button>
               </form>
-            </div>
-          )}
-        </section>
+            </section>
+
+            <section className="card" aria-labelledby="technician-heading">
+              <h2 id="technician-heading">Technician</h2>
+              {canAssignTechnician ? (
+                <form onSubmit={handleAssignTechnician} noValidate>
+                  <SearchableSelect
+                    id="technicianSelection"
+                    label="Assigned technician"
+                    placeholder="Unassigned"
+                    options={technicianOptions.map((t) => ({ id: t.id, label: t.name }))}
+                    value={technicianSelection}
+                    onChange={setTechnicianSelection}
+                  />
+                  {assignTechnicianError && (
+                    <p role="alert" aria-live="assertive" className="form-error">
+                      {assignTechnicianError}
+                    </p>
+                  )}
+                  <button
+                    type="submit"
+                    disabled={assigningTechnician || technicianSelection === (ticket.assignedTechnicianId ?? "")}
+                  >
+                    Save assignment
+                  </button>
+                </form>
+              ) : (
+                <p>{ticket.assignedTechnicianName ?? "Unassigned"}</p>
+              )}
+            </section>
+
+            {showDelivery && (
+              <section className="card" aria-labelledby="delivery-heading">
+                <h2 id="delivery-heading">Delivery</h2>
+                {otpOutcome?.method === "otp" && (
+                  <p>
+                    Delivered — code verified by {otpOutcome.verifiedBy ?? "unknown"} on{" "}
+                    {formatDateTime(otpOutcome.verifiedAt)}.
+                  </p>
+                )}
+                {otpOutcome?.method === "override" && (
+                  <p>
+                    Delivered by override — {otpOutcome.overriddenBy ?? "unknown"} on {formatDateTime(otpOutcome.createdAt)}
+                    : &quot;{otpOutcome.reason}&quot;
+                  </p>
+                )}
+                {otpOutcome === null &&
+                  (delivery?.locked ? (
+                    <>
+                      <p role="alert" aria-live="assertive" className="form-error">
+                        Entry is locked (3 incorrect attempts, or the code and its resend both expired). An Admin or
+                        Super Admin must start a new attempt.
+                      </p>
+                      {reinitiateError && (
+                        <p role="alert" aria-live="assertive" className="form-error">
+                          {reinitiateError}
+                        </p>
+                      )}
+                      <button type="button" onClick={handleReinitiate} disabled={reinitiating}>
+                        Start new attempt
+                      </button>
+                    </>
+                  ) : !delivery?.activeAttempt ? (
+                    <>
+                      <p className="muted">Send a one-time WhatsApp code to the customer to confirm handover.</p>
+                      {deliverError && (
+                        <p role="alert" aria-live="assertive" className="form-error">
+                          {deliverError}
+                        </p>
+                      )}
+                      <button type="button" onClick={handleStartDelivery} disabled={startingDelivery}>
+                        Start delivery verification
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <form onSubmit={handleVerifyCode} noValidate>
+                        <div>
+                          <label htmlFor="otpCode" className="required">
+                            One-time code
+                          </label>
+                          <input
+                            id="otpCode"
+                            inputMode="numeric"
+                            required
+                            value={otpCode}
+                            onChange={(e) => setOtpCode(e.target.value)}
+                          />
+                        </div>
+                        {verifyError && (
+                          <p role="alert" aria-live="assertive" className="form-error">
+                            {verifyError}
+                          </p>
+                        )}
+                        <div className="card__actions">
+                          <button type="button" onClick={handleResendCode} disabled={resending}>
+                            Resend code
+                          </button>
+                          <button type="submit" disabled={verifying || !otpCode}>
+                            Verify code
+                          </button>
+                        </div>
+                      </form>
+                      {resendMessage && (
+                        <p aria-live="polite" className="muted">
+                          {resendMessage}
+                        </p>
+                      )}
+                    </>
+                  ))}
+
+                {isAdminOrAbove && delivery?.sendFailed && (
+                  <div aria-labelledby="correct-phone-heading" className="card__subsection">
+                    <h3 id="correct-phone-heading">OTP send failed</h3>
+                    <p className="muted">The code could not be sent to the customer&apos;s phone. Correct it and retry.</p>
+                    <form onSubmit={handleCorrectPhone} noValidate>
+                      <div>
+                        <label htmlFor="correctedPhone" className="required">
+                          Corrected phone number
+                        </label>
+                        <input
+                          id="correctedPhone"
+                          required
+                          value={correctedPhone}
+                          onChange={(e) => setCorrectedPhone(e.target.value)}
+                        />
+                      </div>
+                      {correctPhoneError && (
+                        <p role="alert" aria-live="assertive" className="form-error">
+                          {correctPhoneError}
+                        </p>
+                      )}
+                      <button type="submit" disabled={correctingPhone || !correctedPhone}>
+                        Correct phone &amp; retry
+                      </button>
+                    </form>
+                  </div>
+                )}
+
+                {isAdminOrAbove && delivery?.canOverride && (
+                  <div aria-labelledby="override-heading" className="card__subsection">
+                    <h3 id="override-heading">Override to Delivered</h3>
+                    <p className="muted">The corrected number also failed. Override with a recorded reason instead.</p>
+                    <form onSubmit={handleOverride} noValidate>
+                      <div>
+                        <label htmlFor="overrideReason" className="required">
+                          Reason
+                        </label>
+                        <textarea
+                          id="overrideReason"
+                          required
+                          value={overrideReason}
+                          onChange={(e) => setOverrideReason(e.target.value)}
+                        />
+                      </div>
+                      {overrideError && (
+                        <p role="alert" aria-live="assertive" className="form-error">
+                          {overrideError}
+                        </p>
+                      )}
+                      <button type="submit" disabled={overriding || !overrideReason}>
+                        Override to Delivered
+                      </button>
+                    </form>
+                  </div>
+                )}
+              </section>
+            )}
+          </div>
+        </div>
       )}
 
-      <section aria-labelledby="line-items-heading">
-        <h2 id="line-items-heading">Parts &amp; services</h2>
-        <form onSubmit={handleAddLineItem} noValidate>
-          <div>
-            <label htmlFor="itemType">Item type</label>
-            <select
-              id="itemType"
-              value={itemType}
-              onChange={(e) => {
-                setItemType(e.target.value as "part" | "service");
-                setItemId("");
-              }}
-            >
-              <option value="part">Part</option>
-              <option value="service">Service</option>
-            </select>
-          </div>
-          <div>
-            <label htmlFor="itemId" className="required">
-              Catalogue item
-            </label>
-            <select id="itemId" required value={itemId} onChange={(e) => setItemId(e.target.value)}>
-              <option value="">Select an item</option>
-              {catalogueOptions.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label htmlFor="quantity" className="required">
-              Quantity
-            </label>
-            <input
-              id="quantity"
-              type="number"
-              min="1"
-              step="1"
-              required
-              value={quantity}
-              onChange={(e) => setQuantity(e.target.value)}
-            />
-          </div>
+      {tab === "billing" && (
+        <section className="card" role="tabpanel" id="panel-billing" aria-labelledby="tab-billing">
+          <h2 className="sr-only">Parts &amp; services</h2>
+          <form onSubmit={handleAddLineItem} noValidate className="inline-form">
+            <div>
+              <label htmlFor="itemType">Item type</label>
+              <select
+                id="itemType"
+                value={itemType}
+                onChange={(e) => {
+                  setItemType(e.target.value as "part" | "service");
+                  setItemId("");
+                }}
+              >
+                <option value="part">Part</option>
+                <option value="service">Service</option>
+              </select>
+            </div>
+            <div className="inline-form__grow">
+              <label htmlFor="itemId" className="required">
+                Catalogue item
+              </label>
+              <select id="itemId" required value={itemId} onChange={(e) => setItemId(e.target.value)}>
+                <option value="">Select an item</option>
+                {catalogueOptions.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="inline-form__narrow">
+              <label htmlFor="quantity" className="required">
+                Quantity
+              </label>
+              <input
+                id="quantity"
+                type="number"
+                min="1"
+                step="1"
+                required
+                value={quantity}
+                onChange={(e) => setQuantity(e.target.value)}
+              />
+            </div>
+            <button type="submit" disabled={!itemId}>
+              Add to ticket
+            </button>
+          </form>
           {lineItemError && (
-            <p role="alert" aria-live="assertive">
+            <p role="alert" aria-live="assertive" className="form-error">
               {lineItemError}
             </p>
           )}
-          <button type="submit" disabled={!itemId}>
-            Add to ticket
-          </button>
-        </form>
 
-        <table>
-          <caption>Applied parts &amp; services</caption>
-          <thead>
-            <tr>
-              <th scope="col">Item</th>
-              <th scope="col">Quantity</th>
-              <th scope="col">Unit cost</th>
-              <th scope="col">Line total</th>
-              <th scope="col">Edit price</th>
-              <th scope="col">Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {lineItems.map((li) => (
-              <tr key={li.id}>
-                <td>{li.nameSnapshot}</td>
-                <td>{li.quantity}</td>
-                <td>{li.unitCostSnapshot.toFixed(2)}</td>
-                <td>{li.lineTotal.toFixed(2)}</td>
-                <td>
-                  <label htmlFor={`price-${li.id}`}>New unit cost</label>
-                  <input
-                    id={`price-${li.id}`}
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={priceEdits[li.id] ?? ""}
-                    onChange={(e) => setPriceEdits((prev) => ({ ...prev, [li.id]: e.target.value }))}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => handleUpdatePrice(li.id)}
-                    disabled={!(priceEdits[li.id] ?? "")}
-                  >
-                    Update price
-                  </button>
-                </td>
-                <td>
-                  <button type="button" onClick={() => handleRemoveLineItem(li.id)}>
-                    Remove
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-
-        <form onSubmit={handleUpdateTaxRate} noValidate>
-          <div>
-            <label htmlFor="taxRateInput">Tax rate (%)</label>
-            <input
-              id="taxRateInput"
-              type="number"
-              min="0"
-              max="100"
-              step="0.01"
-              value={taxRateInput}
-              onChange={(e) => setTaxRateInput(e.target.value)}
-            />
-          </div>
-          {taxRateError && (
-            <p role="alert" aria-live="assertive">
-              {taxRateError}
-            </p>
-          )}
-          <button type="submit" disabled={savingTaxRate}>
-            Update tax rate
-          </button>
-        </form>
-
-        {bill && (
-          <dl aria-label="Bill summary">
-            <dt>Subtotal</dt>
-            <dd>{bill.subtotal.toFixed(2)}</dd>
-            <dt>Tax</dt>
-            <dd>{bill.taxAmount.toFixed(2)}</dd>
-            <dt>Total</dt>
-            <dd>{bill.total.toFixed(2)}</dd>
-          </dl>
-        )}
-      </section>
-
-      <section aria-labelledby="status-history-heading">
-        <h2 id="status-history-heading">Status timeline</h2>
-        <ul>
-          {statusHistory.map((entry, i) => (
-            <li key={i}>
-              {entry.fromStatus ? `${entry.fromStatus} → ${entry.toStatus}` : `Created (${entry.toStatus})`} by{" "}
-              {entry.actorName} at {formatDateTime(entry.createdAt)}
-              {entry.comment ? ` — "${entry.comment}"` : ""}
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      <section aria-labelledby="service-history-heading">
-        <h2 id="service-history-heading">Service history</h2>
-        {serviceHistory?.found ? (
-          <ul>
-            {serviceHistory.entries.map((entry) => (
-              <li key={entry.id}>
-                <a href={`/tickets/${entry.id}`}>{entry.ticketNumber}</a> — {entry.status} (
-                {formatDate(entry.createdAt)})
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p>No prior service history for this machine model.</p>
-        )}
-      </section>
-
-      <section aria-labelledby="notification-log-heading">
-        <h2 id="notification-log-heading">WhatsApp notification log</h2>
-        {notificationLog.length === 0 ? (
-          <p>No notifications sent yet.</p>
-        ) : (
-          <table>
-            <caption>Notifications sent for this ticket</caption>
-            <thead>
-              <tr>
-                <th scope="col">Type</th>
-                <th scope="col">To</th>
-                <th scope="col">Status</th>
-                <th scope="col">Sent at</th>
-              </tr>
-            </thead>
-            <tbody>
-              {notificationLog.map((n, i) => (
-                <tr key={i}>
-                  <td>{n.type}</td>
-                  <td>{n.recipientPhone}</td>
-                  <td>{n.status}</td>
-                  <td>{formatDateTime(n.sentAt)}</td>
+          <div className="table-scroll">
+            <table>
+              <caption className="sr-only">Applied parts &amp; services</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Item</th>
+                  <th scope="col">Qty</th>
+                  <th scope="col">Unit cost</th>
+                  <th scope="col">Line total</th>
+                  <th scope="col">Change price</th>
+                  <th scope="col">
+                    <span className="sr-only">Action</span>
+                  </th>
                 </tr>
+              </thead>
+              <tbody>
+                {lineItems.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="muted">
+                      No parts or services added yet.
+                    </td>
+                  </tr>
+                )}
+                {lineItems.map((li) => (
+                  <tr key={li.id}>
+                    <td>
+                      {li.nameSnapshot}
+                      <span className="muted"> · {li.itemType === "part" ? "Part" : "Service"}</span>
+                    </td>
+                    <td>{li.quantity}</td>
+                    <td>{formatINR(li.unitCostSnapshot)}</td>
+                    <td>{formatINR(li.lineTotal)}</td>
+                    <td>
+                      <div className="price-edit">
+                        <label htmlFor={`price-${li.id}`} className="sr-only">
+                          New unit cost
+                        </label>
+                        <input
+                          id={`price-${li.id}`}
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          placeholder="New price"
+                          value={priceEdits[li.id] ?? ""}
+                          onChange={(e) => setPriceEdits((prev) => ({ ...prev, [li.id]: e.target.value }))}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleUpdatePrice(li.id)}
+                          disabled={!(priceEdits[li.id] ?? "")}
+                        >
+                          Update
+                        </button>
+                      </div>
+                    </td>
+                    <td>
+                      <button type="button" onClick={() => handleRemoveLineItem(li.id)}>
+                        Remove
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="billing-footer">
+            <form onSubmit={handleUpdateTaxRate} noValidate className="inline-form">
+              <div className="inline-form__narrow">
+                <label htmlFor="taxRateInput">Tax rate (%)</label>
+                <input
+                  id="taxRateInput"
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  value={taxRateInput}
+                  onChange={(e) => setTaxRateInput(e.target.value)}
+                />
+              </div>
+              <button type="submit" disabled={savingTaxRate}>
+                Update tax rate
+              </button>
+              {taxRateError && (
+                <p role="alert" aria-live="assertive" className="form-error">
+                  {taxRateError}
+                </p>
+              )}
+            </form>
+
+            {bill && (
+              <dl aria-label="Bill summary" className="bill-summary">
+                <dt>Subtotal</dt>
+                <dd>{formatINR(bill.subtotal)}</dd>
+                <dt>Tax ({Number(ticket.taxRate)}%)</dt>
+                <dd>{formatINR(bill.taxAmount)}</dd>
+                <dt className="bill-summary__total">Total</dt>
+                <dd className="bill-summary__total">{formatINR(bill.total)}</dd>
+              </dl>
+            )}
+          </div>
+        </section>
+      )}
+
+      {tab === "activity" && (
+        <section className="card" role="tabpanel" id="panel-activity" aria-labelledby="tab-activity">
+          <h2 className="sr-only">Activity</h2>
+          {auditTrail.length === 0 ? (
+            <p className="muted">No activity recorded yet.</p>
+          ) : (
+            <ol className="timeline">
+              {[...auditTrail].reverse().map((entry, i) => (
+                <li key={i} className={`timeline__item timeline__item--${entry.source}`}>
+                  <div className="timeline__text">{entry.description}</div>
+                  <div className="timeline__meta">
+                    {entry.actor ?? "System"} · {formatDateTime(entry.timestamp)}
+                  </div>
+                </li>
               ))}
-            </tbody>
-          </table>
-        )}
-      </section>
-
-      <section aria-labelledby="otp-outcome-heading">
-        <h2 id="otp-outcome-heading">OTP verification outcome</h2>
-        {otpOutcome === null && <p>No delivery verification outcome recorded yet.</p>}
-        {otpOutcome?.method === "otp" && (
-          <p>
-            Verified by {otpOutcome.verifiedBy ?? "unknown"} at {formatDateTime(otpOutcome.verifiedAt)}.
-          </p>
-        )}
-        {otpOutcome?.method === "override" && (
-          <p>
-            Delivery overridden by {otpOutcome.overriddenBy ?? "unknown"} at{" "}
-            {formatDateTime(otpOutcome.createdAt)} — reason: &quot;{otpOutcome.reason}&quot;
-          </p>
-        )}
-      </section>
-
-      <section aria-labelledby="audit-trail-heading">
-        <h2 id="audit-trail-heading">Audit trail</h2>
-        <table>
-          <caption>Every recorded mutation to this ticket, chronologically</caption>
-          <thead>
-            <tr>
-              <th scope="col">When</th>
-              <th scope="col">Actor</th>
-              <th scope="col">What changed</th>
-            </tr>
-          </thead>
-          <tbody>
-            {auditTrail.map((entry, i) => (
-              <tr key={i}>
-                <td>{formatDateTime(entry.timestamp)}</td>
-                <td>{entry.actor ?? "System"}</td>
-                <td>{entry.description}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
+            </ol>
+          )}
+        </section>
+      )}
     </main>
   );
 }

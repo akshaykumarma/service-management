@@ -31,11 +31,11 @@ test.describe("Complete and deliver (005-customer-notifications, US1+US3)", () =
 
     await page.getByLabel("New status").selectOption("in_progress");
     await page.getByRole("button", { name: "Update status" }).click();
-    await expect(statusValue).toContainText("in_progress");
+    await expect(statusValue).toContainText("In progress");
 
     await page.getByLabel("New status").selectOption("completed");
     await page.getByRole("button", { name: "Update status" }).click();
-    await expect(statusValue).toContainText("completed");
+    await expect(statusValue).toContainText("Completed");
 
     // Completion notification (US1): poll the mock WhatsApp server's received log.
     await expect
@@ -63,6 +63,6 @@ test.describe("Complete and deliver (005-customer-notifications, US1+US3)", () =
     await page.getByLabel("One-time code").fill(otpMessage.params.otp_code);
     await page.getByRole("button", { name: "Verify code" }).click();
 
-    await expect(statusValue).toContainText("delivered");
+    await expect(statusValue).toContainText("Delivered");
   });
 });
