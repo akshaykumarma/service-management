@@ -290,6 +290,9 @@ main > section h2:first-child {
    last column(s) off-screen. */
 .table-scroll {
   overflow-x: auto;
+  /* Contains absolutely positioned descendants (e.g. .sr-only header text) so they're
+     clipped by this scroller instead of widening the whole page. */
+  position: relative;
 }
 
 table {
@@ -637,12 +640,15 @@ button.app-header__menu-toggle {
 
 /* --- Kanban board --- */
 
+/* Every column shares the available width equally (post-v1 product feedback: all five
+   columns, including Completed and Delivered, fit without scrolling sideways). Narrow
+   screens fall back to fixed-width columns with horizontal scroll (see the 860px media
+   query below). --board-columns is set inline from the number of visible columns. */
 .board {
-  display: flex;
-  flex-wrap: nowrap;
-  gap: 16px;
-  align-items: flex-start;
-  overflow-x: auto;
+  display: grid;
+  grid-template-columns: repeat(var(--board-columns, 5), minmax(0, 1fr));
+  gap: 12px;
+  align-items: start;
   padding-bottom: 8px;
 }
 
@@ -650,8 +656,7 @@ button.app-header__menu-toggle {
   background: var(--color-surface);
   border: 1px solid var(--color-border-subtle);
   border-radius: var(--radius-lg);
-  width: 240px;
-  flex: 0 0 240px;
+  min-width: 0;
   padding: 10px;
   box-shadow: var(--shadow-sm);
 }
@@ -2223,5 +2228,118 @@ button.modal-panel__close:hover {
 
   .detail-list {
     grid-template-columns: 110px minmax(0, 1fr);
+  }
+}
+
+/* --- Board page: wider canvas, clickable status tiles, list table fit (post-v1) --- */
+
+main.board-page {
+  max-width: 1600px;
+}
+
+.board-kpis--status {
+  grid-template-columns: repeat(var(--status-tiles, 5), minmax(0, 1fr));
+}
+
+@media (max-width: 860px) {
+  .board-kpis--status {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  }
+}
+
+button.board-kpi--button {
+  appearance: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  width: 100%;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-subtle);
+  box-shadow: var(--shadow-card);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+button.board-kpi--button:hover:not(:disabled) {
+  background: var(--color-surface);
+  border-color: #fca5a5;
+}
+
+button.board-kpi--button[aria-pressed="true"] {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(200, 30, 30, 0.18), var(--shadow-card);
+}
+
+.board-kpi--button .board-kpi__label,
+.board-kpi--button .board-kpi__value {
+  display: block;
+}
+
+.board-kpis__active {
+  grid-column: 1 / -1;
+  margin: -4px 0 0;
+  font-size: 0.88rem;
+  color: var(--color-text-dim);
+}
+
+button.board-kpis__clear,
+button.board-column__filter {
+  background: none;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+button.board-kpis__clear {
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+button.board-kpis__clear:hover:not(:disabled),
+button.board-column__filter:hover:not(:disabled) {
+  background: none;
+  text-decoration: underline;
+}
+
+button.board-column__filter {
+  text-align: left;
+  font-weight: 700;
+  color: var(--column-accent, var(--color-text));
+}
+
+.board-card__customer,
+.board-card__model {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The list table fills the card's width and wraps long text instead of overflowing it. */
+.table-scroll table.list-table {
+  width: 100%;
+}
+
+.list-table th,
+.list-table td {
+  padding: 9px 10px;
+}
+
+.list-table td {
+  overflow-wrap: anywhere;
+}
+
+.list-table .list-table__ticket-link,
+.list-table .status-pill,
+.list-table .age-pill {
+  white-space: nowrap;
+}
+
+@media (max-width: 860px) {
+  .board {
+    grid-template-columns: repeat(var(--board-columns, 5), 240px);
+    overflow-x: auto;
   }
 }
