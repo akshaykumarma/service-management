@@ -15,18 +15,14 @@ available values are restricted to the caller's visible stores (FR-010); omittin
 returns tickets across all stores the caller can see (not "no filter" in the sense of
 bypassing scope).
 
-**Deviation** (post-v1, per direct product feedback): `technicianId` — an additional
-optional filter narrowing to one Technician's assigned tickets, on top of (not instead
-of) everything above. For a `technician` caller this is redundant with their own forced
-filter (`lib/board/ticket-query.ts`); it's meant for a Service Manager/Admin/Super Admin
-picking a technician from `GET /api/technicians` below.
-
 **Deviation** (post-v1, per direct product feedback): a `Delivered` ticket is only
-included if it was delivered within the current calendar month (its own `updatedAt`,
-UTC — the same "last status change" signal `lib/board/card-shape.ts`'s `daysOpen` already
-relies on for this exact status), regardless of `status[]`/date filters. This keeps the
-board's Delivered column from accumulating every delivery ever made; an older one is
-still fully visible via `GET /api/reports/tickets`, which keeps its own unrestricted date
+included if it was delivered within the current calendar month in the stores' own time
+zone (Asia/Kolkata), regardless of `status[]`/date filters. Delivery time is the ticket's
+latest `status_history` row into `delivered` (falling back to `updatedAt` only when no
+such row exists), since `updatedAt` is also bumped by non-status edits such as technician
+reassignment. This keeps the board's Delivered column from accumulating every delivery
+ever made; an older one is still fully visible via `GET /api/reports/tickets`, which
+keeps its own unrestricted date
 range. No other status is affected.
 
 **Responses**:
