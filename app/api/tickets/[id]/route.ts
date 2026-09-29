@@ -62,7 +62,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 
   // 006-dashboard-reporting FR-011: three more additive sections, same pattern as bill
   // above — Service History, WhatsApp Notification Log, and the OTP/override outcome.
-  const rawHistory = await lookupHistory(caller, ticket.machineModel);
+  const rawHistory = await lookupHistory(caller, { serialNumber: ticket.serialNumber, customerPhone: ticket.customerPhone });
   const serviceHistory = {
     found: rawHistory.entries.some((e) => e.id !== ticket.id),
     entries: rawHistory.entries.filter((e) => e.id !== ticket.id),

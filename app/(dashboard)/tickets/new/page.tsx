@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { todayInBusinessTimeZone } from "@/lib/tickets/received-date";
+import { formatDate } from "@/lib/format/date";
 
 interface Store {
   id: string;
@@ -16,7 +18,19 @@ interface HistoryEntry {
   id: string;
   ticketNumber: string;
   status: string;
+  machineModel: string;
+  issueDescription: string;
+  createdAt: string;
 }
+
+// Sentinel <select> value for "the model isn't in the list — let me type it".
+const OTHER_MODEL = "__other__";
+
+const CREATE_ERROR_MESSAGES: Record<string, string> = {
+  received_date_in_future: "The received date can't be in the future.",
+  invalid_received_date: "Enter a valid received date.",
+  store_inactive: "That store is no longer active.",
+};
 
 interface CreatedTicket {
   id: string;
@@ -32,7 +46,9 @@ export default function NewTicketPage() {
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [customerAltPhone, setCustomerAltPhone] = useState("");
-  const [machineModel, setMachineModel] = useState("");
+  const [machineModelChoice, setMachineModelChoice] = useState("");
+  const [manualMachineModel, setManualMachineModel] = useState("");
+  const [receivedDate, setReceivedDate] = useState(() => todayInBusinessTimeZone());
   const [serialNumber, setSerialNumber] = useState("");
   const [issueDescription, setIssueDescription] = useState("");
   const [estimatedPickupDate, setEstimatedPickupDate] = useState("");
@@ -50,6 +66,8 @@ export default function NewTicketPage() {
       .then((res) => res.json())
       .then((body) => setMachineModelOptions(body.machineModels));
   }, []);
+
+  const machineModel = machineModelChoice === OTHER_MODEL ? manualMachineModel.trim() : machineModelChoice;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -69,6 +87,7 @@ export default function NewTicketPage() {
           serialNumber,
           issueDescription,
           estimatedPickupDate: estimatedPickupDate || null,
+          receivedDate,
         }),
       });
 
@@ -82,7 +101,11 @@ export default function NewTicketPage() {
       }
 
       const body = await res.json();
-      setError(body.error.message ?? body.error.code ?? "Could not create ticket.");
+      if (body.error.code === "missing_required_field") {
+        setError(`Please fill in: ${String(body.error.field).replace(/([A-Z])/g, " $1").toLowerCase()}.`);
+      } else {
+        setError(CREATE_ERROR_MESSAGES[body.error.code] ?? body.error.message ?? "Could not create ticket.");
+      }
     } finally {
       setSubmitting(false);
     }
@@ -94,17 +117,19 @@ export default function NewTicketPage() {
         <h1>Ticket created: {created.ticketNumber}</h1>
         {history.found ? (
           <section aria-labelledby="history-heading">
-            <h2 id="history-heading">Prior service history for this model</h2>
+            <h2 id="history-heading">Prior service history for this machine</h2>
+            <p>Earlier tickets with the same serial number and phone number:</p>
             <ul>
               {history.entries.map((entry) => (
                 <li key={entry.id}>
-                  {entry.ticketNumber} — {entry.status}
+                  <a href={`/tickets/${entry.id}`}>{entry.ticketNumber}</a> — {formatDate(entry.createdAt)} —{" "}
+                  {entry.status.replace("_", " ")} — {entry.issueDescription}
                 </li>
               ))}
             </ul>
           </section>
         ) : (
-          <p>No prior service history for this machine model.</p>
+          <p>No prior service history for this serial number and phone number.</p>
         )}
         <p>
           <a href={`/tickets/${created.id}`}>View full ticket</a>
@@ -164,22 +189,38 @@ export default function NewTicketPage() {
           <label htmlFor="machineModel" className="required">
             Machine model
           </label>
-          <input
+          {/* A saved model from the admin list, or "Other" to type one that isn't
+              there — tickets.machine_model is free text, so either saves fine. */}
+          <select
             id="machineModel"
             required
-            list="machineModelOptions"
-            value={machineModel}
-            onChange={(e) => setMachineModel(e.target.value)}
-          />
-          {/* 007-admin-console FR-002/FR-003: a searchable dropdown of active models with
-              a free-type fallback — tickets.machine_model stays unconstrained free text
-              (003's own design), so a model absent from this list still saves fine. */}
-          <datalist id="machineModelOptions">
+            value={machineModelChoice}
+            onChange={(e) => setMachineModelChoice(e.target.value)}
+          >
+            <option value="">Select a machine model</option>
             {machineModelOptions.map((m) => (
-              <option key={m.id} value={m.name} />
+              <option key={m.id} value={m.name}>
+                {m.name}
+              </option>
             ))}
-          </datalist>
+            <option value={OTHER_MODEL}>Other (type manually)</option>
+          </select>
         </div>
+        {machineModelChoice === OTHER_MODEL && (
+          <div>
+            <label htmlFor="manualMachineModel" className="required">
+              Machine model (not in the list)
+            </label>
+            <input
+              id="manualMachineModel"
+              required
+              autoFocus
+              placeholder="e.g. Usha Janome Allure DLX"
+              value={manualMachineModel}
+              onChange={(e) => setManualMachineModel(e.target.value)}
+            />
+          </div>
+        )}
         <div>
           <label htmlFor="serialNumber" className="required">
             Serial number
@@ -196,6 +237,20 @@ export default function NewTicketPage() {
             value={issueDescription}
             onChange={(e) => setIssueDescription(e.target.value)}
           />
+        </div>
+        <div>
+          <label htmlFor="receivedDate" className="required">
+            Received date
+          </label>
+          <input
+            id="receivedDate"
+            type="date"
+            required
+            max={todayInBusinessTimeZone()}
+            value={receivedDate}
+            onChange={(e) => setReceivedDate(e.target.value)}
+          />
+          <small>Defaults to today. Pick an earlier date to log a machine received in the past.</small>
         </div>
         <div>
           <label htmlFor="estimatedPickupDate">Estimated delivery date (optional)</label>

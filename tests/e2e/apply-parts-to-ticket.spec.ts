@@ -25,7 +25,8 @@ test.describe("Apply parts to ticket", () => {
     await page.getByLabel("Store").selectOption({ index: 1 });
     await page.getByLabel("Customer name").fill("E2E Billing Customer");
     await page.getByLabel("Customer phone").fill("+919999900002");
-    await page.getByLabel("Machine model").fill(`E2E-Bill-Model-${Date.now()}`);
+    await page.getByLabel("Machine model", { exact: true }).selectOption("__other__");
+    await page.getByLabel("Machine model (not in the list)").fill(`E2E-Bill-Model-${Date.now()}`);
     await page.getByLabel("Serial number").fill(`SN-Bill-${Date.now()}`);
     await page.getByLabel("Issue description").fill("Billing e2e test");
     await page.getByRole("button", { name: "Create ticket" }).click();

@@ -7,10 +7,10 @@ import { POST as ticketsPOST } from "@/app/api/tickets/route";
 import { db } from "@/lib/db/client";
 import { tickets } from "@/lib/db/schema";
 
-describe("Ticket intake with model-based history lookup (User Story 1)", () => {
+describe("Ticket intake with serial number + phone history lookup (User Story 1)", () => {
   beforeEach(resetDb);
 
-  it("returns found: false when no prior closed ticket exists for the model", async () => {
+  it("returns found: false when no prior closed ticket exists for the machine", async () => {
     const store = await createStore();
     const sm = await createUser({ role: "service_manager", storeIds: [store.id], password: "Correct123!" });
     const cookie = await loginAs(sm.email, "Correct123!");
@@ -45,6 +45,7 @@ describe("Ticket intake with model-based history lookup (User Story 1)", () => {
       createdBy: smA.id,
       machineModel: "LG-FHM1207ZDL",
       serialNumber: "SN-LG-FHM1207ZDL",
+      customerPhone: "+919876500002",
       status: "completed",
     });
 
@@ -55,10 +56,11 @@ describe("Ticket intake with model-based history lookup (User Story 1)", () => {
         cookie: cookieA,
         body: {
           storeId: storeA.id,
-          customerName: "Someone Else",
-          customerPhone: "+919876500002",
+          customerName: "Returning Customer",
+          // Same number, different formatting; same serial, different case/spacing.
+          customerPhone: "98765 00002",
           machineModel: "LG-FHM1207ZDL",
-          serialNumber: "SN-LG-FHM1207ZDL",
+          serialNumber: " sn-lg-fhm1207zdl ",
           issueDescription: "Different issue",
         },
       }),
@@ -67,7 +69,7 @@ describe("Ticket intake with model-based history lookup (User Story 1)", () => {
     expect(bodyA.history.found).toBe(true);
     expect(bodyA.history.entries.some((e: { id: string }) => e.id === priorTicket.id)).toBe(true);
 
-    // Store-scoped: a Service Manager at a different store sees no history for the same model.
+    // Store-scoped: a Service Manager at a different store sees no history for the same machine.
     const cookieB = await loginAs(smB.email, "Correct123!");
     const resB = await ticketsPOST(
       jsonRequest("/api/tickets", {
@@ -75,8 +77,8 @@ describe("Ticket intake with model-based history lookup (User Story 1)", () => {
         cookie: cookieB,
         body: {
           storeId: storeB.id,
-          customerName: "Third Person",
-          customerPhone: "+919876500003",
+          customerName: "Returning Customer",
+          customerPhone: "+919876500002",
           machineModel: "LG-FHM1207ZDL",
           serialNumber: "SN-LG-FHM1207ZDL",
           issueDescription: "Yet another issue",
@@ -97,7 +99,14 @@ describe("Ticket intake with model-based history lookup (User Story 1)", () => {
       password: "Correct123!",
     });
 
-    await createTicket({ storeId: storeA.id, createdBy: smA.id, machineModel: "Whirlpool-X1", status: "delivered" });
+    await createTicket({
+      storeId: storeA.id,
+      createdBy: smA.id,
+      machineModel: "Whirlpool-X1",
+      serialNumber: "SN-Whirlpool-X1",
+      customerPhone: "+919876500004",
+      status: "delivered",
+    });
 
     const cookie = await loginAs(admin.email, "Correct123!");
     const res = await ticketsPOST(
@@ -116,6 +125,46 @@ describe("Ticket intake with model-based history lookup (User Story 1)", () => {
     );
     const body = await res.json();
     expect(body.history.found).toBe(true);
+  });
+
+  it("needs BOTH the serial number and the phone to match — either alone is a different machine or customer", async () => {
+    const store = await createStore();
+    const sm = await createUser({ role: "service_manager", storeIds: [store.id], password: "Correct123!" });
+    const cookie = await loginAs(sm.email, "Correct123!");
+
+    await createTicket({
+      storeId: store.id,
+      createdBy: sm.id,
+      machineModel: "Singer 4423",
+      serialNumber: "HD4423-1",
+      customerPhone: "+919876500010",
+      status: "delivered",
+    });
+
+    const create = async (serialNumber: string, customerPhone: string) => {
+      const res = await ticketsPOST(
+        jsonRequest("/api/tickets", {
+          method: "POST",
+          cookie,
+          body: {
+            storeId: store.id,
+            customerName: "Someone",
+            customerPhone,
+            machineModel: "Singer 4423",
+            serialNumber,
+            issueDescription: "Check",
+          },
+        }),
+      );
+      return (await res.json()).history;
+    };
+
+    // Same model, same phone, different serial: another machine this customer owns.
+    expect((await create("HD4423-2", "+919876500010")).found).toBe(false);
+    // Same serial, different phone: not this customer's history.
+    expect((await create("HD4423-1", "+919876500011")).found).toBe(false);
+    // Both match.
+    expect((await create("HD4423-1", "+919876500010")).found).toBe(true);
   });
 
   it("resolves the customer to a single identity by phone and updates the name on a later ticket (FR-020)", async () => {

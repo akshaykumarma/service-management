@@ -17,7 +17,8 @@ test.describe("Intake to history", () => {
     await page.getByLabel("Store").selectOption({ index: 1 });
     await page.getByLabel("Customer name").fill("E2E Customer");
     await page.getByLabel("Customer phone").fill("+919999900001");
-    await page.getByLabel("Machine model").fill(`E2E-Model-${Date.now()}`);
+    await page.getByLabel("Machine model", { exact: true }).selectOption("__other__");
+    await page.getByLabel("Machine model (not in the list)").fill(`E2E-Model-${Date.now()}`);
     await page.getByLabel("Serial number").fill(`SN-${Date.now()}`);
     await page.getByLabel("Issue description").fill("Playwright end-to-end intake test");
     await page.getByRole("button", { name: "Create ticket" }).click();
