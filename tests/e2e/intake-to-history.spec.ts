@@ -30,6 +30,8 @@ test.describe("Intake to history", () => {
 
     await page.getByRole("link", { name: "View full ticket" }).click();
     await expect(page).toHaveURL(/\/tickets\/[0-9a-f-]+$/);
-    await expect(page.getByRole("heading", { name: /[a-z0-9]+-\d{4}-\d{5}/i })).toBeVisible();
+    // The details page's heading is the customer's name; the ticket number sits above it.
+    await expect(page.getByRole("heading", { name: "E2E Customer" })).toBeVisible();
+    await expect(page.getByText(/^[a-z0-9]+-\d{4}-\d{5}$/i)).toBeVisible();
   });
 });
