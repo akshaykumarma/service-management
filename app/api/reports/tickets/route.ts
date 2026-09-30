@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuthenticatedSession } from "@/lib/auth/require-session";
-import { AccessDeniedError, requireAdminOrAbove } from "@/lib/auth/rbac";
+import { AccessDeniedError, requireReportsAccess } from "@/lib/auth/rbac";
 import { getTicketDetailsReport } from "@/lib/reporting/ticket-details";
 import type { TicketStatus } from "@/lib/tickets/status-transitions";
 
 /**
  * The Reports page's table view (post-006 product feedback): every ticket's full detail,
  * across every status, for a date range — as opposed to /api/reports/summary's
- * first-Completed-only counts. Same Admin-or-above gate as the rest of /api/reports/*.
+ * first-Completed-only counts. Same Service-Manager-and-up, store-scoped gate as the rest of /api/reports/*.
  */
 export async function GET(request: NextRequest) {
   const sessionOrResponse = await requireAuthenticatedSession(request);
@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
   const caller = sessionOrResponse.user;
 
   try {
-    requireAdminOrAbove(caller);
+    requireReportsAccess(caller);
   } catch (err) {
     if (err instanceof AccessDeniedError) {
       return NextResponse.json({ error: { code: "forbidden", message: err.message } }, { status: 403 });

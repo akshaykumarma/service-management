@@ -69,3 +69,15 @@ export function requireAdminOrAbove(user: SessionUser): void {
     throw new AccessDeniedError("This action requires the Admin or Super Admin role.");
   }
 }
+
+/**
+ * Reports (post-v1 product feedback): open to Service Managers as well as Admins and
+ * Super Admins. Store scoping still applies on top — every report query goes through
+ * getScopedStoreIds/assertAccess — so a Service Manager only ever sees their own
+ * store(s). Technicians have no Reports access.
+ */
+export function requireReportsAccess(user: SessionUser): void {
+  if (user.role !== "super_admin" && user.role !== "admin" && user.role !== "service_manager") {
+    throw new AccessDeniedError("Reports require the Service Manager, Admin or Super Admin role.");
+  }
+}
