@@ -237,10 +237,27 @@ describe("GET /api/tickets/:id/audit-trail", () => {
 describe("GET /api/reports/summary", () => {
   beforeEach(resetDb);
 
-  it("403s for a Store Service Manager", async () => {
+  it("200s for a Store Service Manager on their own store, 404s on another store (post-v1: reports are store-scoped)", async () => {
     const store = await createStore();
+    const otherStore = await createStore();
     const sm = await createUser({ role: "service_manager", storeIds: [store.id], password: "Correct123!" });
     const cookie = await loginAs(sm.email, "Correct123!");
+
+    const own = await summaryGET(
+      jsonRequest(`/api/reports/summary?storeId=${store.id}&dateFrom=2026-01-01&dateTo=2026-12-31`, { cookie }),
+    );
+    expect(own.status).toBe(200);
+
+    const other = await summaryGET(
+      jsonRequest(`/api/reports/summary?storeId=${otherStore.id}&dateFrom=2026-01-01&dateTo=2026-12-31`, { cookie }),
+    );
+    expect(other.status).toBe(404);
+  });
+
+  it("403s for a Technician", async () => {
+    const store = await createStore();
+    const tech = await createUser({ role: "technician", storeIds: [store.id], password: "Correct123!" });
+    const cookie = await loginAs(tech.email, "Correct123!");
 
     const res = await summaryGET(
       jsonRequest(`/api/reports/summary?storeId=${store.id}&dateFrom=2026-01-01&dateTo=2026-12-31`, { cookie }),
@@ -281,10 +298,26 @@ describe("GET /api/reports/export", () => {
     expect((await res.json()).error.code).toBe("invalid_format");
   });
 
-  it("403s for a Store Service Manager", async () => {
+  it("lets a Store Service Manager export only their own store's tickets", async () => {
     const store = await createStore();
+    const otherStore = await createStore();
     const sm = await createUser({ role: "service_manager", storeIds: [store.id], password: "Correct123!" });
+    const otherSm = await createUser({ role: "service_manager", storeIds: [otherStore.id] });
+    const own = await createTicket({ storeId: store.id, createdBy: sm.id, status: "open" });
+    const foreign = await createTicket({ storeId: otherStore.id, createdBy: otherSm.id, status: "open" });
     const cookie = await loginAs(sm.email, "Correct123!");
+
+    const res = await exportGET(jsonRequest("/api/reports/export?format=csv", { cookie }));
+    expect(res.status).toBe(200);
+    const text = await res.text();
+    expect(text).toContain(own.ticketNumber);
+    expect(text).not.toContain(foreign.ticketNumber);
+  });
+
+  it("403s for a Technician", async () => {
+    const store = await createStore();
+    const tech = await createUser({ role: "technician", storeIds: [store.id], password: "Correct123!" });
+    const cookie = await loginAs(tech.email, "Correct123!");
 
     const res = await exportGET(jsonRequest("/api/reports/export?format=csv", { cookie }));
     expect(res.status).toBe(403);
@@ -321,10 +354,30 @@ describe("GET /api/reports/export", () => {
 describe("GET /api/reports/tickets (post-006 product feedback: table view)", () => {
   beforeEach(resetDb);
 
-  it("403s for a Store Service Manager", async () => {
+  it("shows a Store Service Manager only their own store's tickets", async () => {
     const store = await createStore();
+    const otherStore = await createStore();
     const sm = await createUser({ role: "service_manager", storeIds: [store.id], password: "Correct123!" });
+    const otherSm = await createUser({ role: "service_manager", storeIds: [otherStore.id] });
+    const own = await createTicket({ storeId: store.id, createdBy: sm.id, status: "open" });
+    const foreign = await createTicket({ storeId: otherStore.id, createdBy: otherSm.id, status: "open" });
     const cookie = await loginAs(sm.email, "Correct123!");
+
+    // Even explicitly asking for the other store's id can't widen the scope.
+    const res = await reportTicketsGET(jsonRequest(`/api/reports/tickets?storeId=${otherStore.id}`, { cookie }));
+    expect(res.status).toBe(200);
+    expect((await res.json()).tickets).toEqual([]);
+
+    const allRes = await reportTicketsGET(jsonRequest("/api/reports/tickets", { cookie }));
+    const ids = (await allRes.json()).tickets.map((t: { id: string }) => t.id);
+    expect(ids).toContain(own.id);
+    expect(ids).not.toContain(foreign.id);
+  });
+
+  it("403s for a Technician", async () => {
+    const store = await createStore();
+    const tech = await createUser({ role: "technician", storeIds: [store.id], password: "Correct123!" });
+    const cookie = await loginAs(tech.email, "Correct123!");
 
     const res = await reportTicketsGET(jsonRequest("/api/reports/tickets", { cookie }));
     expect(res.status).toBe(403);

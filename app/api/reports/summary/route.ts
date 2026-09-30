@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuthenticatedSession } from "@/lib/auth/require-session";
-import { assertAccess, AccessDeniedError, requireAdminOrAbove } from "@/lib/auth/rbac";
+import { assertAccess, AccessDeniedError, requireReportsAccess } from "@/lib/auth/rbac";
 import { getSummaryReport } from "@/lib/reporting/summary";
 
 export async function GET(request: NextRequest) {
@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
   const caller = sessionOrResponse.user;
 
   try {
-    requireAdminOrAbove(caller);
+    requireReportsAccess(caller);
   } catch (err) {
     if (err instanceof AccessDeniedError) {
       return NextResponse.json({ error: { code: "forbidden", message: err.message } }, { status: 403 });

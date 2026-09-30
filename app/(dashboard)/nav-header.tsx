@@ -69,17 +69,19 @@ export default function NavHeader({ name, role }: NavHeaderProps) {
   }
 
   const showAdminSection = role === "admin" || role === "super_admin";
+  // Reports is store-scoped server-side, so a Service Manager sees only their own store(s).
+  const showReports = showAdminSection || role === "service_manager";
 
   const navLinks = (
     <>
       <nav className="app-sidebar__nav" aria-label="Main">
         <NavLink href="/board" label="Board" dotKey="board" />
+        {showReports && <NavLink href="/reports" label="Reports" dotKey="reports" />}
       </nav>
       {showAdminSection && (
         <>
           <div className="app-sidebar__section-label">Admin</div>
           <nav className="app-sidebar__nav" aria-label="Admin">
-            <NavLink href="/reports" label="Reports" dotKey="reports" />
             <NavLink href="/team" label="Team" dotKey="team" />
             <NavLink href="/admin/stores" label="Stores" dotKey="stores" />
             <NavLink href="/admin/machine-models" label="Machine models" dotKey="machine-models" />
