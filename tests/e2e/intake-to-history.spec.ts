@@ -17,7 +17,8 @@ test.describe("Intake to history", () => {
     await page.getByLabel("Store").selectOption({ index: 1 });
     await page.getByLabel("Customer name").fill("E2E Customer");
     await page.getByLabel("Customer phone").fill("+919999900001");
-    await page.getByLabel("Machine model").fill(`E2E-Model-${Date.now()}`);
+    await page.getByLabel("Machine model", { exact: true }).selectOption("__other__");
+    await page.getByLabel("Machine model (not in the list)").fill(`E2E-Model-${Date.now()}`);
     await page.getByLabel("Serial number").fill(`SN-${Date.now()}`);
     await page.getByLabel("Issue description").fill("Playwright end-to-end intake test");
     await page.getByRole("button", { name: "Create ticket" }).click();
@@ -29,6 +30,8 @@ test.describe("Intake to history", () => {
 
     await page.getByRole("link", { name: "View full ticket" }).click();
     await expect(page).toHaveURL(/\/tickets\/[0-9a-f-]+$/);
-    await expect(page.getByRole("heading", { name: /[a-z0-9]+-\d{4}-\d{5}/i })).toBeVisible();
+    // The details page's heading is the customer's name; the ticket number sits above it.
+    await expect(page.getByRole("heading", { name: "E2E Customer" })).toBeVisible();
+    await expect(page.getByText(/^[a-z0-9]+-\d{4}-\d{5}$/i)).toBeVisible();
   });
 });

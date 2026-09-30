@@ -60,6 +60,18 @@ const STATUS_LABELS: Record<string, string> = {
   cancelled: "Cancelled",
 };
 
+// One tile per status (post-v1 product feedback): the same five statuses as the Kanban
+// columns, with the same names and colours everywhere, and each tile doubles as a
+// one-click filter for that status.
+const STATUS_TILES: { status: string; label: string; dot: string; bg: string }[] = [
+  { status: "open", label: "Open", dot: "#52525b", bg: "#f4f4f5" },
+  { status: "in_progress", label: "In Progress", dot: "#2563eb", bg: "#eaf0fe" },
+  { status: "on_hold", label: "On Hold", dot: "#b45309", bg: "#fdf1e0" },
+  { status: "completed", label: "Completed", dot: "#15803d", bg: "#e8f5ec" },
+  { status: "delivered", label: "Delivered", dot: "#6d28d9", bg: "#efe8fc" },
+];
+const CANCELLED_TILE = { status: "cancelled", label: "Cancelled", dot: "#b91c1c", bg: "#fce9e9" };
+
 const TRANSITION_ERROR_MESSAGES: Record<string, string> = {
   invalid_transition: "That status change isn't allowed from the current status.",
   role_not_permitted: "Your role doesn't permit this status change.",
@@ -131,10 +143,14 @@ function BoardColumn({
   status,
   label,
   tickets,
+  focused,
+  onToggleFocus,
 }: {
   status: string;
   label: string;
   tickets: TicketCard[];
+  focused: boolean;
+  onToggleFocus: () => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: status });
 
@@ -147,7 +163,17 @@ function BoardColumn({
     >
       <div className="board-column__accent-bar" aria-hidden="true" />
       <div className="board-column__head">
-        <h2 id={`column-${status}-heading`}>{label}</h2>
+        <h2 id={`column-${status}-heading`}>
+          <button
+            type="button"
+            className="board-column__filter"
+            aria-pressed={focused}
+            title={focused ? "Show all statuses" : `Show only ${label}`}
+            onClick={onToggleFocus}
+          >
+            {label}
+          </button>
+        </h2>
         <span className="board-column__count">{tickets.length}</span>
       </div>
       <ul>
@@ -177,6 +203,9 @@ export default function BoardPage() {
   const [machineModelFilter, setMachineModelFilter] = useState("");
   const [technicianFilter, setTechnicianFilter] = useState("");
   const [moreFiltersOpen, setMoreFiltersOpen] = useState(false);
+  // Quick status filter from the status tiles / column headers. Client-side over the
+  // already-loaded tickets, so the tile counts keep showing every status's total.
+  const [quickStatus, setQuickStatus] = useState<string | null>(null);
 
   // List view (post-v1 product feedback: a table alternative to the Kanban board). Kanban
   // stays the default drag-and-drop surface; List is an additional view over the exact
@@ -340,29 +369,53 @@ export default function BoardPage() {
     attemptTransition(ticket.id, toStatus, null);
   }
 
-  // Derived client-side from the same (already filtered/scoped) ticket list the columns
-  // render — no separate endpoint, so these always agree with what's actually on screen.
-  const activeTickets = tickets.filter((t) => t.status !== "delivered" && t.status !== "cancelled");
-  const boardKpis = [
-    { label: "Active tickets", value: activeTickets.length, dot: "#7c3aed", bg: "#f3efff" },
-    { label: "In progress", value: tickets.filter((t) => t.status === "in_progress").length, dot: "#0ea5e9", bg: "#e8f6fe" },
-    { label: "Ready for pickup", value: tickets.filter((t) => t.status === "completed").length, dot: "#10b981", bg: "#e7f9f1" },
-    { label: "Waiting 7+ days", value: activeTickets.filter((t) => t.daysOpen >= 7).length, dot: "#f43f5e", bg: "#fff0f2" },
-  ];
+  const statusTiles = includeCancelled ? [...STATUS_TILES, CANCELLED_TILE] : STATUS_TILES;
+  // A quick filter on "cancelled" makes no sense once cancelled tickets are hidden again.
+  const activeQuickStatus = quickStatus === "cancelled" && !includeCancelled ? null : quickStatus;
+  const toggleQuickStatus = (status: string) => {
+    setQuickStatus((prev) => (prev === status ? null : status));
+    setListPage(1);
+  };
+  const visibleColumns = activeQuickStatus ? columns.filter((c) => c.status === activeQuickStatus) : columns;
+  const quickFilteredTickets = activeQuickStatus ? tickets.filter((t) => t.status === activeQuickStatus) : tickets;
 
-  // List view's own KPI row (post-v1 product feedback) — "Ready for Pickup"/"Completed"
-  // here match this app's own "completed" (bill locked, awaiting customer pickup) and
-  // "delivered" (handed over, OTP-verified) statuses respectively, not a new distinction.
-  const listKpis = [
-    { label: "Open", value: tickets.filter((t) => t.status === "open").length, dot: "#52525b", bg: "#f4f4f5" },
-    { label: "In Progress", value: tickets.filter((t) => t.status === "in_progress").length, dot: "#2563eb", bg: "#eaf0fe" },
-    { label: "On Hold", value: tickets.filter((t) => t.status === "on_hold").length, dot: "#b45309", bg: "#fdf1e0" },
-    { label: "Ready for Pickup", value: tickets.filter((t) => t.status === "completed").length, dot: "#15803d", bg: "#e8f5ec" },
-    { label: "Completed", value: tickets.filter((t) => t.status === "delivered").length, dot: "#6d28d9", bg: "#efe8fc" },
-  ];
+  const statusTileRow = (
+    <div
+      className="board-kpis board-kpis--status"
+      role="group"
+      aria-label="Filter by status"
+      style={{ "--status-tiles": statusTiles.length } as React.CSSProperties}
+    >
+      {statusTiles.map((tile) => (
+        <button
+          type="button"
+          key={tile.status}
+          className="board-kpi board-kpi--button"
+          aria-pressed={activeQuickStatus === tile.status}
+          onClick={() => toggleQuickStatus(tile.status)}
+        >
+          <span className="board-kpi__icon" style={{ background: tile.bg }} aria-hidden="true">
+            <span className="board-kpi__dot" style={{ background: tile.dot }} />
+          </span>
+          <span>
+            <span className="board-kpi__label">{tile.label}</span>
+            <span className="board-kpi__value">{tickets.filter((t) => t.status === tile.status).length}</span>
+          </span>
+        </button>
+      ))}
+      {activeQuickStatus && (
+        <p className="board-kpis__active" aria-live="polite">
+          Showing only <strong>{STATUS_LABELS[activeQuickStatus]}</strong> tickets.{" "}
+          <button type="button" className="board-kpis__clear" onClick={() => setQuickStatus(null)}>
+            Show all
+          </button>
+        </p>
+      )}
+    </div>
+  );
 
   const searchedTickets = listSearch.trim()
-    ? tickets.filter((t) => {
+    ? quickFilteredTickets.filter((t) => {
         const q = listSearch.trim().toLowerCase();
         return (
           t.ticketNumber.toLowerCase().includes(q) ||
@@ -372,7 +425,7 @@ export default function BoardPage() {
           (t.technicianName ?? "").toLowerCase().includes(q)
         );
       })
-    : tickets;
+    : quickFilteredTickets;
 
   const sortedTickets = [...searchedTickets].sort((a, b) => {
     const diff = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
@@ -386,8 +439,12 @@ export default function BoardPage() {
   const listRangeStart = sortedTickets.length === 0 ? 0 : listPageStart + 1;
   const listRangeEnd = Math.min(listPageStart + listPageSize, sortedTickets.length);
 
+  // Only one store in scope: every row would repeat it, so the column is dropped to keep
+  // the table within the page width.
+  const showStoreColumn = storeOptions.length !== 1;
+
   return (
-    <main>
+    <main className="board-page">
       <div className="list-page-header">
         <div>
           <h1>Board</h1>
@@ -421,19 +478,7 @@ export default function BoardPage() {
 
       {viewMode === "board" ? (
         <>
-          <div className="board-kpis">
-            {boardKpis.map((kpi) => (
-              <div className="board-kpi" key={kpi.label}>
-                <span className="board-kpi__icon" style={{ background: kpi.bg }} aria-hidden="true">
-                  <span className="board-kpi__dot" style={{ background: kpi.dot }} />
-                </span>
-                <div>
-                  <div className="board-kpi__label">{kpi.label}</div>
-                  <div className="board-kpi__value">{kpi.value}</div>
-                </div>
-              </div>
-            ))}
-          </div>
+          {statusTileRow}
 
           <section aria-labelledby="filters-heading" className="board-toolbar">
             <div className="board-toolbar__row">
@@ -550,13 +595,15 @@ export default function BoardPage() {
           {loaded && tickets.length === 0 && <p>No tickets match the current view.</p>}
 
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-            <div aria-label="Kanban board" className="board">
-              {columns.map((column) => (
+            <div aria-label="Kanban board" className="board" style={{ "--board-columns": visibleColumns.length } as React.CSSProperties}>
+              {visibleColumns.map((column) => (
                 <BoardColumn
                   key={column.status}
                   status={column.status}
                   label={column.label}
                   tickets={tickets.filter((t) => t.status === column.status)}
+                  focused={activeQuickStatus === column.status}
+                  onToggleFocus={() => toggleQuickStatus(column.status)}
                 />
               ))}
             </div>
@@ -564,19 +611,7 @@ export default function BoardPage() {
         </>
       ) : (
         <>
-          <div className="board-kpis">
-            {listKpis.map((kpi) => (
-              <div className="board-kpi" key={kpi.label}>
-                <span className="board-kpi__icon" style={{ background: kpi.bg }} aria-hidden="true">
-                  <span className="board-kpi__dot" style={{ background: kpi.dot }} />
-                </span>
-                <div>
-                  <div className="board-kpi__label">{kpi.label}</div>
-                  <div className="board-kpi__value">{kpi.value}</div>
-                </div>
-              </div>
-            ))}
-          </div>
+          {statusTileRow}
 
           <section aria-labelledby="list-filters-heading" className="list-filterbar">
             <h2 id="list-filters-heading" className="sr-only">
@@ -661,13 +696,13 @@ export default function BoardPage() {
               ) : (
                 <>
                   <div className="table-scroll">
-                    <table>
+                    <table className="list-table">
                       <thead>
                         <tr>
                           <th>Ticket ID</th>
                           <th>Customer</th>
                           <th>Model</th>
-                          <th>Store</th>
+                          {showStoreColumn && <th>Store</th>}
                           <th>Technician</th>
                           <th>Status</th>
                           <th>
@@ -680,7 +715,9 @@ export default function BoardPage() {
                             </button>
                           </th>
                           <th>Age</th>
-                          <th>Actions</th>
+                          <th>
+                            <span className="sr-only">Actions</span>
+                          </th>
                         </tr>
                       </thead>
                       <tbody>
@@ -693,7 +730,7 @@ export default function BoardPage() {
                             </td>
                             <td>{ticket.customerName}</td>
                             <td>{ticket.machineModel}</td>
-                            <td>{ticket.storeName}</td>
+                            {showStoreColumn && <td>{ticket.storeName}</td>}
                             <td>
                               <span className="list-table__technician">
                                 {ticket.technicianName ? (

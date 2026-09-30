@@ -20,7 +20,8 @@ test.describe("Complete and deliver (005-customer-notifications, US1+US3)", () =
     await page.getByLabel("Store").selectOption({ index: 1 });
     await page.getByLabel("Customer name").fill("E2E Delivery Customer");
     await page.getByLabel("Customer phone").fill(customerPhone);
-    await page.getByLabel("Machine model").fill(`E2E-Deliver-Model-${Date.now()}`);
+    await page.getByLabel("Machine model", { exact: true }).selectOption("__other__");
+    await page.getByLabel("Machine model (not in the list)").fill(`E2E-Deliver-Model-${Date.now()}`);
     await page.getByLabel("Serial number").fill(`SN-Deliver-${Date.now()}`);
     await page.getByLabel("Issue description").fill("Delivery e2e test");
     await page.getByRole("button", { name: "Create ticket" }).click();
@@ -30,11 +31,11 @@ test.describe("Complete and deliver (005-customer-notifications, US1+US3)", () =
 
     await page.getByLabel("New status").selectOption("in_progress");
     await page.getByRole("button", { name: "Update status" }).click();
-    await expect(statusValue).toContainText("in_progress");
+    await expect(statusValue).toContainText("In progress");
 
     await page.getByLabel("New status").selectOption("completed");
     await page.getByRole("button", { name: "Update status" }).click();
-    await expect(statusValue).toContainText("completed");
+    await expect(statusValue).toContainText("Completed");
 
     // Completion notification (US1): poll the mock WhatsApp server's received log.
     await expect
@@ -62,6 +63,6 @@ test.describe("Complete and deliver (005-customer-notifications, US1+US3)", () =
     await page.getByLabel("One-time code").fill(otpMessage.params.otp_code);
     await page.getByRole("button", { name: "Verify code" }).click();
 
-    await expect(statusValue).toContainText("delivered");
+    await expect(statusValue).toContainText("Delivered");
   });
 });

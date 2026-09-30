@@ -1,9 +1,22 @@
-import { eq, inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/lib/db/client";
-import { deliveryOverrides, notifications, otpVerifications, statusHistory, ticketLineItems, users } from "@/lib/db/schema";
+import { auditLog, deliveryOverrides, notifications, otpVerifications, statusHistory, ticketLineItems, users } from "@/lib/db/schema";
+import { DETAIL_FIELD_LABELS, type EditableDetailField } from "@/lib/tickets/edit-details";
+
+const STATUS_LABELS: Record<string, string> = {
+  open: "Open",
+  in_progress: "In progress",
+  on_hold: "On hold",
+  completed: "Completed",
+  delivered: "Delivered",
+  cancelled: "Cancelled",
+};
+const statusLabel = (status: string) => STATUS_LABELS[status] ?? status;
+const inr = (value: string | number) =>
+  `₹${Number(value).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 export interface AuditTrailEntry {
-  source: "status_history" | "line_item" | "notification" | "otp" | "override";
+  source: "status_history" | "line_item" | "notification" | "otp" | "override" | "details_edit";
   actor: string | null;
   timestamp: Date;
   description: string;
@@ -44,8 +57,8 @@ export async function getConsolidatedAuditTrail(ticketId: string): Promise<Audit
       actor: row.actorName,
       timestamp: row.createdAt,
       description: row.fromStatus
-        ? `Status changed from ${row.fromStatus} to ${row.toStatus}${row.comment ? ` — "${row.comment}"` : ""}`
-        : `Ticket created (${row.toStatus})`,
+        ? `Status changed from ${statusLabel(row.fromStatus)} to ${statusLabel(row.toStatus)}${row.comment ? ` — "${row.comment}"` : ""}`
+        : `Ticket created (${statusLabel(row.toStatus)})`,
     });
   }
 
@@ -55,7 +68,7 @@ export async function getConsolidatedAuditTrail(ticketId: string): Promise<Audit
       source: "line_item",
       actor: null,
       timestamp: row.createdAt,
-      description: `${row.itemType === "part" ? "Part" : "Service"} added: ${row.nameSnapshot} x${row.quantity} (${row.lineTotal})`,
+      description: `${row.itemType === "part" ? "Part" : "Service"} added: ${row.nameSnapshot} × ${row.quantity} (${inr(row.lineTotal)})`,
     });
   }
 
@@ -105,6 +118,27 @@ export async function getConsolidatedAuditTrail(ticketId: string): Promise<Audit
       actor: row.actorName,
       timestamp: row.createdAt,
       description: `Delivery overridden: ${row.reason}`,
+    });
+  }
+
+  // Post-v1: intake-detail edits from the ticket details page (lib/tickets/edit-details.ts).
+  const editRows = await db
+    .select({ before: auditLog.beforeJson, after: auditLog.afterJson, ts: auditLog.ts, actorName: users.name })
+    .from(auditLog)
+    .innerJoin(users, eq(auditLog.actorId, users.id))
+    .where(and(eq(auditLog.entityType, "ticket"), eq(auditLog.entityId, ticketId), eq(auditLog.action, "ticket_details_updated")));
+
+  for (const row of editRows) {
+    const before = (row.before ?? {}) as Record<string, string | null>;
+    const after = (row.after ?? {}) as Record<string, string | null>;
+    const changes = Object.keys(after).map(
+      (field) => `${DETAIL_FIELD_LABELS[field as EditableDetailField] ?? field}: "${before[field] ?? ""}" → "${after[field] ?? ""}"`,
+    );
+    entries.push({
+      source: "details_edit",
+      actor: row.actorName,
+      timestamp: row.ts,
+      description: `Details edited — ${changes.join("; ")}`,
     });
   }
 

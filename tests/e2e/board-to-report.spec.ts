@@ -42,7 +42,8 @@ test.describe("Board to report end-to-end (006-dashboard-reporting, US1-US5)", (
     const customerName = `E2E Report Customer ${Date.now()}`;
     await page.getByLabel("Customer name").fill(customerName);
     await page.getByLabel("Customer phone").fill("+919999900003");
-    await page.getByLabel("Machine model").fill(`E2E-Report-Model-${Date.now()}`);
+    await page.getByLabel("Machine model", { exact: true }).selectOption("__other__");
+    await page.getByLabel("Machine model (not in the list)").fill(`E2E-Report-Model-${Date.now()}`);
     await page.getByLabel("Serial number").fill(`SN-Report-${Date.now()}`);
     await page.getByLabel("Issue description").fill("Board-to-report e2e test");
     await page.getByRole("button", { name: "Create ticket" }).click();
@@ -57,18 +58,20 @@ test.describe("Board to report end-to-end (006-dashboard-reporting, US1-US5)", (
     const statusValue = page.locator('dt:has-text("Status") + dd');
     await page.getByLabel("New status").selectOption("in_progress");
     await page.getByRole("button", { name: "Update status" }).click();
-    await expect(statusValue).toContainText("in_progress");
+    await expect(statusValue).toContainText("In progress");
 
+    await page.getByRole("tab", { name: /Parts & billing/ }).click();
     await page.getByLabel("Item type").selectOption("part");
     await page.getByLabel("Catalogue item").selectOption({ label: partName });
     await page.getByLabel("Quantity").fill("1");
     await page.getByRole("button", { name: "Add to ticket" }).click();
-    await expect(page.locator('table caption:has-text("Applied parts")')).toBeVisible();
+    await expect(page.getByRole("cell", { name: new RegExp(partName) })).toBeVisible();
     await expect(page.locator('dl[aria-label="Bill summary"]')).toContainText("300.00");
 
+    await page.getByRole("tab", { name: "Overview" }).click();
     await page.getByLabel("New status").selectOption("completed");
     await page.getByRole("button", { name: "Update status" }).click();
-    await expect(page.locator('dt:has-text("Status") + dd')).toContainText("completed");
+    await expect(page.locator('dt:has-text("Status") + dd')).toContainText("Completed");
 
     // Reports: the ticket must show up in the ticket-details table for today's range.
     const today = new Date().toISOString().slice(0, 10);

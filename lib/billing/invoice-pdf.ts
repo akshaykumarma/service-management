@@ -10,6 +10,17 @@ import { formatDate } from "@/lib/format/date";
 const BRAND_NAME = "Shubha Sewing";
 const LOGO_PATH = path.join(process.cwd(), "public", "logo.png");
 
+// Plus Jakarta Sans — the app's own UI font, and unlike pdfkit's built-in standard fonts
+// it has a ₹ glyph. Falls back to Helvetica (and "Rs.") if the files are ever missing,
+// so an invoice is never blocked on a font.
+const FONT_DIR = path.join(process.cwd(), "assets", "fonts");
+const BRAND_FONTS = {
+  regular: path.join(FONT_DIR, "PlusJakartaSans-Regular.ttf"),
+  bold: path.join(FONT_DIR, "PlusJakartaSans-Bold.ttf"),
+  italic: path.join(FONT_DIR, "PlusJakartaSans-Italic.ttf"),
+};
+const hasBrandFonts = () => Object.values(BRAND_FONTS).every((f) => existsSync(f));
+
 // app/globals.css's own brand tokens, so the invoice matches the app.
 const COLOR = {
   primary: "#c81e1e",
@@ -41,9 +52,8 @@ function collectPdf(build: (doc: PDFKit.PDFDocument) => void): Promise<Buffer> {
   });
 }
 
-/** The standard PDF fonts have no ₹ glyph, hence "Rs.". */
-function money(value: number): string {
-  return `Rs. ${value.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+function formatMoney(value: number, symbol: string): string {
+  return `${symbol}${value.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 interface InvoiceData {
@@ -115,6 +125,12 @@ export async function renderInvoicePdf(ticketId: string): Promise<Buffer | null>
 }
 
 function drawInvoice(doc: PDFKit.PDFDocument, data: InvoiceData): void {
+  const brandFonts = hasBrandFonts();
+  doc.registerFont("Body", brandFonts ? BRAND_FONTS.regular : "Helvetica");
+  doc.registerFont("Body-Bold", brandFonts ? BRAND_FONTS.bold : "Helvetica-Bold");
+  doc.registerFont("Body-Italic", brandFonts ? BRAND_FONTS.italic : "Helvetica-Oblique");
+  const money = (value: number) => formatMoney(value, brandFonts ? "₹" : "Rs. ");
+
   const pageWidth = doc.page.width;
   const contentWidth = pageWidth - 2 * MARGIN;
   const contentBottom = doc.page.height - FOOTER_HEIGHT - 16;
@@ -126,12 +142,12 @@ function drawInvoice(doc: PDFKit.PDFDocument, data: InvoiceData): void {
 
     const footerTop = h - FOOTER_HEIGHT;
     doc.moveTo(MARGIN, footerTop).lineTo(pageWidth - MARGIN, footerTop).lineWidth(1).strokeColor(COLOR.border).stroke();
-    doc.fillColor(COLOR.primary).font("Helvetica-Bold").fontSize(11)
+    doc.fillColor(COLOR.primary).font("Body-Bold").fontSize(11)
       .text(`Thank you for choosing ${BRAND_NAME}!`, MARGIN, footerTop + 14, { width: contentWidth, align: "center" });
     const contact = [data.store.name, data.store.address, data.store.whatsappNumber && `WhatsApp ${data.store.whatsappNumber}`]
       .filter(Boolean)
       .join("  ·  ");
-    doc.fillColor(COLOR.muted).font("Helvetica").fontSize(8.5)
+    doc.fillColor(COLOR.muted).font("Body").fontSize(8.5)
       .text(contact, MARGIN, footerTop + 32, { width: contentWidth, align: "center", lineBreak: false, ellipsis: true })
       .text("This is a computer-generated invoice and does not require a signature.", MARGIN, footerTop + 46, {
         width: contentWidth,
@@ -142,7 +158,7 @@ function drawInvoice(doc: PDFKit.PDFDocument, data: InvoiceData): void {
   const newPage = (): number => {
     doc.addPage({ size: "A4", margin: 0 });
     drawPageChrome();
-    doc.fillColor(COLOR.muted).font("Helvetica").fontSize(9)
+    doc.fillColor(COLOR.muted).font("Body").fontSize(9)
       .text(`Invoice ${data.ticketNumber} (continued)`, MARGIN, 24, { width: contentWidth, align: "right" });
     return MARGIN;
   };
@@ -151,7 +167,7 @@ function drawInvoice(doc: PDFKit.PDFDocument, data: InvoiceData): void {
 
   // Header: logo left, INVOICE + meta right.
   if (existsSync(LOGO_PATH)) doc.image(LOGO_PATH, MARGIN, 30, { width: 150 });
-  doc.fillColor(COLOR.primary).font("Helvetica-Bold").fontSize(26)
+  doc.fillColor(COLOR.primary).font("Body-Bold").fontSize(26)
     .text("INVOICE", MARGIN, 36, { width: contentWidth, align: "right", characterSpacing: 2 });
   let y = 72;
   for (const [label, value] of [
@@ -159,8 +175,8 @@ function drawInvoice(doc: PDFKit.PDFDocument, data: InvoiceData): void {
     ["Received", formatDate(data.receivedAt)],
     ["Delivered", formatDate(data.deliveredAt)],
   ]) {
-    doc.fillColor(COLOR.muted).font("Helvetica").fontSize(9.5).text(label, MARGIN, y, { width: contentWidth - 100, align: "right" });
-    doc.fillColor(COLOR.text).font("Helvetica-Bold").text(value, MARGIN, y, { width: contentWidth, align: "right" });
+    doc.fillColor(COLOR.muted).font("Body").fontSize(9.5).text(label, MARGIN, y, { width: contentWidth - 100, align: "right" });
+    doc.fillColor(COLOR.text).font("Body-Bold").text(value, MARGIN, y, { width: contentWidth, align: "right" });
     y += 14;
   }
 
@@ -171,10 +187,10 @@ function drawInvoice(doc: PDFKit.PDFDocument, data: InvoiceData): void {
   y += 16;
   const colWidth = (contentWidth - 24) / 2;
   const infoBlock = (x: number, title: string, lines: string[]): number => {
-    doc.fillColor(COLOR.primary).font("Helvetica-Bold").fontSize(8).text(title.toUpperCase(), x, y, { characterSpacing: 1 });
+    doc.fillColor(COLOR.primary).font("Body-Bold").fontSize(8).text(title.toUpperCase(), x, y, { characterSpacing: 1 });
     let lineY = y + 14;
     lines.forEach((line, i) => {
-      doc.fillColor(i === 0 ? COLOR.text : COLOR.dim).font(i === 0 ? "Helvetica-Bold" : "Helvetica").fontSize(i === 0 ? 11 : 9.5)
+      doc.fillColor(i === 0 ? COLOR.text : COLOR.dim).font(i === 0 ? "Body-Bold" : "Body").fontSize(i === 0 ? 11 : 9.5)
         .text(line, x, lineY, { width: colWidth });
       lineY = doc.y + 2;
     });
@@ -193,18 +209,18 @@ function drawInvoice(doc: PDFKit.PDFDocument, data: InvoiceData): void {
   ];
   const cellWidth = contentWidth / 3;
   const issueText = `Issue: ${data.issueDescription}`;
-  doc.font("Helvetica-Bold").fontSize(10);
+  doc.font("Body-Bold").fontSize(10);
   const cellValueHeight = Math.max(...cells.map(([, v]) => doc.heightOfString(v, { width: cellWidth - 20 })));
-  doc.font("Helvetica-Oblique").fontSize(9);
+  doc.font("Body-Italic").fontSize(9);
   const issueHeight = doc.heightOfString(issueText, { width: contentWidth - 28 });
   const cardHeight = 22 + cellValueHeight + 8 + issueHeight + 12;
   doc.roundedRect(MARGIN, y, contentWidth, cardHeight, 6).fill(COLOR.primaryLight);
   cells.forEach(([label, value], i) => {
     const x = MARGIN + 14 + i * cellWidth;
-    doc.fillColor(COLOR.muted).font("Helvetica").fontSize(8).text(label.toUpperCase(), x, y + 10, { characterSpacing: 0.8 });
-    doc.fillColor(COLOR.text).font("Helvetica-Bold").fontSize(10).text(value, x, y + 22, { width: cellWidth - 20 });
+    doc.fillColor(COLOR.muted).font("Body").fontSize(8).text(label.toUpperCase(), x, y + 10, { characterSpacing: 0.8 });
+    doc.fillColor(COLOR.text).font("Body-Bold").fontSize(10).text(value, x, y + 22, { width: cellWidth - 20 });
   });
-  doc.fillColor(COLOR.dim).font("Helvetica-Oblique").fontSize(9)
+  doc.fillColor(COLOR.dim).font("Body-Italic").fontSize(9)
     .text(issueText, MARGIN + 14, y + 22 + cellValueHeight + 8, { width: contentWidth - 28 });
   y += cardHeight + 22;
 
@@ -221,7 +237,7 @@ function drawInvoice(doc: PDFKit.PDFDocument, data: InvoiceData): void {
     let x = MARGIN;
     values.forEach((value, i) => {
       const col = columns[i];
-      doc.fillColor(opts.color ?? COLOR.text).font(opts.bold ? "Helvetica-Bold" : "Helvetica").fontSize(opts.size ?? 9.5)
+      doc.fillColor(opts.color ?? COLOR.text).font(opts.bold ? "Body-Bold" : "Body").fontSize(opts.size ?? 9.5)
         .text(value, x + ROW_PADDING, rowY, { width: col.width - 2 * ROW_PADDING, align: col.align });
       x += col.width;
     });
@@ -234,12 +250,12 @@ function drawInvoice(doc: PDFKit.PDFDocument, data: InvoiceData): void {
 
   drawTableHeader();
   if (data.lineItems.length === 0) {
-    doc.fillColor(COLOR.muted).font("Helvetica-Oblique").fontSize(9.5)
+    doc.fillColor(COLOR.muted).font("Body-Italic").fontSize(9.5)
       .text("No parts or services billed.", MARGIN + ROW_PADDING, y + ROW_PADDING, { width: contentWidth - 2 * ROW_PADDING });
     y += 24;
   }
   data.lineItems.forEach((item, i) => {
-    doc.font("Helvetica").fontSize(9.5);
+    doc.font("Body").fontSize(9.5);
     const rowHeight = Math.max(24, doc.heightOfString(item.name, { width: columns[1].width - 2 * ROW_PADDING }) + 2 * ROW_PADDING);
     if (y + rowHeight > contentBottom) {
       y = newPage();
@@ -258,14 +274,14 @@ function drawInvoice(doc: PDFKit.PDFDocument, data: InvoiceData): void {
   const totalsWidth = 220;
   const totalsX = pageWidth - MARGIN - totalsWidth;
   const totalLine = (label: string, value: string) => {
-    doc.fillColor(COLOR.dim).font("Helvetica").fontSize(10).text(label, totalsX + 12, y, { width: 110 });
-    doc.fillColor(COLOR.text).font("Helvetica").text(value, totalsX, y, { width: totalsWidth - 12, align: "right" });
+    doc.fillColor(COLOR.dim).font("Body").fontSize(10).text(label, totalsX + 12, y, { width: 110 });
+    doc.fillColor(COLOR.text).font("Body").text(value, totalsX, y, { width: totalsWidth - 12, align: "right" });
     y += 18;
   };
   totalLine("Subtotal", money(data.bill.subtotal));
   totalLine(`Tax (${data.taxRate}%)`, money(data.bill.taxAmount));
   y += 4;
   doc.roundedRect(totalsX, y, totalsWidth, 34, 6).fill(COLOR.primary);
-  doc.fillColor(COLOR.white).font("Helvetica-Bold").fontSize(11).text("TOTAL", totalsX + 12, y + 11, { characterSpacing: 1 });
+  doc.fillColor(COLOR.white).font("Body-Bold").fontSize(11).text("TOTAL", totalsX + 12, y + 11, { characterSpacing: 1 });
   doc.fontSize(14).text(money(data.bill.total), totalsX, y + 9, { width: totalsWidth - 12, align: "right" });
 }

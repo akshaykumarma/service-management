@@ -8,6 +8,7 @@ import { assertAccess, AccessDeniedError } from "@/lib/auth/rbac";
 import { resolveCustomer } from "@/lib/tickets/customer";
 import { nextTicketNumber } from "@/lib/tickets/ticket-number";
 import { lookupHistory } from "@/lib/tickets/history";
+import { resolveReceivedAt } from "@/lib/tickets/received-date";
 import { MAX_PHOTOS_PER_TICKET, verifyUploadedObject } from "@/lib/tickets/photos";
 import { queryScopedTickets } from "@/lib/board/ticket-query";
 import { toTicketCard } from "@/lib/board/card-shape";
@@ -32,6 +33,12 @@ export async function POST(request: NextRequest) {
         { status: 400 },
       );
     }
+  }
+
+  // Optional back-dated intake (post-v1 product feedback) — see lib/tickets/received-date.ts.
+  const received = resolveReceivedAt(payload.receivedDate);
+  if (!received.ok) {
+    return NextResponse.json({ error: { code: received.error } }, { status: 400 });
   }
 
   const photoObjectKeys: string[] = Array.isArray(payload.photoObjectKeys) ? payload.photoObjectKeys : [];
@@ -88,6 +95,7 @@ export async function POST(request: NextRequest) {
         estimatedPickupDate: payload.estimatedPickupDate ?? null,
         status: "open",
         createdBy: caller.id,
+        createdAt: received.receivedAt,
       })
       .returning();
 
@@ -97,6 +105,7 @@ export async function POST(request: NextRequest) {
       toStatus: "open",
       actorId: caller.id,
       comment: null,
+      createdAt: received.receivedAt,
     });
 
     for (const photo of verifiedPhotos) {
@@ -111,7 +120,7 @@ export async function POST(request: NextRequest) {
     return ticket;
   });
 
-  const history = await lookupHistory(caller, created.machineModel);
+  const history = await lookupHistory(caller, { serialNumber: created.serialNumber, customerPhone: created.customerPhone });
 
   return NextResponse.json(
     {

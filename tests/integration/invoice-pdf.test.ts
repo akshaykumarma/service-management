@@ -38,6 +38,9 @@ describe("invoice PDF layout", () => {
     const raw = pdf!.toString("latin1");
     expect(raw.startsWith("%PDF-")).toBe(true);
     expect(raw).toContain("/Subtype /Image");
+    // The bundled Plus Jakarta Sans (which, unlike the standard PDF fonts, has a ₹ glyph)
+    // is embedded rather than silently falling back to Helvetica.
+    expect(raw).toContain("PlusJakartaSans");
     // A4 is 595.28 x 841.89pt.
     expect(raw).toMatch(/\/MediaBox \[0 0 595\.28 841\.89\]/);
     expect(pageCount(pdf!)).toBe(1);
