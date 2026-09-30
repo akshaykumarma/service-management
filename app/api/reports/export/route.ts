@@ -7,6 +7,16 @@ import { getSummaryReport } from "@/lib/reporting/summary";
 import { summaryToCsv, ticketListToCsv } from "@/lib/reporting/csv-export";
 import { summaryToPdf, ticketListToPdf } from "@/lib/reporting/pdf-export";
 import type { TicketStatus } from "@/lib/tickets/status-transitions";
+import { getTicketDetailsReport } from "@/lib/reporting/ticket-details";
+import {
+  exportFilename,
+  ticketDetailsToCsv,
+  ticketDetailsToPdf,
+  ticketDetailsToXlsx,
+} from "@/lib/reporting/ticket-details-export";
+import { formatDate } from "@/lib/format/date";
+
+const XLSX_CONTENT_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
 export async function GET(request: NextRequest) {
   const sessionOrResponse = await requireAuthenticatedSession(request);
@@ -24,6 +34,51 @@ export async function GET(request: NextRequest) {
 
   const params = request.nextUrl.searchParams;
   const format = params.get("format");
+
+  // The Reports page's ticket-details table (post-v1 product feedback): exactly the rows
+  // GET /api/reports/tickets returns for the same filters, as CSV, Excel or PDF. Store
+  // scope comes from the same getTicketDetailsReport -> queryScopedTickets path.
+  if (params.get("type") === "details") {
+    if (format !== "csv" && format !== "pdf" && format !== "xlsx") {
+      return NextResponse.json({ error: { code: "invalid_format" } }, { status: 400 });
+    }
+    const storeIds = params.getAll("storeId");
+    const statuses = params.getAll("status") as TicketStatus[];
+    const dateFrom = params.get("dateFrom") ?? undefined;
+    const dateTo = params.get("dateTo") ?? undefined;
+    const rows = await getTicketDetailsReport(caller, {
+      storeIds: storeIds.length > 0 ? storeIds : undefined,
+      statuses: statuses.length > 0 ? statuses : undefined,
+      dateFrom,
+      dateTo,
+      ticketId: params.get("ticketId") ?? undefined,
+      customerName: params.get("customerName") ?? undefined,
+      customerPhone: params.get("customerPhone") ?? undefined,
+      machineModel: params.get("machineModel") ?? undefined,
+      technicianId: params.get("technicianId") ?? undefined,
+    });
+
+    const filename = exportFilename(format);
+    const disposition = `attachment; filename="${filename}"`;
+    if (format === "csv") {
+      return new NextResponse(ticketDetailsToCsv(rows), {
+        headers: { "content-type": "text/csv; charset=utf-8", "content-disposition": disposition },
+      });
+    }
+    const title = "Service tickets report";
+    if (format === "xlsx") {
+      const buffer = await ticketDetailsToXlsx(rows, { title });
+      return new NextResponse(new Uint8Array(buffer), {
+        headers: { "content-type": XLSX_CONTENT_TYPE, "content-disposition": disposition },
+      });
+    }
+    const range = `${dateFrom ? formatDate(dateFrom) : "Start"} – ${dateTo ? formatDate(dateTo) : "today"}`;
+    const buffer = await ticketDetailsToPdf(rows, { title, subtitle: `${range} · ${rows.length} ticket(s)` });
+    return new NextResponse(new Uint8Array(buffer), {
+      headers: { "content-type": "application/pdf", "content-disposition": disposition },
+    });
+  }
+
   if (format !== "csv" && format !== "pdf") {
     return NextResponse.json({ error: { code: "invalid_format" } }, { status: 400 });
   }

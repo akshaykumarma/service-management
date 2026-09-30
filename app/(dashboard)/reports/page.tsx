@@ -62,6 +62,9 @@ export default function ReportsPage() {
   const [tableTechnicianId, setTableTechnicianId] = useState("");
   const [ticketRows, setTicketRows] = useState<TicketDetailRow[] | null>(null);
   const [tableError, setTableError] = useState<string | null>(null);
+  // The exact query behind the rows on screen, so an export always matches the table even
+  // if the filter inputs were edited afterwards without re-applying.
+  const [appliedQuery, setAppliedQuery] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/stores")
@@ -107,6 +110,7 @@ export default function ReportsPage() {
     }
     const body = await res.json();
     setTicketRows(body.tickets);
+    setAppliedQuery(params.toString());
   }
 
   function toggleStatus(status: string) {
@@ -204,6 +208,25 @@ export default function ReportsPage() {
           )}
           <button type="submit">Apply filters</button>
         </form>
+
+        {ticketRows && appliedQuery !== null && ticketRows.length > 0 && (
+          <div className="report-export" role="group" aria-label="Export this report">
+            <span className="report-export__label">
+              {ticketRows.length} ticket{ticketRows.length === 1 ? "" : "s"} · Export:
+            </span>
+            {(
+              [
+                ["xlsx", "Excel"],
+                ["csv", "CSV"],
+                ["pdf", "PDF"],
+              ] as const
+            ).map(([format, label]) => (
+              <a key={format} className="report-export__button" href={`/api/reports/export?type=details&format=${format}&${appliedQuery}`}>
+                {label}
+              </a>
+            ))}
+          </div>
+        )}
 
         {ticketRows && (
           <div className="table-scroll">
