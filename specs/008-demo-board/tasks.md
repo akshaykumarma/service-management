@@ -44,6 +44,12 @@ contracts/demo-tickets-api.md).
 - [X] T015 Tests: detail GET scope, edit details (lock, technician 403), activity (tests/integration/demo-ticket-detail.test.ts)
 - [X] T016 `GET/PATCH /api/demo-tickets/:id`, `GET /api/demo-tickets/:id/activity`; page app/(dashboard)/demo-tickets/[id]/page.tsx
 
+## Phase 6b: Follow-up — Demo tickets in Reports (FR-013)
+
+- [X] T018 Tests: demo report scoping, filters, technician 403, separation from the service report, Excel/CSV/PDF exports (tests/integration/demo-reports.test.ts)
+- [X] T019 `GET /api/reports/demo-tickets`, export `type=demo-details`; table-driven export module shared by both reports (lib/reporting/ticket-details-export.ts)
+- [X] T020 Reports page Service/Demo switch, demo filters and table (app/(dashboard)/reports/page.tsx)
+
 ## Phase 7: Polish
 
 - [X] T017 PRD update (docs/PRD-v1.1-source.md §16), full test suite, lint, e2e, screenshots

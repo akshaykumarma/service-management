@@ -4,15 +4,41 @@ import ExcelJS from "exceljs";
 import PDFDocument from "pdfkit";
 import { stringify } from "csv-stringify/sync";
 import type { TicketDetailRow } from "@/lib/reporting/ticket-details";
+import type { DemoTicketDetailRow } from "@/lib/reporting/demo-ticket-details";
 import { formatDate } from "@/lib/format/date";
 
 /**
- * Exports of the Reports page's ticket-details table (post-v1 product feedback: the page
- * had no export buttons). All three formats carry exactly the rows and columns the table
- * shows for the same filters, plus a totals row.
+ * Exports of the Reports page's tables (service tickets, and demo tickets since
+ * 008-demo-board). Each format carries exactly the rows and columns the table shows for
+ * the same filters, plus a totals row. A report is described once as a `ReportTable`;
+ * the CSV, Excel and PDF writers below render any such table.
  */
 
-const STATUS_LABELS: Record<string, string> = {
+type Cell = string | number;
+
+interface ReportColumn {
+  header: string;
+  /** Shorter header for the PDF's narrow columns. */
+  pdfHeader?: string;
+  /** Excel column width (characters). */
+  width: number;
+  /** Relative PDF column width. */
+  pdfWidth: number;
+  /** Rupee amount: right-aligned, ₹-formatted in Excel/PDF, 2 decimals in CSV. */
+  money?: boolean;
+  /** Shown as "—" in the PDF when empty. */
+  dashWhenEmpty?: boolean;
+}
+
+export interface ReportTable {
+  sheetName: string;
+  emptyMessage: string;
+  columns: ReportColumn[];
+  rows: Cell[][];
+  totals: Cell[];
+}
+
+const SERVICE_STATUS_LABELS: Record<string, string> = {
   open: "Open",
   in_progress: "In Progress",
   on_hold: "On Hold",
@@ -21,69 +47,118 @@ const STATUS_LABELS: Record<string, string> = {
   cancelled: "Cancelled",
 };
 
-const COLUMNS = [
-  "Ticket #",
-  "Store",
-  "Customer",
-  "Phone",
-  "Machine model",
-  "Status",
-  "Created",
-  "Est. delivery date",
-  "Technician",
-  "Subtotal",
-  "Tax",
-  "Total",
-] as const;
+const DEMO_STATUS_LABELS: Record<string, string> = {
+  new: "New",
+  assigned: "Assigned",
+  in_progress: "In Progress",
+  completed: "Completed",
+  cancelled: "Cancelled",
+};
 
-function rowValues(t: TicketDetailRow): (string | number)[] {
-  return [
-    t.ticketNumber,
-    t.storeName,
-    t.customerName,
-    t.customerPhone,
-    t.machineModel,
-    STATUS_LABELS[t.status] ?? t.status,
-    formatDate(t.createdAt),
-    t.estimatedPickupDate ? formatDate(t.estimatedPickupDate) : "",
-    t.technicianName ?? "",
-    t.subtotal,
-    t.taxAmount,
-    t.total,
-  ];
+const sum = (values: number[]) => Number(values.reduce((a, v) => a + v, 0).toFixed(2));
+
+export function serviceTicketsTable(rows: TicketDetailRow[]): ReportTable {
+  return {
+    sheetName: "Tickets",
+    emptyMessage: "No tickets match these filters.",
+    columns: [
+      { header: "Ticket #", width: 16, pdfWidth: 88 },
+      { header: "Store", width: 24, pdfWidth: 72 },
+      { header: "Customer", width: 22, pdfWidth: 74 },
+      { header: "Phone", width: 16, pdfWidth: 70 },
+      { header: "Machine model", width: 26, pdfWidth: 82 },
+      { header: "Status", width: 13, pdfWidth: 54 },
+      { header: "Created", width: 12, pdfWidth: 60 },
+      { header: "Est. delivery date", pdfHeader: "Est. delivery", width: 16, pdfWidth: 70, dashWhenEmpty: true },
+      { header: "Technician", width: 18, pdfWidth: 62, dashWhenEmpty: true },
+      { header: "Subtotal", width: 12, pdfWidth: 56, money: true },
+      { header: "Tax", width: 11, pdfWidth: 50, money: true },
+      { header: "Total", width: 12, pdfWidth: 60, money: true },
+    ],
+    rows: rows.map((t) => [
+      t.ticketNumber,
+      t.storeName,
+      t.customerName,
+      t.customerPhone,
+      t.machineModel,
+      SERVICE_STATUS_LABELS[t.status] ?? t.status,
+      formatDate(t.createdAt),
+      t.estimatedPickupDate ? formatDate(t.estimatedPickupDate) : "",
+      t.technicianName ?? "",
+      t.subtotal,
+      t.taxAmount,
+      t.total,
+    ]),
+    totals: [
+      "Total", "", "", "", "", "", "", "", "",
+      sum(rows.map((t) => t.subtotal)),
+      sum(rows.map((t) => t.taxAmount)),
+      sum(rows.map((t) => t.total)),
+    ],
+  };
 }
 
-function totals(rows: TicketDetailRow[]) {
-  const sum = (pick: (t: TicketDetailRow) => number) => Number(rows.reduce((a, t) => a + pick(t), 0).toFixed(2));
-  return { subtotal: sum((t) => t.subtotal), taxAmount: sum((t) => t.taxAmount), total: sum((t) => t.total) };
+export function demoTicketsTable(rows: DemoTicketDetailRow[]): ReportTable {
+  return {
+    sheetName: "Demo tickets",
+    emptyMessage: "No demo tickets match these filters.",
+    columns: [
+      { header: "Ticket #", width: 20, pdfWidth: 112 },
+      { header: "Store", width: 22, pdfWidth: 54 },
+      { header: "Customer", width: 20, pdfWidth: 62 },
+      { header: "Phone", width: 16, pdfWidth: 80 },
+      { header: "Model", width: 22, pdfWidth: 58 },
+      { header: "Serial number", pdfHeader: "Serial no.", width: 18, pdfWidth: 60 },
+      { header: "Invoice number", pdfHeader: "Invoice no.", width: 18, pdfWidth: 60 },
+      { header: "Demo service", pdfHeader: "Service", width: 22, pdfWidth: 58 },
+      { header: "Demo date", width: 12, pdfWidth: 62 },
+      { header: "Status", width: 12, pdfWidth: 54 },
+      { header: "Received", width: 12, pdfWidth: 62 },
+      { header: "Technician", width: 18, pdfWidth: 54, dashWhenEmpty: true },
+      { header: "Price", width: 12, pdfWidth: 52, money: true },
+    ],
+    rows: rows.map((t) => [
+      t.ticketNumber,
+      t.storeName,
+      t.customerName,
+      t.customerPhone,
+      t.machineModel,
+      t.serialNumber,
+      t.invoiceNumber,
+      t.demoServiceName,
+      formatDate(t.demoDate),
+      DEMO_STATUS_LABELS[t.status] ?? t.status,
+      formatDate(t.createdAt),
+      t.technicianName ?? "",
+      t.demoServicePrice,
+    ]),
+    totals: [
+      `Total (${rows.length} demo${rows.length === 1 ? "" : "s"})`, "", "", "", "", "", "", "", "", "", "", "",
+      sum(rows.map((t) => t.demoServicePrice)),
+    ],
+  };
 }
 
-export function exportFilename(ext: "csv" | "xlsx" | "pdf", now: Date = new Date()): string {
-  return `tickets-report-${now.toISOString().slice(0, 10)}.${ext}`;
+export function exportFilename(ext: "csv" | "xlsx" | "pdf", now: Date = new Date(), prefix = "tickets-report"): string {
+  return `${prefix}-${now.toISOString().slice(0, 10)}.${ext}`;
 }
 
-export function ticketDetailsToCsv(rows: TicketDetailRow[]): string {
-  const t = totals(rows);
-  const body = rows.map((r) => rowValues(r).map((v) => (typeof v === "number" ? v.toFixed(2) : v)));
-  const totalRow = ["Total", "", "", "", "", "", "", "", "", t.subtotal.toFixed(2), t.taxAmount.toFixed(2), t.total.toFixed(2)];
+export function reportTableToCsv(table: ReportTable): string {
+  const asCsv = (row: Cell[]) => row.map((v, i) => (table.columns[i].money && typeof v === "number" ? v.toFixed(2) : v));
   // A UTF-8 BOM so Excel opens names with non-ASCII characters correctly.
-  return "﻿" + stringify([[...COLUMNS], ...body, totalRow]);
+  return "﻿" + stringify([table.columns.map((c) => c.header), ...table.rows.map(asCsv), asCsv(table.totals)]);
 }
 
-export async function ticketDetailsToXlsx(rows: TicketDetailRow[], meta: { title: string }): Promise<Buffer> {
+export async function reportTableToXlsx(table: ReportTable, meta: { title: string }): Promise<Buffer> {
   const workbook = new ExcelJS.Workbook();
   workbook.creator = "Shubha Sewing Service Desk";
-  const sheet = workbook.addWorksheet("Tickets", { views: [{ state: "frozen", ySplit: 1 }] });
+  workbook.title = meta.title;
+  const sheet = workbook.addWorksheet(table.sheetName, { views: [{ state: "frozen", ySplit: 1 }] });
 
-  sheet.columns = COLUMNS.map((header, i) => ({
-    header,
-    key: `c${i}`,
-    width: [16, 24, 22, 16, 26, 13, 12, 16, 18, 12, 11, 12][i],
-  }));
-  for (const r of rows) sheet.addRow(rowValues(r));
+  sheet.columns = table.columns.map((c, i) => ({ header: c.header, key: `c${i}`, width: c.width }));
+  for (const row of table.rows) sheet.addRow(row);
 
-  const t = totals(rows);
-  const totalRow = sheet.addRow(["Total", "", "", "", "", "", "", "", "", t.subtotal, t.taxAmount, t.total]);
+  const totalRow = sheet.addRow(table.totals);
   totalRow.font = { bold: true };
   totalRow.eachCell((cell) => {
     cell.border = { top: { style: "thin" } };
@@ -95,11 +170,13 @@ export async function ticketDetailsToXlsx(rows: TicketDetailRow[], meta: { title
   header.alignment = { vertical: "middle" };
   header.height = 20;
 
-  for (const col of [10, 11, 12]) {
-    sheet.getColumn(col).numFmt = '"₹"#,##0.00';
-  }
-  sheet.autoFilter = { from: { row: 1, column: 1 }, to: { row: Math.max(1, rows.length + 1), column: COLUMNS.length } };
-  workbook.title = meta.title;
+  table.columns.forEach((c, i) => {
+    if (c.money) sheet.getColumn(i + 1).numFmt = '"₹"#,##0.00';
+  });
+  sheet.autoFilter = {
+    from: { row: 1, column: 1 },
+    to: { row: Math.max(1, table.rows.length + 1), column: table.columns.length },
+  };
 
   return Buffer.from(await workbook.xlsx.writeBuffer());
 }
@@ -111,7 +188,7 @@ const BRAND_FONTS = {
 };
 
 /** A4 landscape table — the same font as the invoice (lib/billing/invoice-pdf.ts) so ₹ renders. */
-export function ticketDetailsToPdf(rows: TicketDetailRow[], meta: { title: string; subtitle: string }): Promise<Buffer> {
+export function reportTableToPdf(table: ReportTable, meta: { title: string; subtitle: string }): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ size: "A4", layout: "landscape", margin: 0 });
     const chunks: Buffer[] = [];
@@ -128,10 +205,8 @@ export function ticketDetailsToPdf(rows: TicketDetailRow[], meta: { title: strin
     const M = 30;
     const pageW = doc.page.width;
     const pageBottom = doc.page.height - 36;
-    const widths = [88, 72, 74, 70, 82, 54, 60, 70, 62, 56, 50, 60];
-    const scale = (pageW - 2 * M) / widths.reduce((a, b) => a + b, 0);
-    const colW = widths.map((w) => w * scale);
-    const numeric = (i: number) => i >= 9;
+    const scale = (pageW - 2 * M) / table.columns.reduce((a, c) => a + c.pdfWidth, 0);
+    const colW = table.columns.map((c) => c.pdfWidth * scale);
     const fontSize = 7.5;
 
     let y = M;
@@ -142,17 +217,16 @@ export function ticketDetailsToPdf(rows: TicketDetailRow[], meta: { title: strin
     const drawHeader = () => {
       doc.rect(M, y, pageW - 2 * M, 18).fill("#18181b");
       let x = M;
-      COLUMNS.forEach((column, i) => {
-        const h = column === "Est. delivery date" ? "Est. delivery" : column;
+      table.columns.forEach((c, i) => {
         doc.fillColor("#ffffff").font("Body-Bold").fontSize(fontSize)
-          .text(h, x + 4, y + 5, { width: colW[i] - 8, align: numeric(i) ? "right" : "left", lineBreak: false, ellipsis: true });
+          .text(c.pdfHeader ?? c.header, x + 4, y + 5, { width: colW[i] - 8, align: c.money ? "right" : "left", lineBreak: false, ellipsis: true });
         x += colW[i];
       });
       y += 18;
     };
 
-    const drawRow = (values: (string | number)[], opts: { bold?: boolean; shade?: boolean } = {}) => {
-      const cells = values.map((v, i) => (numeric(i) && typeof v === "number" ? money(v) : String(v)));
+    const drawRow = (values: Cell[], opts: { bold?: boolean; shade?: boolean } = {}) => {
+      const cells = values.map((v, i) => (table.columns[i].money && typeof v === "number" ? money(v) : String(v)));
       doc.font(opts.bold ? "Body-Bold" : "Body").fontSize(fontSize);
       const h = Math.max(16, ...cells.map((c, i) => doc.heightOfString(c, { width: colW[i] - 8 }) + 8));
       if (y + h > pageBottom) {
@@ -164,27 +238,33 @@ export function ticketDetailsToPdf(rows: TicketDetailRow[], meta: { title: strin
       let x = M;
       cells.forEach((c, i) => {
         doc.fillColor("#18181b").font(opts.bold ? "Body-Bold" : "Body").fontSize(fontSize)
-          .text(c, x + 4, y + 4, { width: colW[i] - 8, align: numeric(i) ? "right" : "left" });
+          .text(c, x + 4, y + 4, { width: colW[i] - 8, align: table.columns[i].money ? "right" : "left" });
         x += colW[i];
       });
       y += h;
     };
 
     drawHeader();
-    if (rows.length === 0) {
-      doc.fillColor("#71717a").font("Body").fontSize(9).text("No tickets match these filters.", M + 4, y + 6);
+    if (table.rows.length === 0) {
+      doc.fillColor("#71717a").font("Body").fontSize(9).text(table.emptyMessage, M + 4, y + 6);
     } else {
-      rows.forEach((r, i) =>
+      table.rows.forEach((row, i) =>
         drawRow(
-          rowValues(r).map((v, col) => ((col === 7 || col === 8) && v === "" ? "—" : v)),
+          row.map((v, col) => (table.columns[col].dashWhenEmpty && v === "" ? "—" : v)),
           { shade: i % 2 === 1 },
         ),
       );
-      const t = totals(rows);
       doc.moveTo(M, y).lineTo(pageW - M, y).strokeColor("#a1a1aa").lineWidth(0.8).stroke();
-      drawRow(["Total", "", "", "", "", "", "", "", "", t.subtotal, t.taxAmount, t.total], { bold: true });
+      drawRow(table.totals, { bold: true });
     }
 
     doc.end();
   });
 }
+
+// Service-ticket entry points, unchanged in name and output.
+export const ticketDetailsToCsv = (rows: TicketDetailRow[]) => reportTableToCsv(serviceTicketsTable(rows));
+export const ticketDetailsToXlsx = (rows: TicketDetailRow[], meta: { title: string }) =>
+  reportTableToXlsx(serviceTicketsTable(rows), meta);
+export const ticketDetailsToPdf = (rows: TicketDetailRow[], meta: { title: string; subtitle: string }) =>
+  reportTableToPdf(serviceTicketsTable(rows), meta);

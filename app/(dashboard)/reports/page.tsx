@@ -30,16 +30,54 @@ interface TicketDetailRow {
   total: number;
 }
 
-const ALL_STATUSES = ["open", "in_progress", "on_hold", "completed", "delivered", "cancelled"];
+interface DemoTicketDetailRow {
+  id: string;
+  ticketNumber: string;
+  storeName: string;
+  customerName: string;
+  customerPhone: string;
+  machineModel: string;
+  serialNumber: string;
+  invoiceNumber: string;
+  demoServiceName: string;
+  demoServicePrice: number;
+  demoDate: string;
+  status: string;
+  createdAt: string;
+  technicianName: string | null;
+}
+
+type ReportType = "service" | "demo";
+
+// Post-008 product feedback: Reports covers demo tickets too, with each type's own
+// statuses, columns, API and export.
+const REPORT_TYPES: Record<ReportType, { statuses: string[]; api: string; exportType: string; noun: string }> = {
+  service: {
+    statuses: ["open", "in_progress", "on_hold", "completed", "delivered", "cancelled"],
+    api: "/api/reports/tickets",
+    exportType: "details",
+    noun: "ticket",
+  },
+  demo: {
+    statuses: ["new", "assigned", "in_progress", "completed", "cancelled"],
+    api: "/api/reports/demo-tickets",
+    exportType: "demo-details",
+    noun: "demo ticket",
+  },
+};
 
 const STATUS_LABELS: Record<string, string> = {
   open: "Open",
+  new: "New",
+  assigned: "Assigned",
   in_progress: "In Progress",
   on_hold: "On Hold",
   completed: "Completed",
   delivered: "Delivered",
   cancelled: "Cancelled",
 };
+
+const inr = (n: number) => `₹${n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 function todayIsoDate(): string {
   return new Date().toISOString().slice(0, 10);
@@ -49,6 +87,7 @@ export default function ReportsPage() {
   const [storeOptions, setStoreOptions] = useState<StoreOption[]>([]);
   const [technicianOptions, setTechnicianOptions] = useState<TechnicianOption[]>([]);
 
+  const [reportType, setReportType] = useState<ReportType>("service");
   const [tableStoreId, setTableStoreId] = useState("");
   const [tableDateFrom, setTableDateFrom] = useState("");
   // Defaults to today (per product feedback) — an unselected end date means "up to now",
@@ -60,7 +99,10 @@ export default function ReportsPage() {
   const [tableMachineModel, setTableMachineModel] = useState("");
   const [tableTicketId, setTableTicketId] = useState("");
   const [tableTechnicianId, setTableTechnicianId] = useState("");
+  const [tableSerialNumber, setTableSerialNumber] = useState("");
+  const [tableInvoiceNumber, setTableInvoiceNumber] = useState("");
   const [ticketRows, setTicketRows] = useState<TicketDetailRow[] | null>(null);
+  const [demoRows, setDemoRows] = useState<DemoTicketDetailRow[] | null>(null);
   const [tableError, setTableError] = useState<string | null>(null);
   // The exact query behind the rows on screen, so an export always matches the table even
   // if the filter inputs were edited afterwards without re-applying.
@@ -82,6 +124,8 @@ export default function ReportsPage() {
     e.preventDefault();
     setTableError(null);
     setTicketRows(null);
+    setDemoRows(null);
+    setAppliedQuery(null);
     if (!tableDateFrom) {
       setTableError("Start date is required.");
       return;
@@ -98,8 +142,12 @@ export default function ReportsPage() {
     if (tableMachineModel) params.set("machineModel", tableMachineModel);
     if (tableTicketId) params.set("ticketId", tableTicketId);
     if (tableTechnicianId) params.set("technicianId", tableTechnicianId);
+    if (reportType === "demo") {
+      if (tableSerialNumber) params.set("serialNumber", tableSerialNumber);
+      if (tableInvoiceNumber) params.set("invoiceNumber", tableInvoiceNumber);
+    }
 
-    const res = await fetch(`/api/reports/tickets?${params.toString()}`);
+    const res = await fetch(`${REPORT_TYPES[reportType].api}?${params.toString()}`);
     if (res.status === 403) {
       setTableError("Your role doesn't permit viewing reports.");
       return;
@@ -109,9 +157,22 @@ export default function ReportsPage() {
       return;
     }
     const body = await res.json();
-    setTicketRows(body.tickets);
+    if (reportType === "demo") setDemoRows(body.tickets);
+    else setTicketRows(body.tickets);
     setAppliedQuery(params.toString());
   }
+
+  function switchReportType(type: ReportType) {
+    setReportType(type);
+    setStatusFilter([]);
+    setTicketRows(null);
+    setDemoRows(null);
+    setAppliedQuery(null);
+    setTableError(null);
+  }
+
+  const shownCount = reportType === "demo" ? demoRows?.length : ticketRows?.length;
+  const { noun, exportType } = REPORT_TYPES[reportType];
 
   function toggleStatus(status: string) {
     setStatusFilter((prev) => (prev.includes(status) ? prev.filter((s) => s !== status) : [...prev, status]));
@@ -121,8 +182,32 @@ export default function ReportsPage() {
     <main>
       <h1>Reports</h1>
 
+      <fieldset className="ticket-type-switch">
+        <legend>Report on</legend>
+        <label htmlFor="reportTypeService">
+          <input
+            id="reportTypeService"
+            type="radio"
+            name="reportType"
+            checked={reportType === "service"}
+            onChange={() => switchReportType("service")}
+          />
+          Service tickets
+        </label>
+        <label htmlFor="reportTypeDemo">
+          <input
+            id="reportTypeDemo"
+            type="radio"
+            name="reportType"
+            checked={reportType === "demo"}
+            onChange={() => switchReportType("demo")}
+          />
+          Demo tickets
+        </label>
+      </fieldset>
+
       <section aria-labelledby="ticket-table-heading">
-        <h2 id="ticket-table-heading">Ticket details</h2>
+        <h2 id="ticket-table-heading">{reportType === "demo" ? "Demo ticket details" : "Ticket details"}</h2>
         <form onSubmit={handleApplyTableFilters} noValidate>
           <div>
             <label htmlFor="tableStore">Filter by store</label>
@@ -153,7 +238,7 @@ export default function ReportsPage() {
           </div>
           <fieldset>
             <legend>Status (all shown if none selected)</legend>
-            {ALL_STATUSES.map((status) => (
+            {REPORT_TYPES[reportType].statuses.map((status) => (
               <label key={status} htmlFor={`tableStatus-${status}`}>
                 <input
                   id={`tableStatus-${status}`}
@@ -182,7 +267,7 @@ export default function ReportsPage() {
             />
           </div>
           <div>
-            <label htmlFor="tableMachineModel">Machine model</label>
+            <label htmlFor="tableMachineModel">{reportType === "demo" ? "Model" : "Machine model"}</label>
             <input
               id="tableMachineModel"
               value={tableMachineModel}
@@ -193,6 +278,18 @@ export default function ReportsPage() {
             <label htmlFor="tableTicketId">Ticket number</label>
             <input id="tableTicketId" value={tableTicketId} onChange={(e) => setTableTicketId(e.target.value)} />
           </div>
+          {reportType === "demo" && (
+            <>
+              <div>
+                <label htmlFor="tableSerialNumber">Serial number</label>
+                <input id="tableSerialNumber" value={tableSerialNumber} onChange={(e) => setTableSerialNumber(e.target.value)} />
+              </div>
+              <div>
+                <label htmlFor="tableInvoiceNumber">Invoice number</label>
+                <input id="tableInvoiceNumber" value={tableInvoiceNumber} onChange={(e) => setTableInvoiceNumber(e.target.value)} />
+              </div>
+            </>
+          )}
           <SearchableSelect
             id="tableTechnicianId"
             label="Filter by technician"
@@ -209,10 +306,11 @@ export default function ReportsPage() {
           <button type="submit">Apply filters</button>
         </form>
 
-        {ticketRows && appliedQuery !== null && ticketRows.length > 0 && (
+        {appliedQuery !== null && !!shownCount && (
           <div className="report-export" role="group" aria-label="Export this report">
             <span className="report-export__label">
-              {ticketRows.length} ticket{ticketRows.length === 1 ? "" : "s"} · Export:
+              {shownCount} {noun}
+              {shownCount === 1 ? "" : "s"} · Export:
             </span>
             {(
               [
@@ -221,14 +319,64 @@ export default function ReportsPage() {
                 ["pdf", "PDF"],
               ] as const
             ).map(([format, label]) => (
-              <a key={format} className="report-export__button" href={`/api/reports/export?type=details&format=${format}&${appliedQuery}`}>
+              <a key={format} className="report-export__button" href={`/api/reports/export?type=${exportType}&format=${format}&${appliedQuery}`}>
                 {label}
               </a>
             ))}
           </div>
         )}
 
-        {ticketRows && (
+        {reportType === "demo" && demoRows && (
+          <div className="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col">Ticket #</th>
+                  <th scope="col">Store</th>
+                  <th scope="col">Customer</th>
+                  <th scope="col">Phone</th>
+                  <th scope="col">Model</th>
+                  <th scope="col">Serial number</th>
+                  <th scope="col">Invoice number</th>
+                  <th scope="col">Demo service</th>
+                  <th scope="col">Demo date</th>
+                  <th scope="col">Status</th>
+                  <th scope="col">Received</th>
+                  <th scope="col">Technician</th>
+                  <th scope="col">Price</th>
+                </tr>
+              </thead>
+              <tbody>
+                {demoRows.map((t) => (
+                  <tr key={t.id}>
+                    <td>
+                      <a href={`/demo-tickets/${t.id}`}>{t.ticketNumber}</a>
+                    </td>
+                    <td>{t.storeName}</td>
+                    <td>{t.customerName}</td>
+                    <td>{t.customerPhone}</td>
+                    <td>{t.machineModel}</td>
+                    <td>{t.serialNumber}</td>
+                    <td>{t.invoiceNumber}</td>
+                    <td>{t.demoServiceName}</td>
+                    <td>{formatDate(t.demoDate)}</td>
+                    <td>{STATUS_LABELS[t.status] ?? t.status}</td>
+                    <td>{formatDate(t.createdAt)}</td>
+                    <td>{t.technicianName ?? "—"}</td>
+                    <td>{inr(t.demoServicePrice)}</td>
+                  </tr>
+                ))}
+                {demoRows.length === 0 && (
+                  <tr>
+                    <td colSpan={13}>No demo tickets match these filters.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {reportType === "service" && ticketRows && (
           <div className="table-scroll">
             <table>
               <thead>
