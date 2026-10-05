@@ -64,6 +64,7 @@ describe("Demo Board data and status moves (008 US2)", () => {
     expect((await noTech.json()).error.code).toBe("technician_required");
 
     const assigned = await createDemoTicket({ storeId: store.id, createdBy: sm.id, status: "assigned", assignedTechnicianId: tech.id });
+    expect((await move(fresh.id, { toStatus: "completed" })).status).toBe(400); // no technician yet
     expect((await move(assigned.id, { toStatus: "in_progress" })).status).toBe(200);
     expect((await (await move(assigned.id, { toStatus: "assigned" })).json()).error.code).toBe("comment_required");
     expect((await move(assigned.id, { toStatus: "completed" })).status).toBe(200);

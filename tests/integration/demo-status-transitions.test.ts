@@ -27,10 +27,10 @@ describe("demo ticket state machine (specs/008-demo-board/data-model.md)", () =>
     expect(check("assigned", "new", { comment: "x" })).toBe("invalid_transition");
   });
 
-  it("refuses skipping steps", () => {
-    expect(check("new", "in_progress")).toBe("invalid_transition");
-    expect(check("new", "completed")).toBe("invalid_transition");
-    expect(check("assigned", "completed")).toBe("invalid_transition");
+  it("lets an assigned demo jump forward (e.g. Assigned → Completed), but not without a technician", () => {
+    expect(check("assigned", "completed")).toBeNull();
+    expect(check("new", "completed", { hasTechnician: false })).toBe("technician_required");
+    expect(check("new", "in_progress", { hasTechnician: false })).toBe("technician_required");
   });
 
   it("requires a comment to move backward", () => {
