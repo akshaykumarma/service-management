@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { todayInBusinessTimeZone } from "@/lib/tickets/received-date";
 import { formatDate } from "@/lib/format/date";
+import DemoTicketForm from "./demo-ticket-form";
 
 interface Store {
   id: string;
@@ -38,6 +39,8 @@ interface CreatedTicket {
 }
 
 export default function NewTicketPage() {
+  // 008-demo-board: New Ticket creates either kind; Service keeps today's form exactly.
+  const [ticketType, setTicketType] = useState<"service" | "demo">("service");
   const [stores, setStores] = useState<Store[]>([]);
   const [machineModelOptions, setMachineModelOptions] = useState<MachineModelOption[]>([]);
   const [created, setCreated] = useState<CreatedTicket | null>(null);
@@ -138,9 +141,46 @@ export default function NewTicketPage() {
     );
   }
 
+  const typeSwitch = (
+    <fieldset className="ticket-type-switch">
+      <legend>Ticket type</legend>
+      <label htmlFor="ticketTypeService">
+        <input
+          id="ticketTypeService"
+          type="radio"
+          name="ticketType"
+          checked={ticketType === "service"}
+          onChange={() => setTicketType("service")}
+        />
+        Service ticket
+      </label>
+      <label htmlFor="ticketTypeDemo">
+        <input
+          id="ticketTypeDemo"
+          type="radio"
+          name="ticketType"
+          checked={ticketType === "demo"}
+          onChange={() => setTicketType("demo")}
+        />
+        Demo ticket
+      </label>
+    </fieldset>
+  );
+
+  if (ticketType === "demo") {
+    return (
+      <main>
+        <h1>New ticket</h1>
+        {typeSwitch}
+        <DemoTicketForm stores={stores} machineModelOptions={machineModelOptions} />
+      </main>
+    );
+  }
+
   return (
     <main>
       <h1>New ticket</h1>
+      {typeSwitch}
       <form onSubmit={handleSubmit} noValidate>
         <div>
           <label htmlFor="storeId" className="required">
