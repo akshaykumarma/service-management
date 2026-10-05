@@ -15,7 +15,8 @@ const ORDER: Exclude<DemoStatus, "cancelled">[] = ["new", "assigned", "in_progre
  * The demo ticket state machine (FR-005), mirroring the service rules where they apply:
  * - New ↔ Assigned is driven by assigning/removing a technician, never by a status move:
  *   moving to New is refused, and moving to Assigned needs a technician already set.
- * - Forward moves go one step at a time; backward moves need a comment.
+ * - Forward moves may skip steps once a technician is assigned (e.g. Assigned → Completed);
+ *   backward moves need a comment.
  * - Cancelled needs a comment, is Admin/Super Admin only, can't follow Completed, and is
  *   terminal.
  */
@@ -39,11 +40,14 @@ export function checkDemoTransition(input: {
   }
 
   if (toStatus === "new") return "invalid_transition";
-  if (toStatus === "assigned" && !hasTechnician) return "technician_required";
+  // Every status past New means a technician is on the job (Assigned, In Progress,
+  // Completed) — so with no technician, say so rather than a generic refusal.
+  if (!hasTechnician) return "technician_required";
 
+  // Forward moves may skip a step (post-008 product feedback: a demo often goes straight
+  // from Assigned to Completed in one visit); backward moves need a comment.
   const fromIdx = ORDER.indexOf(fromStatus as (typeof ORDER)[number]);
   const toIdx = ORDER.indexOf(toStatus as (typeof ORDER)[number]);
-  if (toIdx - fromIdx > 1) return "invalid_transition";
   if (toIdx < fromIdx && !comment) return "comment_required";
   return null;
 }

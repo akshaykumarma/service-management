@@ -79,5 +79,7 @@ any of new/assigned/in_progress ──(comment, Admin+)──▶ cancelled (term
 ```
 
 - `→ assigned` only with a technician set; `→ new` only by removing the technician.
+- Forward moves may skip a step once a technician is assigned (e.g. `assigned → completed`);
+  any move past New without a technician is refused with `technician_required`.
 - Backward moves need a comment; `cancelled` needs a comment and Admin/Super Admin; `cancelled`
-  is terminal; `new → in_progress/completed` and `assigned → completed` skip steps and are refused.
+  is terminal.

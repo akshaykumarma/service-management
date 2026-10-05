@@ -279,7 +279,7 @@ Demo tickets track product demonstrations (e.g. after a machine sale), separatel
 | Cancelled | Terminal; Admin / Super Admin only, comment required. |
 
 - New → Assigned happens by assigning a technician; removing the technician from an Assigned ticket returns it to New.
-- Forward moves: Assigned → In Progress → Completed. Backward moves require a comment. Steps cannot be skipped.
+- Forward moves: Assigned → In Progress → Completed; once a technician is assigned, a demo may also go straight from Assigned to Completed. Backward moves require a comment.
 #### 6.11.4 Demo Board
 - Same features as the Service Board (§6.8): Board and List views, status tiles that filter, Store / Status / Technician / date and text filters, search, drag-and-drop with the same comment prompts, 30-second refresh, role and store scoping (technicians see only demos assigned to them). Completed demos stay on the board for the current month.
 - A demo ticket page mirrors the service ticket page: header, editable details, status, technician, demo history and an activity timeline. Details lock once Completed or Cancelled. No parts, billing, OTP or invoice apply to demos.
