@@ -3,7 +3,7 @@ import path from "path";
 import { beforeEach, describe, expect, it } from "vitest";
 import { resetDb } from "../helpers/db";
 import { importMachineModelsCsv } from "@/lib/admin/machine-models-csv-import";
-import { importPartsCsv } from "@/lib/catalogue/csv-import";
+import { importDemoServicesCsv, importPartsCsv, importServicesCsv } from "@/lib/catalogue/csv-import";
 
 // The downloadable samples on the Machine Models / Catalogue pages must always be a file
 // the matching importer accepts in full — otherwise they'd teach users a broken format.
@@ -22,6 +22,18 @@ describe("downloadable sample CSVs", () => {
 
   it("parts-sample.csv imports every row", async () => {
     const result = await importPartsCsv(readSample("parts-sample.csv"));
+    expect(result.failed).toEqual([]);
+    expect(result.imported).toBe(5);
+  });
+
+  it("services-sample.csv imports every row", async () => {
+    const result = await importServicesCsv(readSample("services-sample.csv"));
+    expect(result.failed).toEqual([]);
+    expect(result.imported).toBe(5);
+  });
+
+  it("demo-services-sample.csv imports every row", async () => {
+    const result = await importDemoServicesCsv(readSample("demo-services-sample.csv"));
     expect(result.failed).toEqual([]);
     expect(result.imported).toBe(5);
   });
