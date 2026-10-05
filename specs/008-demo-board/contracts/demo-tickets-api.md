@@ -66,9 +66,19 @@ description }] }` oldest first.
 
 ## Catalogue: `/api/catalogue/demo-services`
 
-`GET` (active list; `?includeInactive=true` for admins) · `POST {name, description?, unitCost}` →
+`GET` (active list) · `POST {name, description?, unitCost}` →
 `201` · `PATCH /:id {name?, description?, unitCost?, active?}` → `200`. Same roles and validation
 as `/api/catalogue/services`.
+
+## Reports *(follow-up, FR-013)*
+
+- `GET /api/reports/demo-tickets` — same query parameters as `GET /api/demo-tickets` plus
+  `serialNumber`, `invoiceNumber`; includes Cancelled. Service Manager and above (Technician
+  `403`), store-scoped. `200 { tickets: [{ id, ticketNumber, storeName, customerName,
+  customerPhone, machineModel, serialNumber, invoiceNumber, demoServiceName, demoServicePrice,
+  demoDate, status, createdAt, technicianName }] }`
+- `GET /api/reports/export?type=demo-details&format=xlsx|csv|pdf&…same filters` — the same rows
+  with a `Total (N demos)` row summing the price.
 
 ## Users
 

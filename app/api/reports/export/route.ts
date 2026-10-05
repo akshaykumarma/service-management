@@ -9,11 +9,17 @@ import { summaryToPdf, ticketListToPdf } from "@/lib/reporting/pdf-export";
 import type { TicketStatus } from "@/lib/tickets/status-transitions";
 import { getTicketDetailsReport } from "@/lib/reporting/ticket-details";
 import {
+  demoTicketsTable,
   exportFilename,
+  reportTableToCsv,
+  reportTableToPdf,
+  reportTableToXlsx,
   ticketDetailsToCsv,
   ticketDetailsToPdf,
   ticketDetailsToXlsx,
 } from "@/lib/reporting/ticket-details-export";
+import { getDemoTicketDetailsReport } from "@/lib/reporting/demo-ticket-details";
+import { demoReportFilters } from "@/lib/reporting/demo-report-filters";
 import { formatDate } from "@/lib/format/date";
 
 const XLSX_CONTENT_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
@@ -34,6 +40,33 @@ export async function GET(request: NextRequest) {
 
   const params = request.nextUrl.searchParams;
   const format = params.get("format");
+
+  // The Reports page's demo tickets table (post-008): exactly the rows
+  // GET /api/reports/demo-tickets returns for the same filters, as CSV, Excel or PDF.
+  if (params.get("type") === "demo-details") {
+    if (format !== "csv" && format !== "pdf" && format !== "xlsx") {
+      return NextResponse.json({ error: { code: "invalid_format" } }, { status: 400 });
+    }
+    const filters = demoReportFilters(params);
+    const table = demoTicketsTable(await getDemoTicketDetailsReport(caller, filters));
+    const disposition = `attachment; filename="${exportFilename(format, new Date(), "demo-tickets-report")}"`;
+    if (format === "csv") {
+      return new NextResponse(reportTableToCsv(table), {
+        headers: { "content-type": "text/csv; charset=utf-8", "content-disposition": disposition },
+      });
+    }
+    const title = "Demo tickets report";
+    if (format === "xlsx") {
+      return new NextResponse(new Uint8Array(await reportTableToXlsx(table, { title })), {
+        headers: { "content-type": XLSX_CONTENT_TYPE, "content-disposition": disposition },
+      });
+    }
+    const range = `${filters.dateFrom ? formatDate(filters.dateFrom) : "Start"} – ${filters.dateTo ? formatDate(filters.dateTo) : "today"}`;
+    const pdf = await reportTableToPdf(table, { title, subtitle: `${range} · ${table.rows.length} demo ticket(s)` });
+    return new NextResponse(new Uint8Array(pdf), {
+      headers: { "content-type": "application/pdf", "content-disposition": disposition },
+    });
+  }
 
   // The Reports page's ticket-details table (post-v1 product feedback): exactly the rows
   // GET /api/reports/tickets returns for the same filters, as CSV, Excel or PDF. Store

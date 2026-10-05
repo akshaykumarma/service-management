@@ -286,8 +286,13 @@ Demo tickets track product demonstrations (e.g. after a machine sale), separatel
 #### 6.11.5 Technician Assignment Notification
 - When a demo ticket is assigned (or reassigned) to a technician, the technician receives a WhatsApp message with the ticket ID, customer, model, demo date and a **short URL** (`/t/{code}`) that opens the ticket (after login if needed).
 - If the technician has no WhatsApp number on file, the assignment still saves and the user is told the message was not sent.
-#### 6.11.6 Out of Scope for v1.2
-- Demo tickets in Reports / exports; WhatsApp to technicians for service-ticket assignments; customer-facing demo messages.
+#### 6.11.6 Demo Tickets in Reports
+- Reports offers **Service tickets** or **Demo tickets**. The demo report covers every demo status, with the same store scoping as the service report (Service Managers see their own store; Technicians have no Reports access).
+- Filters: store, date range, status, customer name, phone, model, ticket number, serial number, invoice number, technician.
+- Columns: Ticket #, Store, Customer, Phone, Model, Serial number, Invoice number, Demo service, Demo date, Status, Received date, Technician, Price.
+- Export to Excel, CSV or PDF, with a total row (number of demos and total price).
+#### 6.11.7 Out of Scope for v1.2
+- WhatsApp to technicians for service-ticket assignments; customer-facing demo messages.
 
 ## 7. Non-Functional Requirements
 
@@ -406,7 +411,7 @@ All open questions from v1.0 have been resolved. The table below records each de
 | DQ-05 | *(v1.2)* Where is the technician's WhatsApp number kept? | Optional per-user field on the Team page | Resolved |
 | DQ-06 | *(v1.2)* Short URL? | App-hosted `/t/{code}` link per demo ticket | Resolved |
 | DQ-07 | *(v1.2)* Completed demos on the board? | Current month only, like Delivered service tickets | Resolved |
-| DQ-08 | *(v1.2)* Demo tickets in Reports? | Not in v1.2 | Resolved |
+| DQ-08 | *(v1.2)* Demo tickets in Reports? | Yes — a Service/Demo switch on Reports with its own filters, columns and exports (§6.11.6) | Resolved |
 
 
 ## 14. Suggested spec.md Decomposition

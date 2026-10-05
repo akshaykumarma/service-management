@@ -10,7 +10,12 @@ import type { DemoStatus } from "@/lib/demo/status-transitions";
 const TERMINAL = new Set(["completed", "cancelled"]);
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
-export type DemoTicketFilters = Omit<TicketFilters, "statuses"> & { statuses?: DemoStatus[] };
+export type DemoTicketFilters = Omit<TicketFilters, "statuses"> & {
+  statuses?: DemoStatus[];
+  /** Reports-only extras (contains match, like the other text filters). */
+  serialNumber?: string;
+  invoiceNumber?: string;
+};
 
 /**
  * The Demo Board's scoped query — the same role/store visibility and filter set as
@@ -43,6 +48,8 @@ export async function queryScopedDemoTickets(caller: SessionUser, filters: DemoT
   if (filters.customerPhone) conditions.push(ilike(demoTickets.customerPhone, `%${filters.customerPhone}%`));
   if (filters.machineModel) conditions.push(ilike(demoTickets.machineModel, `%${filters.machineModel}%`));
   if (filters.technicianId) conditions.push(eq(demoTickets.assignedTechnicianId, filters.technicianId));
+  if (filters.serialNumber) conditions.push(ilike(demoTickets.serialNumber, `%${filters.serialNumber}%`));
+  if (filters.invoiceNumber) conditions.push(ilike(demoTickets.invoiceNumber, `%${filters.invoiceNumber}%`));
 
   return db
     .select()

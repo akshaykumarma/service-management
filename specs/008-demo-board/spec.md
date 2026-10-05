@@ -45,8 +45,9 @@ Decisions taken where the request left room, recorded so they can be revisited:
 - **D7 — Board parity.** The Demo Board reuses the Service Board as-is: Board/List views, status
   tiles as filters, filters, search, drag-and-drop with the same comment prompts, 30-second
   refresh, and only the current month's terminal-success tickets (Completed) on the board.
-- **D8 — Out of scope for this release.** Demo tickets in Reports/exports; WhatsApp to
-  technicians for *service* ticket assignment; a customer-facing demo message.
+- **D8 — Out of scope for this release.** WhatsApp to technicians for *service* ticket
+  assignment; a customer-facing demo message. *(Demo tickets in Reports was originally out of
+  scope and was added as a follow-up — see FR-013.)*
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -170,6 +171,11 @@ status, technician, demo history) and Activity (status changes, edits, assignmen
 - **FR-010**: Each demo ticket MUST have a unique short URL `/t/{code}` that opens the ticket,
   through login if necessary.
 - **FR-011**: Users MUST have an optional WhatsApp number, editable on the Team page.
+- **FR-013** *(follow-up)*: Reports MUST offer a Service tickets / Demo tickets choice. The demo
+  report lists demo tickets (all statuses, store-scoped like the service report) with filters for
+  store, dates, status, customer, phone, model, ticket number, serial number, invoice number and
+  technician; columns for serial, invoice, demo service, demo date, status, received date,
+  technician and price; and Excel/CSV/PDF exports with a count and price total.
 - **FR-012**: Every demo ticket mutation (creation, status change, detail edit, assignment) MUST
   be attributable and timestamped, and shown in the ticket's Activity.
 
