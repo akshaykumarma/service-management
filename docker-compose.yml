@@ -19,6 +19,14 @@ services:
       MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-service_management}
       MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-service_management_minio}
       MINIO_BUCKET: intake-photos
+      # Public address used in links the app sends out (invoice links, password resets,
+      # demo-ticket short links) — e.g. your ngrok or real domain.
+      APP_BASE_URL: ${APP_BASE_URL:-http://localhost:3000}
+      OTP_HASH_SECRET: ${OTP_HASH_SECRET}
+      WHATSAPP_API_URL: ${WHATSAPP_API_URL}
+      WHATSAPP_ACCESS_TOKEN: ${WHATSAPP_ACCESS_TOKEN}
+      WHATSAPP_PHONE_NUMBER_ID: ${WHATSAPP_PHONE_NUMBER_ID}
+      WHATSAPP_WEBHOOK_SECRET: ${WHATSAPP_WEBHOOK_SECRET}
     depends_on:
       db:
         condition: service_healthy
