@@ -14,6 +14,7 @@ import {
   uniqueIndex,
   index,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 
 export const roleEnum = pgEnum("role", ["super_admin", "admin", "service_manager", "technician"]);
 export const ticketStatusEnum = pgEnum("ticket_status", [
@@ -88,6 +89,9 @@ export const users = pgTable("users", {
   username: text("username"),
   passwordHash: text("password_hash").notNull(),
   role: roleEnum("role").notNull(),
+  // Optional WhatsApp number (008-demo-board FR-011) — how a technician is told about a
+  // demo ticket assigned to them.
+  phone: text("phone"),
   active: boolean("active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
@@ -290,13 +294,15 @@ export const ticketLineItems = pgTable("ticket_line_items", {
 
 // "invoice" (post-005 product feedback): the WhatsApp message sent at delivery with a
 // link to the invoice PDF — see lib/notifications/send-invoice.ts.
-export const notificationTypeEnum = pgEnum("notification_type", ["completion", "otp", "invoice"]);
+export const notificationTypeEnum = pgEnum("notification_type", ["completion", "otp", "invoice", "demo_assignment"]);
 export const notificationStatusEnum = pgEnum("notification_status", ["sent", "delivered", "failed"]);
 
 export const notifications = pgTable("notifications", {
   id: uuid("id").primaryKey().defaultRandom(),
   // Nullable — null for a Super Admin test-send, not tied to a real ticket (research.md §5).
   ticketId: uuid("ticket_id").references(() => tickets.id, { onDelete: "cascade" }),
+  // 008-demo-board: set instead of ticketId for a demo ticket's assignment message.
+  demoTicketId: uuid("demo_ticket_id").references(() => demoTickets.id, { onDelete: "cascade" }),
   type: notificationTypeEnum("type").notNull(),
   channel: text("channel").notNull().default("whatsapp"),
   recipientPhone: text("recipient_phone").notNull(),
@@ -397,3 +403,100 @@ export const ticketInvoices = pgTable(
     tokenUnique: uniqueIndex("ticket_invoices_token_unique_idx").on(table.token),
   }),
 );
+
+// --- 008-demo-board (specs/008-demo-board/data-model.md) -------------------------------
+// Demo tickets are their own records, never rows in `tickets`, so nothing service-only
+// (billing, OTP delivery, invoices, Reports) can pick one up by accident (spec.md D1).
+
+export const demoTicketStatusEnum = pgEnum("demo_ticket_status", [
+  "new",
+  "assigned",
+  "in_progress",
+  "completed",
+  "cancelled",
+]);
+
+/** The Catalogue's "Demo services" list — same fields as `services`. */
+export const demoServices = pgTable("demo_services", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull(),
+  description: text("description"),
+  unitCost: numeric("unit_cost", { precision: 12, scale: 2 }).notNull(),
+  active: boolean("active").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const demoTickets = pgTable(
+  "demo_tickets",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    ticketNumber: text("ticket_number").notNull(),
+    storeId: uuid("store_id")
+      .notNull()
+      .references(() => stores.id),
+    customerId: uuid("customer_id")
+      .notNull()
+      .references(() => customers.id),
+    customerName: text("customer_name").notNull(),
+    customerPhone: text("customer_phone").notNull(),
+    machineModel: text("machine_model").notNull(),
+    serialNumber: text("serial_number").notNull(),
+    invoiceNumber: text("invoice_number").notNull(),
+    demoServiceId: uuid("demo_service_id")
+      .notNull()
+      .references(() => demoServices.id),
+    // Snapshots, like line items' cost snapshot: a later catalogue edit doesn't rewrite
+    // what this ticket was created with.
+    demoServiceName: text("demo_service_name").notNull(),
+    demoServicePrice: numeric("demo_service_price", { precision: 12, scale: 2 }).notNull(),
+    demoDate: date("demo_date").notNull(),
+    status: demoTicketStatusEnum("status").notNull().default("new"),
+    assignedTechnicianId: uuid("assigned_technician_id").references(() => users.id),
+    // Random code behind the /t/{code} short link sent to the technician on WhatsApp.
+    shortCode: text("short_code").notNull(),
+    createdBy: uuid("created_by")
+      .notNull()
+      .references(() => users.id),
+    // The received date (back-datable at intake, same as service tickets).
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    ticketNumberUnique: uniqueIndex("demo_tickets_ticket_number_unique_idx").on(table.ticketNumber),
+    shortCodeUnique: uniqueIndex("demo_tickets_short_code_unique_idx").on(table.shortCode),
+    storeIdx: index("demo_tickets_store_idx").on(table.storeId),
+    serialIdx: index("demo_tickets_serial_idx").on(sql`lower(trim(${table.serialNumber}))`),
+    invoiceIdx: index("demo_tickets_invoice_idx").on(sql`lower(trim(${table.invoiceNumber}))`),
+  }),
+);
+
+/** Append-only, like `status_history`. A null fromStatus is the creation entry. */
+export const demoTicketStatusHistory = pgTable("demo_ticket_status_history", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  demoTicketId: uuid("demo_ticket_id")
+    .notNull()
+    .references(() => demoTickets.id, { onDelete: "cascade" }),
+  fromStatus: demoTicketStatusEnum("from_status"),
+  toStatus: demoTicketStatusEnum("to_status").notNull(),
+  actorId: uuid("actor_id")
+    .notNull()
+    .references(() => users.id),
+  comment: text("comment"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const demoTicketNumberCounters = pgTable(
+  "demo_ticket_number_counters",
+  {
+    storeId: uuid("store_id")
+      .notNull()
+      .references(() => stores.id),
+    year: integer("year").notNull(),
+    seq: integer("seq").notNull(),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.storeId, table.year] }),
+  }),
+);
+

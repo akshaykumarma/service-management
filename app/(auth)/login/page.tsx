@@ -4,6 +4,17 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import PasswordInput from "@/components/password-input";
 
+/**
+ * Where to go after logging in: a `?next=` path (e.g. from a demo ticket's /t/{code}
+ * short link) if it is a same-site relative path, otherwise the dashboard. Anything
+ * absolute or protocol-relative ("//evil.example") is ignored — no open redirect.
+ */
+function postLoginPath(): string {
+  const next = new URLSearchParams(window.location.search).get("next");
+  if (next && next.startsWith("/") && !next.startsWith("//") && !next.includes("\\")) return next;
+  return "/dashboard";
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -24,7 +35,7 @@ export default function LoginPage() {
       });
 
       if (res.ok) {
-        router.push("/dashboard");
+        router.push(postLoginPath());
         return;
       }
 

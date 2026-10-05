@@ -6,6 +6,7 @@ import { hashPassword } from "@/lib/auth/auth.config";
 import { isValidEmail } from "@/lib/auth/email-validation";
 import { DEFAULT_TECHNICIAN_PASSWORD, isValidPassword } from "@/lib/auth/password-policy";
 import { isValidUsername } from "@/lib/auth/username-validation";
+import { normalizeUserPhone } from "@/lib/users/phone";
 import { requireAuthenticatedSession } from "@/lib/auth/require-session";
 import { AccessDeniedError, getScopedStoreIds, requireAdminOrAbove } from "@/lib/auth/rbac";
 import { requireSameOrigin } from "@/lib/auth/csrf";
@@ -46,6 +47,7 @@ export async function GET(request: NextRequest) {
       name: u.name,
       email: u.email,
       username: u.username,
+      phone: u.phone,
       role: u.role,
       active: u.active,
       storeIds: storeIdsByUser.get(u.id) ?? [],
@@ -70,7 +72,15 @@ export async function POST(request: NextRequest) {
     throw err;
   }
 
-  const { name, email, username, role, storeIds, password } = await request.json();
+  const { name, email, username, role, storeIds, password, phone } = await request.json();
+
+  const normalizedPhone = normalizeUserPhone(phone);
+  if (!normalizedPhone.ok) {
+    return NextResponse.json(
+      { error: { code: "invalid_phone", message: "WhatsApp number must have 8-15 digits." } },
+      { status: 400 },
+    );
+  }
 
   if (role !== "admin" && role !== "service_manager" && role !== "technician") {
     return NextResponse.json(
@@ -195,7 +205,15 @@ export async function POST(request: NextRequest) {
   const created = await db.transaction(async (tx) => {
     const [user] = await tx
       .insert(users)
-      .values({ name, email: normalizedEmail, username: normalizedUsername, passwordHash, role, active: true })
+      .values({
+        name,
+        email: normalizedEmail,
+        username: normalizedUsername,
+        phone: normalizedPhone.value,
+        passwordHash,
+        role,
+        active: true,
+      })
       .returning();
 
     for (const storeId of ids) {
@@ -212,6 +230,7 @@ export async function POST(request: NextRequest) {
         name: created.name,
         email: created.email,
         username: created.username,
+        phone: created.phone,
         role: created.role,
         active: created.active,
         storeIds: ids,

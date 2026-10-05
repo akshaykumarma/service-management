@@ -6,6 +6,7 @@ import { requireAuthenticatedSession } from "@/lib/auth/require-session";
 import { AccessDeniedError, getScopedStoreIds, requireAdminOrAbove, requireSuperAdmin } from "@/lib/auth/rbac";
 import { writeAuditLog } from "@/lib/auth/audit";
 import { requireSameOrigin } from "@/lib/auth/csrf";
+import { normalizeUserPhone } from "@/lib/users/phone";
 
 async function requireSuperAdminSession(request: NextRequest) {
   const csrfResponse = requireSameOrigin(request);
@@ -78,7 +79,16 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     role?: "admin" | "service_manager" | "technician";
     active?: boolean;
     storeIds?: string[];
+    phone?: string | null;
   } = await request.json();
+
+  const normalizedPhone = patch.phone !== undefined ? normalizeUserPhone(patch.phone) : null;
+  if (normalizedPhone && !normalizedPhone.ok) {
+    return NextResponse.json(
+      { error: { code: "invalid_phone", message: "WhatsApp number must have 8-15 digits." } },
+      { status: 400 },
+    );
+  }
 
   if (actor.role === "admin" && patch.role !== undefined && patch.role !== "service_manager" && patch.role !== "technician") {
     return NextResponse.json(
@@ -151,6 +161,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
         ...(patch.name !== undefined ? { name: patch.name } : {}),
         ...(patch.role !== undefined ? { role: patch.role } : {}),
         ...(patch.active !== undefined ? { active: patch.active } : {}),
+        ...(normalizedPhone?.ok ? { phone: normalizedPhone.value } : {}),
         updatedAt: new Date(),
       })
       .where(eq(users.id, target.id))
@@ -180,6 +191,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       id: updated.id,
       name: updated.name,
       email: updated.email,
+      phone: updated.phone,
       role: updated.role,
       active: updated.active,
       storeIds: resultingStoreIds,

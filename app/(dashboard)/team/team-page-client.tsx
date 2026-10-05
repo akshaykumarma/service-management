@@ -10,6 +10,7 @@ interface StaffUser {
   name: string;
   email: string;
   username: string | null;
+  phone: string | null;
   role: "super_admin" | "admin" | "service_manager" | "technician";
   active: boolean;
   storeIds: string[];
@@ -28,6 +29,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   invalid_email: "Enter a valid email address.",
   invalid_username: "Username must be 3-32 characters: letters, digits, dots, underscores, or hyphens only.",
   username_already_registered: "That username is already taken.",
+  invalid_phone: "WhatsApp number must have 8-15 digits (spaces, dashes and a leading + are fine).",
   store_assignment_required: "At least one store is required.",
   invalid_store_count: "A Service Manager or Technician must have exactly one store.",
   invalid_store_id: "One or more selected stores no longer exist.",
@@ -44,6 +46,7 @@ export default function TeamPageClient({ callerRole }: { callerRole: "super_admi
   const [formName, setFormName] = useState("");
   const [formEmail, setFormEmail] = useState("");
   const [formUsername, setFormUsername] = useState("");
+  const [formPhone, setFormPhone] = useState("");
   const [formRole, setFormRole] = useState<"admin" | "service_manager" | "technician">("service_manager");
   const [formStoreIds, setFormStoreIds] = useState<string[]>([]);
   const [formPassword, setFormPassword] = useState("");
@@ -84,6 +87,7 @@ export default function TeamPageClient({ callerRole }: { callerRole: "super_admi
     setFormName("");
     setFormEmail("");
     setFormUsername("");
+    setFormPhone("");
     setFormRole("service_manager");
     setFormStoreIds([]);
     setFormPassword("");
@@ -96,6 +100,7 @@ export default function TeamPageClient({ callerRole }: { callerRole: "super_admi
     setFormName(user.name);
     setFormEmail(user.email);
     setFormUsername(user.username ?? "");
+    setFormPhone(user.phone ?? "");
     setFormRole(user.role === "super_admin" ? "admin" : user.role);
     setFormStoreIds(user.storeIds);
     setFormPassword("");
@@ -109,7 +114,7 @@ export default function TeamPageClient({ callerRole }: { callerRole: "super_admi
     setSubmitting(true);
 
     if (editingUser) {
-      const patch: Record<string, unknown> = { name: formName, storeIds: formStoreIds };
+      const patch: Record<string, unknown> = { name: formName, storeIds: formStoreIds, phone: formPhone };
       if (editingUser.role !== "super_admin") patch.role = formRole;
       const res = await fetch(`/api/auth/users/${editingUser.id}`, {
         method: "PATCH",
@@ -134,6 +139,7 @@ export default function TeamPageClient({ callerRole }: { callerRole: "super_admi
         name: formName,
         email: formEmail,
         username: formUsername || undefined,
+        phone: formPhone || undefined,
         role: formRole,
         storeIds: formStoreIds,
         password: formPassword,
@@ -245,6 +251,7 @@ export default function TeamPageClient({ callerRole }: { callerRole: "super_admi
                 <th scope="col">Name</th>
                 <th scope="col">Email</th>
                 <th scope="col">Username</th>
+                <th scope="col">WhatsApp</th>
                 <th scope="col">Role</th>
                 <th scope="col">Status</th>
                 <th scope="col">Stores</th>
@@ -258,6 +265,7 @@ export default function TeamPageClient({ callerRole }: { callerRole: "super_admi
                   <td>{u.name}</td>
                   <td>{u.email}</td>
                   <td>{u.username ?? "—"}</td>
+                  <td>{u.phone ?? "—"}</td>
                   <td>{u.role}</td>
                   <td>{u.active ? "Active" : "Deactivated"}</td>
                   <td>{storeNames(u.storeIds)}</td>
@@ -337,6 +345,16 @@ export default function TeamPageClient({ callerRole }: { callerRole: "super_admi
                 <input id="usernameDisplay" disabled value={editingUser.username} />
               </div>
             )}
+            <div>
+              <label htmlFor="phone">WhatsApp number (optional — technicians get demo assignments here)</label>
+              <input
+                id="phone"
+                type="tel"
+                placeholder="+91 90000 00000"
+                value={formPhone}
+                onChange={(e) => setFormPhone(e.target.value)}
+              />
+            </div>
             <div>
               <label htmlFor="role">Role</label>
               {editingUser?.role === "super_admin" ? (
