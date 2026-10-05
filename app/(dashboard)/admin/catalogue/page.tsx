@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Modal from "@/components/modal";
 import DemoServicesSection from "./demo-services-section";
+import CsvImportControl from "./csv-import-control";
 
 interface Part {
   id: string;
@@ -307,6 +308,14 @@ export default function CataloguePage() {
             + Add service
           </button>
         </div>
+
+        <CsvImportControl
+          id="serviceCsvImport"
+          label="Bulk import services from CSV (columns: name,description,unit_cost)"
+          endpoint="/api/catalogue/services/import"
+          sampleHref="/samples/services-sample.csv"
+          onImported={load}
+        />
 
         <div className="list-toolbar">
           <div className="list-toolbar__field">
