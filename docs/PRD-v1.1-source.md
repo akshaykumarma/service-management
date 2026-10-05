@@ -3,6 +3,10 @@ Source: SVC_MGMT_BRD_PRD_v1.1.docx, provided by the user (Akshay Kumar) 2026-09-
 Extracted verbatim (text content only; formatting/images not preserved) for traceability from
 specs/001-overview through specs/007-admin-console, all of which decompose this document.
 See each spec's Input/Assumptions/Notes for how its sections map here.
+
+v1.2 (2026-10-05): additions by the product owner for the Demo Board — §6.8 (Service Board /
+Demo Board naming), §6.9.2a, §6.9.6, §6.11, §13 DQ-01–DQ-08, §14, §15. Decomposed into
+specs/008-demo-board. Text outside those additions is unchanged from v1.1.
 -->
 
 # Service Management Web App
@@ -11,8 +15,8 @@ Business & Product Requirements Document
 
 | Document Type | BRD / PRD (Constitution) |
 | --- | --- |
-| Version | 1.1 — All open questions resolved |
-| Date | September 2026 |
+| Version | 1.2 — Demo Board & demo tickets added (v1.1: all open questions resolved) |
+| Date | September 2026 (v1.1) · October 2026 (v1.2) |
 | Author | Akshay Kumar |
 | Collaborator | Nav |
 | Status | Approved — ready for spec.md decomposition |
@@ -202,6 +206,7 @@ Current pain points in the target stores include:
 
 ### 6.8 Dashboard & Board View
 #### 6.8.1 Kanban Board
+- *(v1.2)* The application has two boards in the sidebar: **Service Board** (this board, previously just "Board") and **Demo Board** directly below it (§6.11). Everything in §6.8 applies to both.
 - Main view is a JIRA-style kanban board with one column per ticket status.
 - Each card displays: Ticket ID, Customer Name, Machine Model, status, date created, days-open counter.
 - Cards are draggable to valid adjacent columns (respects the transition rules in §6.4).
@@ -229,6 +234,9 @@ Current pain points in the target stores include:
 - Bulk import via CSV.
 #### 6.9.2 Services Catalogue
 - CRUD: Service Name, Description, Unit Cost, Active/Inactive flag.
+#### 6.9.2a Demo Services Catalogue *(v1.2)*
+- A "Demo" list in the Catalogue with the same fields and actions as Services: Demo Service Name, Description, Unit Cost, Active/Inactive flag.
+- Active demo services populate the Demo Service drop-down on demo tickets (§6.11). A demo ticket keeps the name and cost it was created with.
 #### 6.9.3 Machine Models
 - CRUD: Model Name, Manufacturer, Category (e.g. Washing Machine, Refrigerator, AC).
 - Bulk import via CSV.
@@ -242,12 +250,44 @@ Current pain points in the target stores include:
 #### 6.9.6 User Management
 - Create, edit, deactivate, and delete users of all roles.
 - Assign stores to Admins and Store Service Managers.
+- *(v1.2)* Optional WhatsApp number per user, used to notify technicians of demo assignments (§6.11.5).
 
 ### 6.10 Reporting — v1 (Basic)
 - Admin and Super Admin can export filtered ticket lists as CSV or PDF.
 - Summary report per store: total tickets, tickets by status, average resolution time, parts revenue, services revenue.
 - Date-range selector on all reports.
 
+
+### 6.11 Demo Tickets & Demo Board *(v1.2)*
+Demo tickets track product demonstrations (e.g. after a machine sale), separately from service jobs. The service ticket flow (§6.2–§6.10) is unchanged.
+#### 6.11.1 Creating a Demo Ticket
+- Created from the existing **New Ticket** option, which first asks whether it is a **Service Ticket** (default; today's form) or a **Demo Ticket**.
+- Demo ticket fields (all required): Store, Customer Name, Phone Number, Model Number (saved models or typed manually), Serial Number, Invoice Number, Demo Service (drop-down from §6.9.2a), Received Date (defaults to today, may be back-dated, never in the future), Demo Date (not before the Received Date).
+- Ticket ID format: `{STORE CODE}-DEMO-{YEAR}-{5-digit sequence}`, e.g. `BLP-DEMO-2026-00001`, numbered separately from service tickets.
+#### 6.11.2 Demo History & Repeat-Demo Warning
+- While the demo ticket is being entered, earlier demo tickets matching the **Invoice Number or Serial Number** are listed.
+- If 2 or more non-cancelled demo tickets already exist for that serial number or invoice number, a warning is shown before saving ("this will be the 3rd demo"). It warns but does not block.
+- The same history appears on the demo ticket's page.
+#### 6.11.3 Demo Statuses & Workflow
+
+| Status | Meaning |
+| --- | --- |
+| New | Created; no technician yet. |
+| Assigned | A technician is assigned (set automatically on assignment). |
+| In Progress | The demo is under way. |
+| Completed | Demo done. |
+| Cancelled | Terminal; Admin / Super Admin only, comment required. |
+
+- New → Assigned happens by assigning a technician; removing the technician from an Assigned ticket returns it to New.
+- Forward moves: Assigned → In Progress → Completed. Backward moves require a comment. Steps cannot be skipped.
+#### 6.11.4 Demo Board
+- Same features as the Service Board (§6.8): Board and List views, status tiles that filter, Store / Status / Technician / date and text filters, search, drag-and-drop with the same comment prompts, 30-second refresh, role and store scoping (technicians see only demos assigned to them). Completed demos stay on the board for the current month.
+- A demo ticket page mirrors the service ticket page: header, editable details, status, technician, demo history and an activity timeline. Details lock once Completed or Cancelled. No parts, billing, OTP or invoice apply to demos.
+#### 6.11.5 Technician Assignment Notification
+- When a demo ticket is assigned (or reassigned) to a technician, the technician receives a WhatsApp message with the ticket ID, customer, model, demo date and a **short URL** (`/t/{code}`) that opens the ticket (after login if needed).
+- If the technician has no WhatsApp number on file, the assignment still saves and the user is told the message was not sent.
+#### 6.11.6 Out of Scope for v1.2
+- Demo tickets in Reports / exports; WhatsApp to technicians for service-ticket assignments; customer-facing demo messages.
 
 ## 7. Non-Functional Requirements
 
@@ -359,6 +399,14 @@ All open questions from v1.0 have been resolved. The table below records each de
 | OQ-08 | Tech stack? | Any acceptable; recommended: Next.js + PostgreSQL | Resolved |
 | OQ-09 | Database? | PostgreSQL | Resolved |
 | OQ-10 | Hosting? | Self-hosted (Linux VPS + Docker) | Resolved |
+| DQ-01 | *(v1.2)* Demo tickets as a type of service ticket or separate? | Separate records, numbering and statuses; service flow untouched | Resolved |
+| DQ-02 | *(v1.2)* Demo ticket ID format? | `{STORE CODE}-DEMO-{YEAR}-{seq}` | Resolved |
+| DQ-03 | *(v1.2)* How does a demo reach Assigned? | Automatically when a technician is assigned; back to New if removed | Resolved |
+| DQ-04 | *(v1.2)* What counts toward the repeat-demo warning? | Non-cancelled demos matching serial or invoice; warn at 2+ existing, never block | Resolved |
+| DQ-05 | *(v1.2)* Where is the technician's WhatsApp number kept? | Optional per-user field on the Team page | Resolved |
+| DQ-06 | *(v1.2)* Short URL? | App-hosted `/t/{code}` link per demo ticket | Resolved |
+| DQ-07 | *(v1.2)* Completed demos on the board? | Current month only, like Delivered service tickets | Resolved |
+| DQ-08 | *(v1.2)* Demo tickets in Reports? | Not in v1.2 | Resolved |
 
 
 ## 14. Suggested spec.md Decomposition
@@ -378,6 +426,7 @@ When converting this document to spec.md files, the recommended module breakdown
 | spec/08-tech-stack.md | §10 Tech Stack & Deployment | P1 |
 | spec/09-integrations.md | §11 Integrations — WhatsApp API setup, SMTP | P1 |
 | spec/10-nfr.md | §7 Non-Functional Requirements | P1 |
+| specs/008-demo-board *(v1.2)* | §6.11 Demo Tickets & Demo Board, §6.9.2a, §6.9.6 phone | P1 |
 
 
 ## 15. Glossary
@@ -400,6 +449,11 @@ When converting this document to spec.md files, the recommended module breakdown
 | Cost Snapshot | The unit cost of a part or service copied onto the ticket line at selection time, so price changes do not alter historical billing. |
 | RBAC | Role-Based Access Control — permissions enforced by user role. |
 | VPS | Virtual Private Server — the self-hosted cloud machine running the application. |
+| Service Board | *(v1.2)* The board of service tickets (formerly "Board"). |
+| Demo Ticket | *(v1.2)* A record of a product demonstration for a customer, tracked on the Demo Board. |
+| Demo Board | *(v1.2)* The board of demo tickets, shown under the Service Board. |
+| Demo Service | *(v1.2)* A catalogue entry describing a type of demo, with a cost, chosen on each demo ticket. |
+| Short URL | *(v1.2)* A short `/t/{code}` link to a demo ticket, sent to the assigned technician. |
 
 
 
