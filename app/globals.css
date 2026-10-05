@@ -2377,3 +2377,135 @@ button.board-column__filter {
   color: var(--color-primary);
   text-decoration: none;
 }
+
+/* --- 008-demo-board: colours for the demo-only statuses (board columns + pills) --- */
+
+.board-column.status-new {
+  --column-accent: #6b7280;
+}
+.board-column.status-assigned {
+  --column-accent: #0891b2;
+}
+.status-pill.status-new {
+  --pill-accent: #52525b;
+}
+.status-pill.status-assigned {
+  --pill-accent: #0891b2;
+}
+
+/* --- 008-demo-board: New Ticket type switch, demo history + warning --- */
+
+fieldset.ticket-type-switch {
+  display: flex;
+  gap: 8px;
+  border: none;
+  padding: 0;
+  margin: 0 0 16px;
+  max-width: 560px;
+}
+
+fieldset.ticket-type-switch legend {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  margin-bottom: 6px;
+  padding: 0;
+}
+
+fieldset.ticket-type-switch label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 9px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 0.92rem;
+  cursor: pointer;
+}
+
+fieldset.ticket-type-switch label:has(input:checked) {
+  border-color: var(--color-primary);
+  background: var(--color-primary-light);
+  color: var(--color-primary-dark);
+}
+
+fieldset.ticket-type-switch input {
+  width: auto;
+  margin: 0;
+}
+
+.demo-warning,
+p[role].demo-warning {
+  border: 1px solid #f5d0a0;
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  font-weight: 600;
+  margin: 0 0 14px;
+}
+
+.demo-history {
+  margin: 0 0 14px;
+}
+
+.demo-history h2 {
+  font-size: 0.9rem;
+  margin: 0 0 6px;
+}
+
+.demo-history ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.demo-history li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 0.9rem;
+}
+
+.demo-created-links {
+  display: flex;
+  gap: 16px;
+}
+
+/* --- 008-demo-board: demo ticket page --- */
+
+.ticket-kind-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #0369a1;
+  background: #e0f2fe;
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+
+.short-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  overflow-wrap: anywhere;
+}
+
+.short-link button {
+  padding: 4px 10px;
+  font-family: var(--font-sans);
+}
+
+.timeline__item--assignment::before {
+  border-color: #0891b2;
+}

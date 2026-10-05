@@ -9,7 +9,7 @@
  */
 export interface SendMessageInput {
   to: string;
-  templateType: "completion" | "otp" | "invoice";
+  templateType: "completion" | "otp" | "invoice" | "demo_assignment";
   params: Record<string, string>;
 }
 

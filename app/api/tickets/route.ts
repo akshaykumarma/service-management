@@ -9,6 +9,7 @@ import { resolveCustomer } from "@/lib/tickets/customer";
 import { nextTicketNumber } from "@/lib/tickets/ticket-number";
 import { lookupHistory } from "@/lib/tickets/history";
 import { resolveReceivedAt } from "@/lib/tickets/received-date";
+import { isCurrentBusinessMonth } from "@/lib/format/business-time";
 import { MAX_PHOTOS_PER_TICKET, verifyUploadedObject } from "@/lib/tickets/photos";
 import { queryScopedTickets } from "@/lib/board/ticket-query";
 import { toTicketCard } from "@/lib/board/card-shape";
@@ -184,7 +185,7 @@ export async function GET(request: NextRequest) {
     if (!prev || row.createdAt > prev) deliveredAtById.set(row.ticketId, row.createdAt);
   }
   const visible = rows.filter(
-    (t) => t.status !== "delivered" || isCurrentMonth(deliveredAtById.get(t.id) ?? t.updatedAt),
+    (t) => t.status !== "delivered" || isCurrentBusinessMonth(deliveredAtById.get(t.id) ?? t.updatedAt),
   );
 
   // storeName/technicianName back the List view's table columns (the Kanban view doesn't
@@ -212,13 +213,4 @@ export async function GET(request: NextRequest) {
   }));
 
   return NextResponse.json({ tickets: cards });
-}
-
-// Calendar months are the stores' own (India, UTC+5:30), not UTC's — otherwise a
-// delivery made before 05:30 IST on the 1st would count toward the previous month.
-const BUSINESS_TIME_ZONE = "Asia/Kolkata";
-const yearMonthFormat = new Intl.DateTimeFormat("en-CA", { timeZone: BUSINESS_TIME_ZONE, year: "numeric", month: "2-digit" });
-
-function isCurrentMonth(date: Date): boolean {
-  return yearMonthFormat.format(date) === yearMonthFormat.format(new Date());
 }

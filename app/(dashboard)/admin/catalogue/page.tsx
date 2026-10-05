@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Modal from "@/components/modal";
+import DemoServicesSection from "./demo-services-section";
 
 interface Part {
   id: string;
@@ -211,7 +212,7 @@ export default function CataloguePage() {
 
   return (
     <main>
-      <h1>Parts &amp; services catalogue</h1>
+      <h1>Parts, services &amp; demo catalogue</h1>
 
       <section aria-labelledby="parts-heading">
         <div className="section-header">
@@ -354,6 +355,8 @@ export default function CataloguePage() {
           </table>
         </div>
       </section>
+
+      <DemoServicesSection />
 
       <Modal
         open={partModalOpen}

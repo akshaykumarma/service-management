@@ -18,6 +18,7 @@ const ROLE_LABELS: Record<NavHeaderProps["role"], string> = {
 // Per-item accent dot color, matching the design's per-screen identity color.
 const NAV_DOT: Record<string, string> = {
   board: "#a78bfa",
+  "demo-board": "#38bdf8",
   reports: "#34d399",
   team: "#fbbf24",
   stores: "#f472b6",
@@ -47,7 +48,12 @@ export default function NavHeader({ name, role }: NavHeaderProps) {
   }, [pathname]);
 
   function navClass(href: string) {
-    const active = pathname === href || (href !== "/board" && pathname?.startsWith(href));
+    // A ticket page highlights the board it belongs to (008-demo-board).
+    const active =
+      pathname === href ||
+      (href !== "/board" && pathname?.startsWith(href)) ||
+      (href === "/board" && pathname?.startsWith("/tickets/") && pathname !== "/tickets/new") ||
+      (href === "/demo-board" && pathname?.startsWith("/demo-tickets/"));
     return active ? "active" : undefined;
   }
 
@@ -75,7 +81,8 @@ export default function NavHeader({ name, role }: NavHeaderProps) {
   const navLinks = (
     <>
       <nav className="app-sidebar__nav" aria-label="Main">
-        <NavLink href="/board" label="Board" dotKey="board" />
+        <NavLink href="/board" label="Service Board" dotKey="board" />
+        <NavLink href="/demo-board" label="Demo Board" dotKey="demo-board" />
         {showReports && <NavLink href="/reports" label="Reports" dotKey="reports" />}
       </nav>
       {showAdminSection && (

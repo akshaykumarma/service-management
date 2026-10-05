@@ -7,7 +7,9 @@ export const SEND_WHATSAPP_MESSAGE_QUEUE = "send-whatsapp-message";
 
 export interface SendWhatsAppMessageJobData {
   ticketId: string | null;
-  type: "completion" | "otp" | "invoice";
+  /** 008-demo-board: set (with ticketId null) for a demo ticket's assignment message. */
+  demoTicketId?: string | null;
+  type: "completion" | "otp" | "invoice" | "demo_assignment";
   recipientPhone: string;
   /** The real per-message values (e.g. the actual OTP code) substituted into Meta's
    * pre-approved template for the actual send — never persisted as-is. */
@@ -52,6 +54,7 @@ export async function processSendWhatsAppMessageJob(data: SendWhatsAppMessageJob
 
   await db.insert(notifications).values({
     ticketId: data.ticketId,
+    demoTicketId: data.demoTicketId ?? null,
     type: data.type,
     recipientPhone: data.recipientPhone,
     renderedContent: data.storedContent,
