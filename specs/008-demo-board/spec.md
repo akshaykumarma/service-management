@@ -33,10 +33,13 @@ Decisions taken where the request left room, recorded so they can be revisited:
   assigned** and returns to **New** if the technician is removed while it is still Assigned; a
   ticket cannot be moved to Assigned without a technician. Backward moves (and Cancelled) need a
   comment; Cancelled is Admin/Super Admin only and terminal — the same rules as service tickets.
-- **D4 — "3rd demo" warning.** Counts existing *non-cancelled* demo tickets whose serial number
-  **or** invoice number matches (case/space-insensitive). With 2 or more, the form shows a
-  warning before saving; it does not block creation. Matching is limited to the stores the user
-  can see, like service history.
+- **D4 — "3rd demo" warning.** The history list shows earlier demo tickets whose serial number
+  **or** invoice number matches. The warning counts only existing *non-cancelled* demo tickets
+  with the same **model number + serial number + invoice number** combination (all three,
+  case/space-insensitive); with 2 or more, the form shows a warning before saving and those
+  entries are tagged in the list. It does not block creation. Matching is limited to the stores
+  the user can see, like service history. *(Revised 2026-10-06: the warning first counted any
+  serial-or-invoice match.)*
 - **D5 — Technician WhatsApp number.** Users gain an optional "WhatsApp number" (set on the Team
   page). If an assigned technician has none, the assignment still saves and the page says the
   message could not be sent.
@@ -67,8 +70,10 @@ the Service Board.
 
 1. **Given** the New Ticket page, **When** the user picks "Demo ticket", **Then** the demo fields
    are shown and the service fields are not; picking "Service ticket" shows today's form unchanged.
-2. **Given** two earlier non-cancelled demos with serial `SN-1`, **When** the user enters `SN-1`,
-   **Then** both are listed and a "this will be the 3rd demo" warning is shown; saving still works.
+2. **Given** two earlier non-cancelled demos of model `M1`, serial `SN-1`, invoice `INV-1`, **When**
+   the user enters that same model, serial and invoice, **Then** both are listed and a "this will be
+   the 3rd demo" warning is shown; saving still works. Earlier demos sharing only the serial or
+   only the invoice are listed but not counted.
 3. **Given** a missing required field or a Demo date before the Received date, **When** saving,
    **Then** the ticket is not created and the problem is named.
 
@@ -195,7 +200,8 @@ status, technician, demo history) and Activity (status changes, edits, assignmen
 
 - **SC-001**: A demo ticket can be created in under a minute from New Ticket.
 - **SC-002**: 100% of demo tickets appear only on the Demo Board, and 0 on the Service Board.
-- **SC-003**: The 3rd-demo warning appears for every qualifying serial/invoice before saving.
+- **SC-003**: The 3rd-demo warning appears for every qualifying model + serial + invoice
+  combination before saving.
 - **SC-004**: A technician with a WhatsApp number receives the assignment message within 2 minutes.
 - **SC-005**: Existing service-ticket automated tests pass unchanged in behaviour.
 

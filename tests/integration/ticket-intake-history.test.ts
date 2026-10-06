@@ -7,7 +7,7 @@ import { POST as ticketsPOST } from "@/app/api/tickets/route";
 import { db } from "@/lib/db/client";
 import { tickets } from "@/lib/db/schema";
 
-describe("Ticket intake with serial number + phone history lookup (User Story 1)", () => {
+describe("Ticket intake with model number + serial number history lookup (User Story 1)", () => {
   beforeEach(resetDb);
 
   it("returns found: false when no prior closed ticket exists for the machine", async () => {
@@ -57,9 +57,10 @@ describe("Ticket intake with serial number + phone history lookup (User Story 1)
         body: {
           storeId: storeA.id,
           customerName: "Returning Customer",
-          // Same number, different formatting; same serial, different case/spacing.
-          customerPhone: "98765 00002",
-          machineModel: "LG-FHM1207ZDL",
+          // A different phone (the machine is what matters); same model and serial,
+          // different case/spacing.
+          customerPhone: "+919811100000",
+          machineModel: " lg-fhm1207zdl ",
           serialNumber: " sn-lg-fhm1207zdl ",
           issueDescription: "Different issue",
         },
@@ -127,12 +128,12 @@ describe("Ticket intake with serial number + phone history lookup (User Story 1)
     expect(body.history.found).toBe(true);
   });
 
-  it("needs BOTH the serial number and the phone to match — either alone is a different machine or customer", async () => {
+  it("needs BOTH the model number and the serial number to match, whatever the phone number", async () => {
     const store = await createStore();
     const sm = await createUser({ role: "service_manager", storeIds: [store.id], password: "Correct123!" });
     const cookie = await loginAs(sm.email, "Correct123!");
 
-    await createTicket({
+    const prior = await createTicket({
       storeId: store.id,
       createdBy: sm.id,
       machineModel: "Singer 4423",
@@ -140,8 +141,17 @@ describe("Ticket intake with serial number + phone history lookup (User Story 1)
       customerPhone: "+919876500010",
       status: "delivered",
     });
+    // Still open: not history yet.
+    await createTicket({
+      storeId: store.id,
+      createdBy: sm.id,
+      machineModel: "Singer 4423",
+      serialNumber: "HD4423-1",
+      customerPhone: "+919876500010",
+      status: "in_progress",
+    });
 
-    const create = async (serialNumber: string, customerPhone: string) => {
+    const create = async (machineModel: string, serialNumber: string, customerPhone: string) => {
       const res = await ticketsPOST(
         jsonRequest("/api/tickets", {
           method: "POST",
@@ -150,7 +160,7 @@ describe("Ticket intake with serial number + phone history lookup (User Story 1)
             storeId: store.id,
             customerName: "Someone",
             customerPhone,
-            machineModel: "Singer 4423",
+            machineModel,
             serialNumber,
             issueDescription: "Check",
           },
@@ -159,12 +169,16 @@ describe("Ticket intake with serial number + phone history lookup (User Story 1)
       return (await res.json()).history;
     };
 
-    // Same model, same phone, different serial: another machine this customer owns.
-    expect((await create("HD4423-2", "+919876500010")).found).toBe(false);
-    // Same serial, different phone: not this customer's history.
-    expect((await create("HD4423-1", "+919876500011")).found).toBe(false);
-    // Both match.
-    expect((await create("HD4423-1", "+919876500010")).found).toBe(true);
+    // Same model, different serial: another machine.
+    expect((await create("Singer 4423", "HD4423-2", "+919876500010")).found).toBe(false);
+    // Same serial, different model: another machine.
+    expect((await create("Usha Janome", "HD4423-1", "+919876500010")).found).toBe(false);
+    // Model and serial match: history, even from a different customer phone.
+    const history = await create("SINGER 4423", "hd4423-1", "+919999900000");
+    expect(history.found).toBe(true);
+    expect(history.entries.map((e: { id: string }) => e.id)).toEqual([prior.id]);
+    // No warning on service tickets.
+    expect(history.warning).toBeUndefined();
   });
 
   it("resolves the customer to a single identity by phone and updates the name on a later ticket (FR-020)", async () => {

@@ -20,11 +20,13 @@ interface DemoHistoryEntry {
   id: string;
   ticketNumber: string;
   status: string;
+  machineModel: string;
   serialNumber: string;
   invoiceNumber: string;
   demoServiceName: string;
   demoDate: string;
   createdAt: string;
+  sameCombination: boolean;
 }
 
 interface DemoHistory {
@@ -81,8 +83,10 @@ function HistoryPanel({ history }: { history: DemoHistory }) {
             <a href={`/demo-tickets/${e.id}`}>{e.ticketNumber}</a>
             <span className={`status-pill status-${e.status}`}>{STATUS_LABELS[e.status] ?? e.status}</span>
             <span className="muted">
-              Demo {formatDate(e.demoDate)} · {e.demoServiceName} · SN {e.serialNumber} · Invoice {e.invoiceNumber}
+              Demo {formatDate(e.demoDate)} · {e.demoServiceName} · Model {e.machineModel} · SN {e.serialNumber} · Invoice{" "}
+              {e.invoiceNumber}
             </span>
+            {e.sameCombination && <span className="demo-history__match">Same model + serial + invoice</span>}
           </li>
         ))}
       </ul>
@@ -93,7 +97,8 @@ function HistoryPanel({ history }: { history: DemoHistory }) {
 /**
  * 008-demo-board US1: the Demo ticket form on New Ticket. Looks up earlier demos by
  * serial/invoice number as they are typed and warns before saving when this would be
- * the 3rd (or later) non-cancelled demo — a warning, never a block (spec.md D4).
+ * the 3rd (or later) non-cancelled demo for the same model + serial + invoice number
+ * combination — a warning, never a block (spec.md D4).
  */
 export default function DemoTicketForm({
   stores,
@@ -128,7 +133,10 @@ export default function DemoTicketForm({
     if (!storeId && stores.length === 1) setStoreId(stores[0].id);
   }, [stores, storeId]);
 
-  // Live repeat-demo check, debounced while typing.
+  const machineModel = machineModelChoice === OTHER_MODEL ? manualMachineModel.trim() : machineModelChoice;
+
+  // Live history (serial or invoice) and repeat-demo check (model + serial + invoice),
+  // debounced while typing.
   useEffect(() => {
     const serial = serialNumber.trim();
     const invoice = invoiceNumber.trim();
@@ -138,15 +146,14 @@ export default function DemoTicketForm({
     }
     const timer = setTimeout(async () => {
       const params = new URLSearchParams();
+      if (machineModel) params.set("machineModel", machineModel);
       if (serial) params.set("serialNumber", serial);
       if (invoice) params.set("invoiceNumber", invoice);
       const res = await fetch(`/api/demo-tickets/history?${params.toString()}`);
       if (res.ok) setHistory(await res.json());
     }, 400);
     return () => clearTimeout(timer);
-  }, [serialNumber, invoiceNumber]);
-
-  const machineModel = machineModelChoice === OTHER_MODEL ? manualMachineModel.trim() : machineModelChoice;
+  }, [machineModel, serialNumber, invoiceNumber]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -189,7 +196,8 @@ export default function DemoTicketForm({
         <h2 id="demo-created-heading">Demo ticket created: {created.ticketNumber}</h2>
         {created.history.warning && (
           <p className="demo-warning" role="status">
-            Note: this is the {ordinal(created.history.activeCount + 1)} demo for this machine or invoice.
+            Note: this is the {ordinal(created.history.activeCount + 1)} demo for this model + serial number + invoice
+            number combination.
           </p>
         )}
         <HistoryPanel history={created.history} />
@@ -272,8 +280,8 @@ export default function DemoTicketForm({
 
       {history?.warning && (
         <p className="demo-warning" role="alert">
-          This will be the {ordinal(history.activeCount + 1)} demo for this machine/serial number/invoice. Check the
-          earlier demos below before creating another.
+          This will be the {ordinal(history.activeCount + 1)} demo for this model + serial number + invoice number
+          combination. Check the earlier demos below before creating another.
         </p>
       )}
       {history && <HistoryPanel history={history} />}

@@ -137,6 +137,7 @@ export async function createDemoTicket(opts: {
   status?: "new" | "assigned" | "in_progress" | "completed" | "cancelled";
   serialNumber?: string;
   invoiceNumber?: string;
+  machineModel?: string;
   customerName?: string;
   customerPhone?: string;
   assignedTechnicianId?: string | null;
@@ -159,7 +160,7 @@ export async function createDemoTicket(opts: {
       customerId: customer.id,
       customerName: opts.customerName ?? `Demo Customer ${counter}`,
       customerPhone: phone,
-      machineModel: "Demo Model",
+      machineModel: opts.machineModel ?? "Demo Model",
       serialNumber: opts.serialNumber ?? `DSN-${counter}`,
       invoiceNumber: opts.invoiceNumber ?? `INV-${counter}`,
       demoServiceId: service.id,

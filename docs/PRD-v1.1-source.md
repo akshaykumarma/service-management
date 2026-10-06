@@ -142,10 +142,10 @@ Current pain points in the target stores include:
 - The creating user, store, and creation timestamp are recorded automatically and immutably.
 
 ### 6.3 Service History Lookup
-- Immediately after a ticket is saved, the system queries all prior closed tickets for the same machine model number.
+- Immediately after a ticket is saved, the system queries all prior closed tickets for the same machine — the same **model number and serial number** (case/space-insensitive), whoever the customer is. No repeat warning is shown for service tickets.
 - Matching records are displayed in a collapsible "Service History" panel on the ticket detail view, sorted by date descending.
 - Each history entry shows: Ticket ID, date, issue description, parts used, services performed, resolution notes.
-- No prior history → panel shows "No previous service records for this machine model."
+- No prior history → panel shows "No prior service history for this model number and serial number."
 - Super Admin and Admin see history across all stores. Store Service Managers see only their store's history.
 
 ### 6.4 Ticket Status Workflow
@@ -266,7 +266,7 @@ Demo tickets track product demonstrations (e.g. after a machine sale), separatel
 - Ticket ID format: `{STORE CODE}-DEMO-{YEAR}-{5-digit sequence}`, e.g. `BLP-DEMO-2026-00001`, numbered separately from service tickets.
 #### 6.11.2 Demo History & Repeat-Demo Warning
 - While the demo ticket is being entered, earlier demo tickets matching the **Invoice Number or Serial Number** are listed.
-- If 2 or more non-cancelled demo tickets already exist for that serial number or invoice number, a warning is shown before saving ("this will be the 3rd demo"). It warns but does not block.
+- If 2 or more non-cancelled demo tickets already exist for the same **Model Number + Serial Number + Invoice Number** combination, a warning is shown before saving ("this will be the 3rd demo") and those earlier demos are tagged in the list. It warns but does not block.
 - The same history appears on the demo ticket's page.
 #### 6.11.3 Demo Statuses & Workflow
 
@@ -407,7 +407,7 @@ All open questions from v1.0 have been resolved. The table below records each de
 | DQ-01 | *(v1.2)* Demo tickets as a type of service ticket or separate? | Separate records, numbering and statuses; service flow untouched | Resolved |
 | DQ-02 | *(v1.2)* Demo ticket ID format? | `{STORE CODE}-DEMO-{YEAR}-{seq}` | Resolved |
 | DQ-03 | *(v1.2)* How does a demo reach Assigned? | Automatically when a technician is assigned; back to New if removed | Resolved |
-| DQ-04 | *(v1.2)* What counts toward the repeat-demo warning? | Non-cancelled demos matching serial or invoice; warn at 2+ existing, never block | Resolved |
+| DQ-04 | *(v1.2)* What counts toward the repeat-demo warning? | Non-cancelled demos with the same model + serial + invoice combination; warn at 2+ existing, never block | Resolved |
 | DQ-05 | *(v1.2)* Where is the technician's WhatsApp number kept? | Optional per-user field on the Team page | Resolved |
 | DQ-06 | *(v1.2)* Short URL? | App-hosted `/t/{code}` link per demo ticket | Resolved |
 | DQ-07 | *(v1.2)* Completed demos on the board? | Current month only, like Delivered service tickets | Resolved |

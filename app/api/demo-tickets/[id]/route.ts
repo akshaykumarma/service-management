@@ -22,7 +22,12 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     ticket.assignedTechnicianId
       ? db.select({ name: users.name, phone: users.phone }).from(users).where(eq(users.id, ticket.assignedTechnicianId)).limit(1)
       : Promise.resolve([] as { name: string; phone: string | null }[]),
-    lookupDemoHistory(caller, { serialNumber: ticket.serialNumber, invoiceNumber: ticket.invoiceNumber, excludeId: ticket.id }),
+    lookupDemoHistory(caller, {
+      machineModel: ticket.machineModel,
+      serialNumber: ticket.serialNumber,
+      invoiceNumber: ticket.invoiceNumber,
+      excludeId: ticket.id,
+    }),
   ]);
 
   return NextResponse.json({

@@ -73,32 +73,51 @@ describe("creating demo tickets (008 US1)", () => {
     expect((await create({ storeId: other.id })).status).toBe(403);
   });
 
-  it("finds history by serial OR invoice number and warns from the 3rd demo, ignoring cancelled ones", async () => {
+  it("lists history by serial OR invoice number, but warns only from the 3rd demo of the same model + serial + invoice", async () => {
     const { store, sm, cookie } = await setup();
-    await createDemoTicket({ storeId: store.id, createdBy: sm.id, serialNumber: "SN-1", invoiceNumber: "INV-A" });
     const history = (q: string) => historyGET(jsonRequest(`/api/demo-tickets/history?${q}`, { cookie })).then((r) => r.json());
+    const combo = "machineModel=juki%20ddl-8700&serialNumber=SN-1&invoiceNumber=INV-A";
+    await createDemoTicket({ storeId: store.id, createdBy: sm.id, machineModel: "Juki DDL-8700", serialNumber: "SN-1", invoiceNumber: "INV-A" });
 
-    let result = await history("serialNumber=sn-1");
+    let result = await history(combo);
+    expect(result).toMatchObject({ activeCount: 1, warning: false });
+    expect(result.entries[0].sameCombination).toBe(true);
+
+    // Same serial but a different invoice, same invoice but a different model: listed, not counted.
+    await createDemoTicket({ storeId: store.id, createdBy: sm.id, machineModel: "Juki DDL-8700", serialNumber: "SN-1", invoiceNumber: "INV-B" });
+    await createDemoTicket({ storeId: store.id, createdBy: sm.id, machineModel: "Usha 8801", serialNumber: "SN-9", invoiceNumber: "inv-a" });
+    result = await history(combo);
+    expect(result.entries).toHaveLength(3);
     expect(result).toMatchObject({ activeCount: 1, warning: false });
 
-    await createDemoTicket({ storeId: store.id, createdBy: sm.id, serialNumber: "OTHER", invoiceNumber: " inv-a " });
+    // A cancelled demo of the same combination doesn't count either.
+    await createDemoTicket({ storeId: store.id, createdBy: sm.id, machineModel: "Juki DDL-8700", serialNumber: "SN-1", invoiceNumber: "INV-A", status: "cancelled" });
+    result = await history(combo);
+    expect(result).toMatchObject({ activeCount: 1, warning: false });
+
+    // A 2nd live demo of the same combination (case/space-insensitive): the next is the 3rd.
+    await createDemoTicket({ storeId: store.id, createdBy: sm.id, machineModel: " JUKI ddl-8700 ", serialNumber: "sn-1 ", invoiceNumber: " Inv-A" });
+    result = await history(combo);
+    expect(result).toMatchObject({ activeCount: 2, warning: true });
+    expect(result.entries).toHaveLength(5);
+
+    // Without the model the combination isn't known yet: history is listed, no warning.
     result = await history("serialNumber=SN-1&invoiceNumber=INV-A");
-    expect(result.entries).toHaveLength(2);
-    expect(result.warning).toBe(true);
-
-    await createDemoTicket({ storeId: store.id, createdBy: sm.id, serialNumber: "SN-2", status: "cancelled" });
-    await createDemoTicket({ storeId: store.id, createdBy: sm.id, serialNumber: "SN-2" });
-    result = await history("serialNumber=SN-2");
-    expect(result).toMatchObject({ activeCount: 1, warning: false });
-    expect(result.entries).toHaveLength(2);
+    expect(result).toMatchObject({ activeCount: 0, warning: false });
+    expect(result.entries.length).toBeGreaterThan(0);
   });
 
   it("returns the history with the created ticket", async () => {
     const { store, sm, create } = await setup();
+    const same = { machineModel: "Juki DDL-8700", serialNumber: "DDL87-33321", invoiceNumber: "INV-2026-0042" };
+    await createDemoTicket({ storeId: store.id, createdBy: sm.id, ...same });
     await createDemoTicket({ storeId: store.id, createdBy: sm.id, serialNumber: "DDL87-33321" });
-    await createDemoTicket({ storeId: store.id, createdBy: sm.id, invoiceNumber: "INV-2026-0042" });
-    const { history } = await (await create()).json();
+    let { history } = await (await create()).json();
     expect(history.entries).toHaveLength(2);
-    expect(history.warning).toBe(true);
+    expect(history).toMatchObject({ activeCount: 1, warning: false });
+
+    // Now two earlier demos share the full combination, so this one is the 3rd.
+    ({ history } = await (await create()).json());
+    expect(history).toMatchObject({ activeCount: 2, warning: true });
   });
 });

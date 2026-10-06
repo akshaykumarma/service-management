@@ -140,7 +140,7 @@ function NewTicketForm() {
         {history.found ? (
           <section aria-labelledby="history-heading">
             <h2 id="history-heading">Prior service history for this machine</h2>
-            <p>Earlier tickets with the same serial number and phone number:</p>
+            <p>Earlier tickets with the same model number and serial number:</p>
             <ul>
               {history.entries.map((entry) => (
                 <li key={entry.id}>
@@ -151,7 +151,7 @@ function NewTicketForm() {
             </ul>
           </section>
         ) : (
-          <p>No prior service history for this serial number and phone number.</p>
+          <p>No prior service history for this model number and serial number.</p>
         )}
         <p>
           <a href={`/tickets/${created.id}`}>View full ticket</a>

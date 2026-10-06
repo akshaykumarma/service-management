@@ -24,12 +24,14 @@ demoServiceId, receivedDate (YYYY-MM-DD, optional = today), demoDate (YYYY-MM-DD
   `invalid_demo_date` · `demo_date_before_received` · `invalid_demo_service`
 - `403 forbidden` (store out of scope) · `409 store_inactive`
 
-## `GET /api/demo-tickets/history?serialNumber=&invoiceNumber=[&excludeId=]`
+## `GET /api/demo-tickets/history?machineModel=&serialNumber=&invoiceNumber=[&excludeId=]`
 
-`200 HistoryResult = { entries: [{ id, ticketNumber, status, serialNumber, invoiceNumber,
-demoServiceName, demoDate, createdAt }], activeCount: number, warning: boolean }` —
-entries match serial **or** invoice (case/space-insensitive), within the caller's stores, newest
-first. `activeCount` excludes cancelled; `warning = activeCount >= 2`.
+`200 HistoryResult = { entries: [{ id, ticketNumber, status, machineModel, serialNumber,
+invoiceNumber, demoServiceName, demoDate, createdAt, sameCombination }], activeCount: number,
+warning: boolean }` — entries match serial **or** invoice (case/space-insensitive), within the
+caller's stores, newest first. `sameCombination` marks entries whose model, serial and invoice
+all match the query; `activeCount` counts those that aren't cancelled (0 until all three are
+given); `warning = activeCount >= 2`.
 
 ## `GET /api/demo-tickets/:id`
 

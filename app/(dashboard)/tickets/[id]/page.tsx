@@ -796,7 +796,7 @@ export default function TicketDetailPage() {
                   ))}
                 </ul>
               ) : (
-                <p className="muted">No earlier tickets for this serial number and phone number.</p>
+                <p className="muted">No earlier tickets for this model number and serial number.</p>
               )}
             </section>
           </div>
