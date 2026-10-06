@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { todayInBusinessTimeZone } from "@/lib/tickets/received-date";
 import { formatDate } from "@/lib/format/date";
+import { freshNewTicketUrl } from "@/lib/tickets/new-ticket-url";
 
 interface Option {
   id: string;
@@ -195,6 +196,7 @@ export default function DemoTicketForm({
         <p className="demo-created-links">
           <a href={`/demo-tickets/${created.id}`}>View demo ticket</a>
           <a href="/demo-board">Go to Demo Board</a>
+          <a href={freshNewTicketUrl()}>+ Create another ticket</a>
         </p>
       </section>
     );
