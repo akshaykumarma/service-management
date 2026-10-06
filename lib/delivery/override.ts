@@ -40,10 +40,11 @@ export async function correctionRetryHasFailed(ticketId: string): Promise<boolea
 export async function correctPhoneAndRetry(
   ticket: { id: string; ticketNumber: string },
   correctedPhone: string,
-): Promise<void> {
+): Promise<{ code: string }> {
   await db.update(tickets).set({ customerPhone: correctedPhone, updatedAt: new Date() }).where(eq(tickets.id, ticket.id));
   const { code } = await issueOtp(ticket.id);
   await enqueueOtpSend({ id: ticket.id, ticketNumber: ticket.ticketNumber, customerPhone: correctedPhone }, code);
+  return { code };
 }
 
 export async function overrideToDelivered(

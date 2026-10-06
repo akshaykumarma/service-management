@@ -7,6 +7,7 @@ import { isLocked, recordFailedAttempt, clearFailedAttempts } from "@/lib/auth/l
 import { createSession } from "@/lib/auth/session";
 import { setSessionCookie } from "@/lib/auth/cookies";
 import { requireSameOrigin } from "@/lib/auth/csrf";
+import { recordLoginEvent } from "@/lib/auth/login-events";
 
 export async function POST(request: NextRequest) {
   const csrfResponse = requireSameOrigin(request);
@@ -21,14 +22,6 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const lockState = isLocked(email);
-  if (lockState.locked) {
-    return NextResponse.json(
-      { error: { code: "account_locked", retryAfterSeconds: lockState.retryAfterSeconds } },
-      { status: 423 },
-    );
-  }
-
   // The request body's `email` field doubles as "email or username" (an accepted
   // deviation, documented in specs/002-auth-rbac/contracts/auth-api.md, so the API
   // contract doesn't grow a second, largely-redundant field for this).
@@ -40,8 +33,18 @@ export async function POST(request: NextRequest) {
     .limit(1);
   const user = rows[0];
 
+  const lockState = isLocked(email);
+  if (lockState.locked) {
+    await recordLoginEvent({ userId: user?.id ?? null, identifier, outcome: "locked", request });
+    return NextResponse.json(
+      { error: { code: "account_locked", retryAfterSeconds: lockState.retryAfterSeconds } },
+      { status: 423 },
+    );
+  }
+
   if (!user || !(await verifyPassword(password, user.passwordHash))) {
     recordFailedAttempt(email);
+    await recordLoginEvent({ userId: user?.id ?? null, identifier, outcome: "failed", request });
     return NextResponse.json(
       { error: { code: "invalid_credentials", message: "Incorrect email or password." } },
       { status: 401 },
@@ -51,6 +54,7 @@ export async function POST(request: NextRequest) {
   if (!user.active) {
     // A deactivated account's correct credentials don't clear its lockout counter or
     // establish a session — this is a distinct denial reason from a wrong password.
+    await recordLoginEvent({ userId: user.id, identifier, outcome: "deactivated", request });
     return NextResponse.json(
       { error: { code: "account_deactivated", message: "This account has been deactivated." } },
       { status: 403 },
@@ -59,6 +63,7 @@ export async function POST(request: NextRequest) {
 
   clearFailedAttempts(email);
   const { token, expiresAt } = await createSession(user.id);
+  await recordLoginEvent({ userId: user.id, identifier, outcome: "success", request });
 
   const response = NextResponse.json({
     user: { id: user.id, name: user.name, email: user.email, role: user.role },

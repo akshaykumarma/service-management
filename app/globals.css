@@ -2509,3 +2509,74 @@ p[role].demo-warning {
 .timeline__item--assignment::before {
   border-color: #0891b2;
 }
+
+/* TEMPORARY: on-screen OTP for testing (lib/delivery/otp-display.ts) — remove before production. */
+p.test-otp[role] {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: #fff7ed;
+  color: #9a3412;
+  border: 1px dashed #fb923c;
+  font-size: 0.85rem;
+}
+
+p.test-otp strong {
+  font-family: var(--font-mono);
+  font-size: 1.15rem;
+  letter-spacing: 0.08em;
+}
+
+/* Super Admin — Login & activity */
+.activity-signed-in ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.activity-signed-in li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 12px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  border-radius: 10px;
+  font-size: 0.9rem;
+}
+.activity-signed-in li span {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+tr.activity-row--warn td {
+  color: var(--color-warning);
+}
+form.activity-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+}
+form.activity-filters > div {
+  min-width: 180px;
+}
+form.activity-filters p[role="alert"] {
+  flex-basis: 100%;
+}
+.table-scroll table.activity-table {
+  width: 100%;
+}
+table.activity-table td {
+  white-space: normal;
+  vertical-align: top;
+}
+table.activity-table td:first-child,
+table.activity-table td:nth-child(3),
+table.activity-table td:nth-child(5) {
+  white-space: nowrap;
+}
+table.activity-table td:nth-child(4) {
+  min-width: 320px;
+}

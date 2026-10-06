@@ -500,3 +500,26 @@ export const demoTicketNumberCounters = pgTable(
   }),
 );
 
+
+// --- Super Admin "Login & activity" (post-008 product feedback) ------------------------
+// Every login attempt and logout, kept for the Super Admin's audit view. `userId` is null
+// when the identifier matched no account (a failed login for an unknown user).
+
+export const loginOutcomeEnum = pgEnum("login_outcome", ["success", "failed", "locked", "deactivated", "logout"]);
+
+export const loginEvents = pgTable(
+  "login_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
+    identifier: text("identifier").notNull(),
+    outcome: loginOutcomeEnum("outcome").notNull(),
+    ipAddress: text("ip_address"),
+    userAgent: text("user_agent"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    createdAtIdx: index("login_events_created_at_idx").on(table.createdAt),
+    userIdx: index("login_events_user_idx").on(table.userId),
+  }),
+);
