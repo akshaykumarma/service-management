@@ -61,6 +61,7 @@ export async function POST(request: NextRequest) {
   }
 
   const history = await lookupDemoHistory(caller, {
+    machineModel: result.ticket.machineModel,
     serialNumber: result.ticket.serialNumber,
     invoiceNumber: result.ticket.invoiceNumber,
     excludeId: result.ticket.id,

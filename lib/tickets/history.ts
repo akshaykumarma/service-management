@@ -16,22 +16,18 @@ export interface HistoryEntry {
 }
 
 export interface HistoryKey {
+  machineModel: string | null;
   serialNumber: string | null;
-  customerPhone: string;
 }
 
-// Deviation (post-v1, per direct product feedback): history used to match on machine
-// model alone, which lumped every customer's machine of the same model together. It now
-// identifies one physical machine for one customer — the serial number AND the phone
-// number together. Both sides are normalised in SQL so trivial formatting differences
-// don't hide a match: serials ignore case and surrounding spaces; phones compare on
-// their last 10 digits (so "+91 90190 55667" and "9019055667" are the same number).
+// Deviation (post-v1, per direct product feedback): history first matched on machine
+// model alone (every customer's machine of that model lumped together), then on serial
+// number + customer phone. It now follows the physical machine — the model number AND
+// the serial number together, the same machine identity the Demo Board's repeat-demo
+// check uses — whoever brings it in. Both sides are normalised in SQL (case and
+// surrounding spaces ignored) so trivial formatting differences don't hide a match.
+const normalisedModel = sql`lower(trim(${tickets.machineModel}))`;
 const normalisedSerial = sql`lower(trim(${tickets.serialNumber}))`;
-const normalisedPhone = sql`right(regexp_replace(${tickets.customerPhone}, '\\D', '', 'g'), 10)`;
-
-function phoneKey(phone: string): string {
-  return phone.replace(/\D/g, "").slice(-10);
-}
 
 /**
  * Single query, scoped to the caller's role/store visibility — the same scoping rule used
@@ -41,9 +37,9 @@ export async function lookupHistory(
   caller: SessionUser,
   key: HistoryKey,
 ): Promise<{ found: boolean; entries: HistoryEntry[] }> {
+  const model = key.machineModel?.trim().toLowerCase();
   const serial = key.serialNumber?.trim().toLowerCase();
-  const phone = phoneKey(key.customerPhone);
-  if (!serial || !phone) {
+  if (!model || !serial) {
     return { found: false, entries: [] };
   }
 
@@ -53,8 +49,8 @@ export async function lookupHistory(
   }
 
   const baseCondition = and(
+    sql`${normalisedModel} = ${model}`,
     sql`${normalisedSerial} = ${serial}`,
-    sql`${normalisedPhone} = ${phone}`,
     inArray(tickets.status, [...CLOSED_STATUSES]),
   );
   // Store scoping is composed into the query itself (research.md §6) rather than fetched

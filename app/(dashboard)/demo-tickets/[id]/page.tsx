@@ -28,7 +28,17 @@ interface DemoTicketDetail {
 }
 
 interface DemoHistory {
-  entries: { id: string; ticketNumber: string; status: string; demoServiceName: string; demoDate: string; serialNumber: string; invoiceNumber: string }[];
+  entries: {
+    id: string;
+    ticketNumber: string;
+    status: string;
+    demoServiceName: string;
+    demoDate: string;
+    machineModel: string;
+    serialNumber: string;
+    invoiceNumber: string;
+    sameCombination: boolean;
+  }[];
   activeCount: number;
   warning: boolean;
 }
@@ -426,7 +436,8 @@ export default function DemoTicketPage() {
               <h2 id="demo-history-card-heading">Demo history</h2>
               {demoHistory?.warning && (
                 <p className="demo-warning">
-                  This machine or invoice already has {demoHistory.activeCount} other demo{demoHistory.activeCount === 1 ? "" : "s"}.
+                  This model + serial number + invoice number combination already has {demoHistory.activeCount} other
+                  demo{demoHistory.activeCount === 1 ? "" : "s"}.
                 </p>
               )}
               {demoHistory && demoHistory.entries.length > 0 ? (
@@ -437,8 +448,10 @@ export default function DemoTicketPage() {
                       <span className={`status-pill status-${entry.status}`}>{STATUS_LABELS[entry.status] ?? entry.status}</span>
                       <span className="history-list__date">{formatDate(entry.demoDate)}</span>
                       <span className="history-list__issue">
-                        {entry.demoServiceName} · SN {entry.serialNumber} · Invoice {entry.invoiceNumber}
+                        {entry.demoServiceName} · Model {entry.machineModel} · SN {entry.serialNumber} · Invoice{" "}
+                        {entry.invoiceNumber}
                       </span>
+                      {entry.sameCombination && <span className="demo-history__match">Same model + serial + invoice</span>}
                     </li>
                   ))}
                 </ul>

@@ -121,7 +121,7 @@ export async function POST(request: NextRequest) {
     return ticket;
   });
 
-  const history = await lookupHistory(caller, { serialNumber: created.serialNumber, customerPhone: created.customerPhone });
+  const history = await lookupHistory(caller, { machineModel: created.machineModel, serialNumber: created.serialNumber });
 
   return NextResponse.json(
     {

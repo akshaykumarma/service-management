@@ -42,7 +42,7 @@ test.describe("Demo Board (008-demo-board)", () => {
 
     const serial = `E2E-SN-${stamp}`;
     const customer = `E2E Demo Customer ${stamp}`;
-    // Two earlier demos on the same serial, so the next one is the 3rd.
+    // Two earlier demos of the same model + serial + invoice, so the next one is the 3rd.
     for (let i = 0; i < 2; i++) {
       const res = await api(page, "post", "/api/demo-tickets", {
         storeId,
@@ -50,7 +50,7 @@ test.describe("Demo Board (008-demo-board)", () => {
         customerPhone: "+919000000001",
         machineModel: "E2E Model",
         serialNumber: serial,
-        invoiceNumber: `E2E-INV-${stamp}-${i}`,
+        invoiceNumber: `E2E-INV-${stamp}`,
         demoServiceId: service.demoService.id,
         demoDate: new Date().toISOString().slice(0, 10),
       });
@@ -65,7 +65,7 @@ test.describe("Demo Board (008-demo-board)", () => {
     await page.getByLabel("Model number", { exact: true }).selectOption("__other__");
     await page.getByLabel("Model number (not in the list)").fill("E2E Model");
     await page.getByLabel("Serial number").fill(serial);
-    await page.getByLabel("Invoice number").fill(`E2E-INV-${stamp}-new`);
+    await page.getByLabel("Invoice number").fill(`E2E-INV-${stamp}`);
     await expect(page.getByRole("alert").filter({ hasText: "3rd demo" })).toBeVisible();
     await page.getByLabel("Demo service").selectOption(service.demoService.id);
     await page.getByLabel("Demo date").fill(new Date().toISOString().slice(0, 10));

@@ -2640,3 +2640,15 @@ button.board-refresh__now {
     animation: none;
   }
 }
+
+/* Demo history: earlier demos counted by the repeat-demo warning */
+.demo-history__match {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
