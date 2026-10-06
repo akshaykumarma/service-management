@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { freshNewTicketUrl } from "@/lib/tickets/new-ticket-url";
 import { todayInBusinessTimeZone } from "@/lib/tickets/received-date";
 import { formatDate } from "@/lib/format/date";
 import DemoTicketForm from "./demo-ticket-form";
@@ -38,7 +40,24 @@ interface CreatedTicket {
   ticketNumber: string;
 }
 
+/**
+ * Keyed on the `n` search param (lib/tickets/new-ticket-url.ts): clicking "New ticket"
+ * again — even while already here — starts a fresh, empty form.
+ */
 export default function NewTicketPage() {
+  return (
+    <Suspense>
+      <FreshNewTicketForm />
+    </Suspense>
+  );
+}
+
+function FreshNewTicketForm() {
+  const searchParams = useSearchParams();
+  return <NewTicketForm key={searchParams.get("n") ?? "initial"} />;
+}
+
+function NewTicketForm() {
   // 008-demo-board: New Ticket creates either kind; Service keeps today's form exactly.
   const [ticketType, setTicketType] = useState<"service" | "demo">("service");
   const [stores, setStores] = useState<Store[]>([]);
@@ -136,6 +155,11 @@ export default function NewTicketPage() {
         )}
         <p>
           <a href={`/tickets/${created.id}`}>View full ticket</a>
+        </p>
+        <p>
+          <a className="button-link" href={freshNewTicketUrl()}>
+            + Create another ticket
+          </a>
         </p>
       </main>
     );

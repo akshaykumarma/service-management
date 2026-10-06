@@ -28,7 +28,14 @@ test.describe("Intake to history", () => {
     await expect(page.getByRole("heading", { name: /ticket created: [a-z0-9]+-\d{4}-\d{5}/i })).toBeVisible();
     await expect(page.getByText(/no prior service history/i)).toBeVisible();
 
-    await page.getByRole("link", { name: "View full ticket" }).click();
+    // Clicking the sidebar's "New ticket" right after creating one opens an empty form again
+    // (it used to keep showing the "Ticket created" screen).
+    const ticketHref = await page.getByRole("link", { name: "View full ticket" }).getAttribute("href");
+    await page.getByRole("button", { name: "New ticket" }).first().click();
+    await expect(page.getByRole("heading", { name: /ticket created/i })).toHaveCount(0);
+    await expect(page.getByLabel("Customer name")).toHaveValue("");
+
+    await page.goto(ticketHref!);
     await expect(page).toHaveURL(/\/tickets\/[0-9a-f-]+$/);
     // The details page's heading is the customer's name; the ticket number sits above it.
     await expect(page.getByRole("heading", { name: "E2E Customer" })).toBeVisible();

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import { freshNewTicketUrl } from "@/lib/tickets/new-ticket-url";
 
 interface NavHeaderProps {
   name: string;
@@ -125,7 +126,7 @@ export default function NavHeader({ name, role }: NavHeaderProps) {
           <span className="app-sidebar__brand-tag">Service</span>
         </a>
         <div className="app-sidebar__new">
-          <button type="button" className="app-sidebar__new-btn" onClick={() => router.push("/tickets/new")}>
+          <button type="button" className="app-sidebar__new-btn" onClick={() => router.push(freshNewTicketUrl())}>
             <span aria-hidden="true">+</span> New ticket
           </button>
         </div>
@@ -151,7 +152,7 @@ export default function NavHeader({ name, role }: NavHeaderProps) {
         </button>
         <div id="app-header-menu" className={`app-topbar__menu${menuOpen ? " app-topbar__menu--open" : ""}`}>
           <div className="app-sidebar__new">
-            <button type="button" className="app-sidebar__new-btn" onClick={() => router.push("/tickets/new")}>
+            <button type="button" className="app-sidebar__new-btn" onClick={() => router.push(freshNewTicketUrl())}>
               <span aria-hidden="true">+</span> New ticket
             </button>
           </div>
