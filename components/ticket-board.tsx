@@ -14,6 +14,17 @@ import {
 } from "@dnd-kit/core";
 import { createBoardKeyboardCoordinateGetter } from "@/lib/board/keyboard-coordinates";
 import { formatDate } from "@/lib/format/date";
+import {
+  AUTO_REFRESH_STORAGE_KEY,
+  DEFAULT_AUTO_REFRESH,
+  REFRESH_INTERVALS,
+  intervalLabel,
+  isStale,
+  parseAutoRefreshPrefs,
+  shouldAutoRefresh,
+  type AutoRefreshPrefs,
+  type RefreshInterval,
+} from "@/lib/board/auto-refresh";
 import MultiSelectDropdown from "@/components/multi-select-dropdown";
 import SearchableSelect from "@/components/searchable-select";
 
@@ -222,6 +233,32 @@ export default function TicketBoard({ config }: { config: BoardConfig }) {
   const [listPageSize, setListPageSize] = useState(10);
   const listSearchInputRef = useRef<HTMLInputElement>(null);
 
+  // Auto-refresh: visible control, remembered per browser (lib/board/auto-refresh.ts).
+  const [autoRefresh, setAutoRefresh] = useState<AutoRefreshPrefs>(DEFAULT_AUTO_REFRESH);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshFailed, setRefreshFailed] = useState(false);
+  const inFlightRef = useRef(false);
+  const draggingRef = useRef(false);
+  const lastUpdatedRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    try {
+      setAutoRefresh(parseAutoRefreshPrefs(window.localStorage.getItem(AUTO_REFRESH_STORAGE_KEY)));
+    } catch {
+      // Storage blocked (private window etc.): keep the defaults.
+    }
+  }, []);
+
+  function updateAutoRefresh(next: AutoRefreshPrefs) {
+    setAutoRefresh(next);
+    try {
+      window.localStorage.setItem(AUTO_REFRESH_STORAGE_KEY, JSON.stringify(next));
+    } catch {
+      // Not remembered, but still applies for this visit.
+    }
+  }
+
   useEffect(() => {
     fetch("/api/stores")
       .then((res) => res.json())
@@ -292,10 +329,31 @@ export default function TicketBoard({ config }: { config: BoardConfig }) {
     if (machineModelFilter) params.set("machineModel", machineModelFilter);
     if (technicianFilter) params.set("technicianId", technicianFilter);
 
-    const res = await fetch(`${config.apiBase}?${params.toString()}`);
-    const body = await res.json();
-    setTickets(body.tickets);
-    setLoaded(true);
+    inFlightRef.current = true;
+    setRefreshing(true);
+    try {
+      const res = await fetch(`${config.apiBase}?${params.toString()}`, { cache: "no-store" });
+      if (res.status === 401) {
+        // Session expired while the board sat open: go log in again rather than show a
+        // board that silently stopped updating.
+        window.location.href = `/login?next=${encodeURIComponent(window.location.pathname)}`;
+        return;
+      }
+      if (!res.ok) throw new Error(`Board refresh failed: ${res.status}`);
+      const body = await res.json();
+      setTickets(body.tickets);
+      setLoaded(true);
+      setRefreshFailed(false);
+      const now = new Date();
+      lastUpdatedRef.current = now.getTime();
+      setLastUpdated(now);
+    } catch {
+      // Keep showing the last good board; the next tick retries.
+      setRefreshFailed(true);
+    } finally {
+      inFlightRef.current = false;
+      setRefreshing(false);
+    }
   }, [
     includeCancelled,
     selectedStoreIds,
@@ -314,11 +372,35 @@ export default function TicketBoard({ config }: { config: BoardConfig }) {
     load();
   }, [load]);
 
-  // FR-003/SC-002: at least every 30 seconds, no manual refresh required.
+  // FR-003/SC-002: refreshes on its own (every 30 seconds by default), no manual refresh
+  // required. Paused while the tab is hidden or a card is being dragged; catches up as
+  // soon as the tab is shown again.
   useEffect(() => {
-    const interval = setInterval(load, 30_000);
-    return () => clearInterval(interval);
-  }, [load]);
+    if (!autoRefresh.enabled) return;
+    const tick = () => {
+      if (
+        shouldAutoRefresh({
+          enabled: true,
+          hidden: document.visibilityState === "hidden",
+          dragging: draggingRef.current,
+          inFlight: inFlightRef.current,
+        })
+      ) {
+        load();
+      }
+    };
+    const interval = setInterval(tick, autoRefresh.seconds * 1000);
+    const onVisible = () => {
+      if (document.visibilityState === "visible" && isStale(lastUpdatedRef.current, Date.now(), autoRefresh.seconds)) tick();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onVisible);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onVisible);
+    };
+  }, [load, autoRefresh]);
 
   // Cmd/Ctrl+K focuses the List view's search box, matching the shortcut hinted in its
   // own placeholder text.
@@ -366,6 +448,7 @@ export default function TicketBoard({ config }: { config: BoardConfig }) {
   }
 
   function handleDragEnd(event: DragEndEvent) {
+    draggingRef.current = false;
     const { active, over } = event;
     if (!over) return;
     const ticket = tickets.find((t) => t.id === active.id);
@@ -473,13 +556,52 @@ export default function TicketBoard({ config }: { config: BoardConfig }) {
         )}
       </div>
 
-      <div className="board-view-toggle" role="group" aria-label="Board view">
-        <button type="button" aria-pressed={viewMode === "board"} onClick={() => setViewMode("board")}>
-          Board
-        </button>
-        <button type="button" aria-pressed={viewMode === "list"} onClick={() => setViewMode("list")}>
-          List
-        </button>
+      <div className="board-view-bar">
+        <div className="board-view-toggle" role="group" aria-label="Board view">
+          <button type="button" aria-pressed={viewMode === "board"} onClick={() => setViewMode("board")}>
+            Board
+          </button>
+          <button type="button" aria-pressed={viewMode === "list"} onClick={() => setViewMode("list")}>
+            List
+          </button>
+        </div>
+
+        <div className="board-refresh" role="group" aria-label="Auto-refresh">
+          <label className="board-refresh__toggle" htmlFor="autoRefreshEnabled">
+            <input
+              id="autoRefreshEnabled"
+              type="checkbox"
+              checked={autoRefresh.enabled}
+              onChange={(e) => updateAutoRefresh({ ...autoRefresh, enabled: e.target.checked })}
+            />
+            Auto-refresh
+          </label>
+          <select
+            aria-label="Auto-refresh interval"
+            value={autoRefresh.seconds}
+            disabled={!autoRefresh.enabled}
+            onChange={(e) => updateAutoRefresh({ ...autoRefresh, seconds: Number(e.target.value) as RefreshInterval })}
+          >
+            {REFRESH_INTERVALS.map((seconds) => (
+              <option key={seconds} value={seconds}>
+                every {intervalLabel(seconds)}
+              </option>
+            ))}
+          </select>
+          <span className={`board-refresh__status${refreshFailed ? " board-refresh__status--error" : ""}`} role="status">
+            {refreshFailed
+              ? "Couldn't refresh — will retry"
+              : lastUpdated
+                ? `Updated ${lastUpdated.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}`
+                : "Loading…"}
+          </span>
+          <button type="button" className="board-refresh__now" onClick={() => load()} disabled={refreshing}>
+            <span aria-hidden="true" className={refreshing ? "board-refresh__spin" : undefined}>
+              ↻
+            </span>{" "}
+            Refresh
+          </button>
+        </div>
       </div>
 
       {viewMode === "board" ? (
@@ -600,7 +722,17 @@ export default function TicketBoard({ config }: { config: BoardConfig }) {
 
           {loaded && tickets.length === 0 && <p>No tickets match the current view.</p>}
 
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragStart={() => {
+              draggingRef.current = true;
+            }}
+            onDragCancel={() => {
+              draggingRef.current = false;
+            }}
+            onDragEnd={handleDragEnd}
+          >
             <div aria-label="Kanban board" className="board" style={{ "--board-columns": visibleColumns.length } as React.CSSProperties}>
               {visibleColumns.map((column) => (
                 <BoardColumn

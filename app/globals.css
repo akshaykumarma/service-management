@@ -2580,3 +2580,63 @@ table.activity-table td:nth-child(5) {
 table.activity-table td:nth-child(4) {
   min-width: 320px;
 }
+
+/* Board auto-refresh control (Service Board and Demo Board) */
+.board-view-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+  margin-bottom: 16px;
+}
+.board-view-bar .board-view-toggle {
+  margin-bottom: 0;
+}
+.board-refresh {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+.board-refresh label.board-refresh__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-weight: 600;
+  color: var(--color-text-dim);
+  white-space: nowrap;
+}
+.board-refresh select {
+  width: auto;
+  padding: 4px 8px;
+  font-size: 0.85rem;
+}
+.board-refresh__status {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.board-refresh__status--error {
+  color: var(--color-warning);
+}
+button.board-refresh__now {
+  padding: 4px 12px;
+  font-size: 0.85rem;
+}
+.board-refresh__spin {
+  display: inline-block;
+  animation: board-refresh-spin 0.8s linear infinite;
+}
+@keyframes board-refresh-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .board-refresh__spin {
+    animation: none;
+  }
+}
