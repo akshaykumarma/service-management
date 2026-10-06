@@ -27,6 +27,9 @@ services:
       WHATSAPP_ACCESS_TOKEN: ${WHATSAPP_ACCESS_TOKEN}
       WHATSAPP_PHONE_NUMBER_ID: ${WHATSAPP_PHONE_NUMBER_ID}
       WHATSAPP_WEBHOOK_SECRET: ${WHATSAPP_WEBHOOK_SECRET}
+      # TEMPORARY testing aid: shows the delivery OTP on the ticket page. Must be turned
+      # off and the feature removed (owner to confirm) before production — see CLAUDE.md.
+      SHOW_OTP_ON_SCREEN: ${SHOW_OTP_ON_SCREEN:-true}
     depends_on:
       db:
         condition: service_healthy

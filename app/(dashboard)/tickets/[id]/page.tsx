@@ -312,12 +312,23 @@ export default function TicketDetailPage() {
     }
   }
 
+  // TEMPORARY test aid (lib/delivery/otp-display.ts): the code the server returned while
+  // SHOW_OTP_ON_SCREEN=true. To be removed before production, after confirming with the owner.
+  const [testOtp, setTestOtp] = useState<string | null>(null);
+  async function captureTestOtp(res: Response) {
+    if (res.headers.get("content-type")?.includes("application/json")) {
+      const body = await res.json().catch(() => null);
+      if (body?.testOtp) setTestOtp(body.testOtp);
+    }
+  }
+
   async function handleStartDelivery() {
     setDeliverError(null);
     setStartingDelivery(true);
     try {
       const res = await fetch(`/api/tickets/${params.id}/deliver`, { method: "POST" });
       if (res.ok) {
+        await captureTestOtp(res);
         await load();
         return;
       }
@@ -340,6 +351,7 @@ export default function TicketDetailPage() {
       });
       if (res.ok) {
         setOtpCode("");
+        setTestOtp(null);
         await load();
         return;
       }
@@ -365,6 +377,7 @@ export default function TicketDetailPage() {
     try {
       const res = await fetch(`/api/tickets/${params.id}/deliver/resend`, { method: "POST" });
       if (res.ok) {
+        await captureTestOtp(res);
         setResendMessage("A new code has been sent.");
         return;
       }
@@ -385,6 +398,7 @@ export default function TicketDetailPage() {
     try {
       const res = await fetch(`/api/tickets/${params.id}/deliver/reinitiate`, { method: "POST" });
       if (res.ok) {
+        await captureTestOtp(res);
         await load();
         return;
       }
@@ -410,6 +424,7 @@ export default function TicketDetailPage() {
         body: JSON.stringify({ correctedPhone }),
       });
       if (res.ok) {
+        await captureTestOtp(res);
         setCorrectedPhone("");
         await load();
         return;
@@ -896,6 +911,12 @@ export default function TicketDetailPage() {
                     </>
                   ) : (
                     <>
+                      {testOtp && (
+                        <p className="test-otp" role="status">
+                          <strong>Test mode — OTP: {testOtp}</strong>
+                          <span>Shown on screen for testing only; this will be removed before production.</span>
+                        </p>
+                      )}
                       <form onSubmit={handleVerifyCode} noValidate>
                         <div>
                           <label htmlFor="otpCode" className="required">

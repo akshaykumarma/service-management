@@ -11,3 +11,12 @@
   or a reviewer has requested changes.
 - Design previews: when the owner asks to "show it before implementing", share the
   preview and wait for approval before building it.
+
+## Before deploying to production (owner must confirm)
+
+- **Remove the on-screen OTP test aid.** `SHOW_OTP_ON_SCREEN` (lib/delivery/otp-display.ts,
+  the `testOtp` banner on the ticket page, docker-compose.yml, .env.example) shows the
+  delivery OTP to staff, which defeats OTP verification. It was added at the owner's request
+  for testing only. Before any production deployment, ask the owner to confirm, then remove
+  the feature entirely (not just the flag).
+

@@ -25,6 +25,8 @@ const NAV_DOT: Record<string, string> = {
   stores: "#f472b6",
   "machine-models": "#22d3ee",
   catalogue: "#a3e635",
+  activity: "#fb7185",
+  templates: "#c084fc",
 };
 
 function initials(name: string) {
@@ -94,6 +96,15 @@ export default function NavHeader({ name, role }: NavHeaderProps) {
             <NavLink href="/admin/stores" label="Stores" dotKey="stores" />
             <NavLink href="/admin/machine-models" label="Machine models" dotKey="machine-models" />
             <NavLink href="/admin/catalogue" label="Catalogue" dotKey="catalogue" />
+          </nav>
+        </>
+      )}
+      {role === "super_admin" && (
+        <>
+          <div className="app-sidebar__section-label">Super Admin</div>
+          <nav className="app-sidebar__nav" aria-label="Super Admin">
+            <NavLink href="/admin/activity" label="Login & activity" dotKey="activity" />
+            <NavLink href="/admin/templates" label="Message templates" dotKey="templates" />
           </nav>
         </>
       )}
