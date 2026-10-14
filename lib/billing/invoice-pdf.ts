@@ -66,7 +66,7 @@ interface InvoiceData {
   serialNumber: string | null;
   issueDescription: string;
   technicianName: string | null;
-  store: { name: string; address: string | null; whatsappNumber: string | null };
+  store: { name: string; address: string | null; phone: string | null; whatsappNumber: string | null };
   lineItems: { name: string; type: string; quantity: number; unitCost: number; lineTotal: number }[];
   taxRate: number;
   bill: { subtotal: number; taxAmount: number; total: number };
@@ -109,7 +109,12 @@ export async function renderInvoicePdf(ticketId: string): Promise<Buffer | null>
     serialNumber: ticket.serialNumber,
     issueDescription: ticket.issueDescription,
     technicianName: technicianRows[0]?.name ?? null,
-    store: { name: store?.name ?? BRAND_NAME, address: store?.address ?? null, whatsappNumber: store?.whatsappNumber ?? null },
+    store: {
+      name: store?.name ?? BRAND_NAME,
+      address: store?.address ?? null,
+      phone: store?.phone ?? null,
+      whatsappNumber: store?.whatsappNumber ?? null,
+    },
     lineItems: lineItems.map((li) => ({
       name: li.nameSnapshot,
       type: li.itemType === "part" ? "Part" : "Service",
@@ -144,7 +149,12 @@ function drawInvoice(doc: PDFKit.PDFDocument, data: InvoiceData): void {
     doc.moveTo(MARGIN, footerTop).lineTo(pageWidth - MARGIN, footerTop).lineWidth(1).strokeColor(COLOR.border).stroke();
     doc.fillColor(COLOR.primary).font("Body-Bold").fontSize(11)
       .text(`Thank you for choosing ${BRAND_NAME}!`, MARGIN, footerTop + 14, { width: contentWidth, align: "center" });
-    const contact = [data.store.name, data.store.address, data.store.whatsappNumber && `WhatsApp ${data.store.whatsappNumber}`]
+    const contact = [
+      data.store.name,
+      data.store.address,
+      data.store.phone && `Phone ${data.store.phone}`,
+      data.store.whatsappNumber && `WhatsApp ${data.store.whatsappNumber}`,
+    ]
       .filter(Boolean)
       .join("  ·  ");
     doc.fillColor(COLOR.muted).font("Body").fontSize(8.5)
@@ -197,7 +207,12 @@ function drawInvoice(doc: PDFKit.PDFDocument, data: InvoiceData): void {
     return lineY;
   };
   const billedToBottom = infoBlock(MARGIN, "Billed to", [data.customerName, data.customerPhone]);
-  const fromLines = [data.store.name, data.store.address, data.store.whatsappNumber && `WhatsApp: ${data.store.whatsappNumber}`];
+  const fromLines = [
+    data.store.name,
+    data.store.address,
+    data.store.phone && `Phone: ${data.store.phone}`,
+    data.store.whatsappNumber && `WhatsApp: ${data.store.whatsappNumber}`,
+  ];
   const fromBottom = infoBlock(MARGIN + colWidth + 24, "From", fromLines.filter((l): l is string => Boolean(l)));
   y = Math.max(billedToBottom, fromBottom) + 14;
 

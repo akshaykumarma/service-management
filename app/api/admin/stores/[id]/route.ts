@@ -36,6 +36,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       storeCode: result.store.storeCode,
       address: result.store.address,
       primaryContact: result.store.primaryContact,
+      phone: result.store.phone,
       whatsappNumber: result.store.whatsappNumber,
       taxRate: Number(result.store.taxRate),
       active: result.store.active,

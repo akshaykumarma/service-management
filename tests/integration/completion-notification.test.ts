@@ -11,6 +11,24 @@ import { notifications, stores } from "@/lib/db/schema";
 describe("Automatic completion notification (User Story 1)", () => {
   beforeEach(resetDb);
 
+  it("uses the store's phone number for {{store_phone}} when it has one (else its WhatsApp number)", async () => {
+    const store = await createStore({ phone: "080-2345 6789", whatsappNumber: "+911234567890" });
+    const admin = await createUser({ role: "admin", storeIds: [store.id], password: "Correct123!" });
+    const ticket = await createTicket({ storeId: store.id, createdBy: admin.id, status: "in_progress" });
+    const cookie = await loginAs(admin.email, "Correct123!");
+
+    await statusPATCH(
+      jsonRequest(`/api/tickets/${ticket.id}/status`, { method: "PATCH", cookie, body: { toStatus: "completed", comment: null } }),
+      { params: { id: ticket.id } },
+    );
+    const notif = await waitFor(async () => {
+      const rows = await db.select().from(notifications).where(eq(notifications.ticketId, ticket.id));
+      return rows[0];
+    }, { message: "expected a completion notification" });
+    expect(notif.renderedContent).toContain("080-2345 6789");
+    expect(notif.renderedContent).not.toContain("+911234567890");
+  });
+
   it("sends a WhatsApp completion message with bill/store details on the first Completed transition, and not again on a later re-Completed transition", async () => {
     const store = await createStore();
     await db.update(stores).set({ whatsappNumber: "+911234567890" }).where(eq(stores.id, store.id));

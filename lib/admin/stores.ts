@@ -5,6 +5,7 @@ import { stores } from "@/lib/db/schema";
 export type StoreError =
   | "invalid_tax_rate"
   | "invalid_whatsapp_number"
+  | "invalid_phone_number"
   | "invalid_store_code"
   | "store_code_already_registered"
   | "whatsapp_number_required_to_activate"
@@ -26,6 +27,19 @@ export function isValidWhatsAppNumber(value: unknown): value is string {
   return typeof value === "string" && /^\+[1-9]\d{7,14}$/.test(value);
 }
 
+/**
+ * The store's contact phone: a mobile or a landline, so more forgiving than the WhatsApp
+ * number — digits with optional spaces, dashes, brackets and a leading +, 10 to 15 digits
+ * in all (e.g. "+91 98765 43210", "080-2345 6789").
+ */
+export function isValidStorePhone(value: unknown): value is string {
+  if (typeof value !== "string") return false;
+  const trimmed = value.trim();
+  if (!/^\+?[\d\s()-]+$/.test(trimmed)) return false;
+  const digits = trimmed.replace(/\D/g, "").length;
+  return digits >= 10 && digits <= 15;
+}
+
 export function isValidTaxRate(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= 100;
 }
@@ -35,10 +49,12 @@ export async function createStore(input: {
   storeCode: string;
   address: string;
   primaryContact: string;
+  phone: string;
   whatsappNumber: string;
   taxRate: number;
 }): Promise<{ error: StoreError } | { store: typeof stores.$inferSelect }> {
   if (!isValidTaxRate(input.taxRate)) return { error: "invalid_tax_rate" };
+  if (!isValidStorePhone(input.phone)) return { error: "invalid_phone_number" };
   if (!isValidWhatsAppNumber(input.whatsappNumber)) return { error: "invalid_whatsapp_number" };
 
   const normalizedStoreCode = typeof input.storeCode === "string" ? input.storeCode.toUpperCase() : input.storeCode;
@@ -54,6 +70,7 @@ export async function createStore(input: {
       storeCode: normalizedStoreCode,
       address: input.address,
       primaryContact: input.primaryContact,
+      phone: input.phone.trim(),
       whatsappNumber: input.whatsappNumber,
       taxRate: input.taxRate.toFixed(2),
       // contracts/admin-console-api.md + quickstart.md Scenario 2: always created
@@ -72,6 +89,7 @@ export async function updateStore(
     name?: string;
     address?: string;
     primaryContact?: string;
+    phone?: string;
     whatsappNumber?: string;
     taxRate?: number;
     active?: boolean;
@@ -83,6 +101,10 @@ export async function updateStore(
 
   if (patch.taxRate !== undefined && !isValidTaxRate(patch.taxRate)) {
     return { error: "invalid_tax_rate" };
+  }
+  // Once given it can be changed but not cleared.
+  if (patch.phone !== undefined && !isValidStorePhone(patch.phone)) {
+    return { error: "invalid_phone_number" };
   }
   if (patch.whatsappNumber !== undefined && !isValidWhatsAppNumber(patch.whatsappNumber)) {
     return { error: "invalid_whatsapp_number" };
@@ -103,6 +125,7 @@ export async function updateStore(
       ...(patch.name !== undefined ? { name: patch.name } : {}),
       ...(patch.address !== undefined ? { address: patch.address } : {}),
       ...(patch.primaryContact !== undefined ? { primaryContact: patch.primaryContact } : {}),
+      ...(patch.phone !== undefined ? { phone: patch.phone.trim() } : {}),
       ...(patch.whatsappNumber !== undefined ? { whatsappNumber: patch.whatsappNumber } : {}),
       ...(patch.taxRate !== undefined ? { taxRate: patch.taxRate.toFixed(2) } : {}),
       ...(patch.active !== undefined ? { active: patch.active } : {}),

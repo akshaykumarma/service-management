@@ -51,6 +51,10 @@ export const stores = pgTable("stores", {
   storeCode: text("store_code").notNull(),
   taxRate: numeric("tax_rate", { precision: 5, scale: 2 }).notNull().default("0"),
   whatsappNumber: text("whatsapp_number"),
+  // The store's contact phone (post-v1 product feedback) — shown on invoices and used as
+  // {{store_phone}} in customer messages. Mandatory for every new store (lib/admin/stores.ts);
+  // nullable here only because stores created before it existed have none yet.
+  phone: text("phone"),
   address: text("address"),
   primaryContact: text("primary_contact"),
   // Contract/quickstart.md's demonstrated behavior (POST always creates active:false,
