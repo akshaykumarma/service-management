@@ -83,7 +83,7 @@ From the store management screen, the Super Admin assigns which Admin user(s) ar
 - **FR-003**: System MUST exclude deactivated machine models from the intake selection dropdown while leaving existing ticket references to them unaffected.
 - **FR-004**: System MUST support bulk-importing machine models from a CSV file, applying valid rows and reporting invalid/duplicate rows with the reason they failed.
 - **FR-005**: System MUST allow only the Super Admin to create, edit, and deactivate stores.
-- **FR-006**: System MUST capture, for each store, a name, address, primary contact, WhatsApp number, tax rate, and active/inactive state.
+- **FR-006**: System MUST capture, for each store, a name, address, primary contact, phone number *(added post-v1: mandatory on create, shown on invoices and as `{{store_phone}}`)*, WhatsApp number, tax rate, and active/inactive state.
 - **FR-007**: System MUST validate that a store has a usable WhatsApp number before it can be made active.
 - **FR-008**: System MUST use a store's currently configured tax rate for any bill calculated at that store going forward, per `004-parts-services-catalogue`.
 - **FR-009**: System MUST exclude a deactivated store from selection when creating new tickets, while preserving access to its historical tickets per each role's normal visibility.

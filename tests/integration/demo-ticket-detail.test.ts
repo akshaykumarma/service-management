@@ -35,17 +35,19 @@ describe("demo ticket page API (008 US5)", () => {
 
   it("edits details (including the demo service snapshot) and records the edit in Activity", async () => {
     const { cookie, ticket, params } = await setup();
+    // Relative to today: the ticket was received today, and a demo date can't be earlier.
+    const demoDate = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
     const newService = await createDemoService({ name: "Store demo", unitCost: "100.00" });
     const res = await detailPATCH(
       jsonRequest(`/api/demo-tickets/${ticket.id}`, {
         method: "PATCH",
         cookie,
-        body: { invoiceNumber: "INV-10", demoServiceId: newService.id, demoDate: "2026-10-12" },
+        body: { invoiceNumber: "INV-10", demoServiceId: newService.id, demoDate },
       }),
       params,
     );
     expect(res.status).toBe(200);
-    expect((await res.json()).ticket).toMatchObject({ invoiceNumber: "INV-10", demoServiceName: "Store demo", demoServicePrice: "100.00", demoDate: "2026-10-12" });
+    expect((await res.json()).ticket).toMatchObject({ invoiceNumber: "INV-10", demoServiceName: "Store demo", demoServicePrice: "100.00", demoDate });
 
     const activity = await (await activityGET(jsonRequest(`/api/demo-tickets/${ticket.id}/activity`, { cookie }), params)).json();
     const edit = activity.entries.find((e: { source: string }) => e.source === "edit");

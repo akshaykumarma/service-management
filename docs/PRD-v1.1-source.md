@@ -241,7 +241,8 @@ Current pain points in the target stores include:
 - CRUD: Model Name, Manufacturer, Category (e.g. Washing Machine, Refrigerator, AC).
 - Bulk import via CSV.
 #### 6.9.4 Stores Management
-- CRUD: Store Name, Address, Primary Contact, WhatsApp Number, Tax Rate (%), Active/Inactive.
+- CRUD: Store Name, Store Code, Address, Primary Contact, Phone Number, WhatsApp Number, Tax Rate (%), Active/Inactive.
+- *(v1.2)* **Phone Number** is mandatory when a store is created (mobile or landline, 10–15 digits; spaces, dashes and brackets allowed). It can be changed later but not cleared, and is shown on invoices and used as `{{store_phone}}` in customer messages (stores created before it existed fall back to their WhatsApp number until one is entered).
 - Assign Admin users to stores from this screen.
 #### 6.9.5 Notification Configuration
 - Edit WhatsApp message templates (completion + OTP).

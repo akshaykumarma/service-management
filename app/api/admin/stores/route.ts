@@ -5,7 +5,7 @@ import { requireAdminOrAbove, AccessDeniedError } from "@/lib/auth/rbac";
 import { createStore, listStores } from "@/lib/admin/stores";
 import type { stores } from "@/lib/db/schema";
 
-const REQUIRED_FIELDS = ["name", "storeCode", "address", "primaryContact", "whatsappNumber"] as const;
+const REQUIRED_FIELDS = ["name", "storeCode", "address", "primaryContact", "phone", "whatsappNumber"] as const;
 
 function serializeStore(row: typeof stores.$inferSelect) {
   return {
@@ -14,6 +14,7 @@ function serializeStore(row: typeof stores.$inferSelect) {
     storeCode: row.storeCode,
     address: row.address,
     primaryContact: row.primaryContact,
+    phone: row.phone,
     whatsappNumber: row.whatsappNumber,
     taxRate: Number(row.taxRate),
     active: row.active,
@@ -68,6 +69,7 @@ export async function POST(request: NextRequest) {
     storeCode: payload.storeCode,
     address: payload.address,
     primaryContact: payload.primaryContact,
+    phone: payload.phone,
     whatsappNumber: payload.whatsappNumber,
     // Optional (per direct product feedback): tax is now set and edited per-ticket
     // (tickets.tax_rate, defaulting to 0%), not fixed at the store level, so this is no

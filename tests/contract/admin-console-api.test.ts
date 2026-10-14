@@ -155,6 +155,7 @@ describe("POST/PATCH /api/admin/stores", () => {
           storeCode: "KOR",
           address: "123 Main St",
           primaryContact: "Ravi",
+          phone: "+91 98765 43210",
           whatsappNumber: "+919876543210",
           taxRate: 18,
         },
@@ -176,6 +177,7 @@ describe("POST/PATCH /api/admin/stores", () => {
           storeCode: "NTS",
           address: "123 Main St",
           primaryContact: "Ravi",
+          phone: "+91 98765 43210",
           whatsappNumber: "+919876543210",
         },
       }),
@@ -191,11 +193,45 @@ describe("POST/PATCH /api/admin/stores", () => {
       jsonRequest("/api/admin/stores", {
         method: "POST",
         cookie,
-        body: { name: "X", address: "A", primaryContact: "B", whatsappNumber: "+919876543210", taxRate: 18 },
+        body: { name: "X", address: "A", primaryContact: "B", phone: "080-2345 6789", whatsappNumber: "+919876543210", taxRate: 18 },
       }),
     );
     expect(res.status).toBe(400);
     expect((await res.json()).error.field).toBe("storeCode");
+  });
+
+  it("requires a valid store phone number on create, returns it, and lets it be changed but not cleared", async () => {
+    const cookie = await superAdminCookie();
+    const base = { name: "X", storeCode: "PHN", address: "A", primaryContact: "B", whatsappNumber: "+919876543210" };
+    const post = (body: Record<string, unknown>) =>
+      storesPOST(jsonRequest("/api/admin/stores", { method: "POST", cookie, body }));
+
+    const missing = await post(base);
+    expect(missing.status).toBe(400);
+    expect((await missing.json()).error).toEqual({ code: "missing_required_field", field: "phone" });
+
+    for (const phone of ["12345", "98765 4321a", "+91 98765 43210 99999 0"]) {
+      const res = await post({ ...base, phone });
+      expect(res.status).toBe(400);
+      expect((await res.json()).error.code).toBe("invalid_phone_number");
+    }
+
+    const created = await post({ ...base, phone: "  080-2345 6789 " });
+    expect(created.status).toBe(201);
+    const { store } = await created.json();
+    expect(store.phone).toBe("080-2345 6789");
+
+    const listed = (await (await storesGET(jsonRequest("/api/admin/stores", { cookie }))).json()).stores;
+    expect(listed.find((s: { id: string }) => s.id === store.id).phone).toBe("080-2345 6789");
+
+    const patch = (body: Record<string, unknown>) =>
+      storePATCH(jsonRequest(`/api/admin/stores/${store.id}`, { method: "PATCH", cookie, body }), { params: { id: store.id } });
+    const changed = await patch({ phone: "+91 98450 12345" });
+    expect(changed.status).toBe(200);
+    expect((await changed.json()).store.phone).toBe("+91 98450 12345");
+    const cleared = await patch({ phone: "" });
+    expect(cleared.status).toBe(400);
+    expect((await cleared.json()).error.code).toBe("invalid_phone_number");
   });
 
   it("400s invalid_store_code for anything but exactly 3 letters", async () => {
@@ -204,7 +240,7 @@ describe("POST/PATCH /api/admin/stores", () => {
       jsonRequest("/api/admin/stores", {
         method: "POST",
         cookie,
-        body: { name: "X", storeCode: "AB1", address: "A", primaryContact: "B", whatsappNumber: "+919876543210", taxRate: 18 },
+        body: { name: "X", storeCode: "AB1", address: "A", primaryContact: "B", phone: "080-2345 6789", whatsappNumber: "+919876543210", taxRate: 18 },
       }),
     );
     expect(res.status).toBe(400);
@@ -217,14 +253,14 @@ describe("POST/PATCH /api/admin/stores", () => {
       jsonRequest("/api/admin/stores", {
         method: "POST",
         cookie,
-        body: { name: "X", storeCode: "ABC", address: "A", primaryContact: "B", whatsappNumber: "+919876543210", taxRate: 18 },
+        body: { name: "X", storeCode: "ABC", address: "A", primaryContact: "B", phone: "080-2345 6789", whatsappNumber: "+919876543210", taxRate: 18 },
       }),
     );
     const res = await storesPOST(
       jsonRequest("/api/admin/stores", {
         method: "POST",
         cookie,
-        body: { name: "Y", storeCode: "abc", address: "A", primaryContact: "B", whatsappNumber: "+919876543210", taxRate: 18 },
+        body: { name: "Y", storeCode: "abc", address: "A", primaryContact: "B", phone: "080-2345 6789", whatsappNumber: "+919876543210", taxRate: 18 },
       }),
     );
     expect(res.status).toBe(409);
@@ -237,7 +273,7 @@ describe("POST/PATCH /api/admin/stores", () => {
       jsonRequest("/api/admin/stores", {
         method: "POST",
         cookie,
-        body: { name: "X", storeCode: "ABC", address: "A", primaryContact: "B", whatsappNumber: "+919876543210", taxRate: 150 },
+        body: { name: "X", storeCode: "ABC", address: "A", primaryContact: "B", phone: "080-2345 6789", whatsappNumber: "+919876543210", taxRate: 150 },
       }),
     );
     expect(res.status).toBe(400);
@@ -250,7 +286,7 @@ describe("POST/PATCH /api/admin/stores", () => {
       jsonRequest("/api/admin/stores", {
         method: "POST",
         cookie,
-        body: { name: "X", storeCode: "ABC", address: "A", primaryContact: "B", whatsappNumber: "+919876543210", taxRate: 18 },
+        body: { name: "X", storeCode: "ABC", address: "A", primaryContact: "B", phone: "080-2345 6789", whatsappNumber: "+919876543210", taxRate: 18 },
       }),
     );
     const { store } = await createRes.json();
@@ -269,7 +305,7 @@ describe("POST/PATCH /api/admin/stores", () => {
       jsonRequest("/api/admin/stores", {
         method: "POST",
         cookie,
-        body: { name: "Y", storeCode: "WYE", address: "A", primaryContact: "B", whatsappNumber: "not-a-number", taxRate: 18 },
+        body: { name: "Y", storeCode: "WYE", address: "A", primaryContact: "B", phone: "080-2345 6789", whatsappNumber: "not-a-number", taxRate: 18 },
       }),
     );
     expect(res.status).toBe(400);
@@ -309,7 +345,7 @@ describe("POST/PATCH /api/admin/stores", () => {
       jsonRequest("/api/admin/stores", {
         method: "POST",
         cookie,
-        body: { name: "X", address: "A", primaryContact: "B", whatsappNumber: "+919876543210", taxRate: 18 },
+        body: { name: "X", address: "A", primaryContact: "B", phone: "080-2345 6789", whatsappNumber: "+919876543210", taxRate: 18 },
       }),
     );
     expect(res.status).toBe(403);
@@ -328,6 +364,7 @@ describe("POST/PATCH /api/admin/stores", () => {
           storeCode: "ADM",
           address: "A",
           primaryContact: "B",
+          phone: "+91 98765 43210",
           whatsappNumber: "+919876543210",
           taxRate: 18,
         },

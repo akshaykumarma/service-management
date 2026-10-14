@@ -9,6 +9,7 @@ interface Store {
   storeCode: string;
   address: string | null;
   primaryContact: string | null;
+  phone: string | null;
   whatsappNumber: string | null;
   taxRate: number;
   active: boolean;
@@ -25,6 +26,7 @@ interface UserRow {
 const STORE_ERROR_MESSAGES: Record<string, string> = {
   missing_required_field: "All fields are required.",
   invalid_tax_rate: "Tax rate must be between 0 and 100.",
+  invalid_phone_number: "Enter a valid phone number (10 to 15 digits), e.g. +91 98765 43210 or 080-2345 6789.",
   invalid_whatsapp_number: "WhatsApp number must be in international format, e.g. +919876543210.",
   whatsapp_number_required_to_activate: "A valid WhatsApp number is required before this store can be activated.",
   invalid_store_code: "Store code must be exactly 3 letters.",
@@ -46,6 +48,7 @@ export default function StoresPageClient({ callerRole }: { callerRole: "super_ad
   const [formStoreCode, setFormStoreCode] = useState("");
   const [formAddress, setFormAddress] = useState("");
   const [formPrimaryContact, setFormPrimaryContact] = useState("");
+  const [formPhone, setFormPhone] = useState("");
   const [formWhatsapp, setFormWhatsapp] = useState("");
   const [formTaxRate, setFormTaxRate] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
@@ -67,6 +70,7 @@ export default function StoresPageClient({ callerRole }: { callerRole: "super_ad
     setFormStoreCode("");
     setFormAddress("");
     setFormPrimaryContact("");
+    setFormPhone("");
     setFormWhatsapp("");
     setFormTaxRate("");
     setFormError(null);
@@ -79,6 +83,7 @@ export default function StoresPageClient({ callerRole }: { callerRole: "super_ad
     setFormStoreCode(store.storeCode);
     setFormAddress(store.address ?? "");
     setFormPrimaryContact(store.primaryContact ?? "");
+    setFormPhone(store.phone ?? "");
     setFormWhatsapp(store.whatsappNumber ?? "");
     setFormTaxRate(String(store.taxRate ?? ""));
     setFormError(null);
@@ -94,6 +99,8 @@ export default function StoresPageClient({ callerRole }: { callerRole: "super_ad
       address: formAddress,
       primaryContact: formPrimaryContact,
       whatsappNumber: formWhatsapp,
+      // Older stores have no phone yet: leave it unset until someone fills it in.
+      ...(formPhone.trim() || !editingStore ? { phone: formPhone } : {}),
       taxRate: Number(formTaxRate),
     };
     // Immutable once set — the API ignores storeCode on PATCH anyway, but this keeps the
@@ -159,7 +166,8 @@ export default function StoresPageClient({ callerRole }: { callerRole: "super_ad
       !q ||
       store.name.toLowerCase().includes(q) ||
       (store.address ?? "").toLowerCase().includes(q) ||
-      (store.primaryContact ?? "").toLowerCase().includes(q);
+      (store.primaryContact ?? "").toLowerCase().includes(q) ||
+      (store.phone ?? "").toLowerCase().includes(q);
     const matchesStatus = !statusFilter || (statusFilter === "active" ? store.active : !store.active);
     return matchesSearch && matchesStatus;
   });
@@ -187,7 +195,7 @@ export default function StoresPageClient({ callerRole }: { callerRole: "super_ad
             <label htmlFor="storeSearch">Search stores</label>
             <input
               id="storeSearch"
-              placeholder="Name, address, or contact"
+              placeholder="Name, address, contact or phone"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -212,6 +220,7 @@ export default function StoresPageClient({ callerRole }: { callerRole: "super_ad
                 <th scope="col">Store code</th>
                 <th scope="col">Address</th>
                 <th scope="col">Primary contact</th>
+                <th scope="col">Phone number</th>
                 <th scope="col">WhatsApp number</th>
                 <th scope="col">Tax rate</th>
                 <th scope="col">Status</th>
@@ -228,6 +237,7 @@ export default function StoresPageClient({ callerRole }: { callerRole: "super_ad
                     <td>{store.storeCode}</td>
                     <td>{store.address}</td>
                     <td>{store.primaryContact}</td>
+                    <td>{store.phone ?? "—"}</td>
                     <td>{store.whatsappNumber ?? "—"}</td>
                     <td>{store.taxRate}%</td>
                     <td>{store.active ? "Active" : "Inactive"}</td>
@@ -332,6 +342,20 @@ export default function StoresPageClient({ callerRole }: { callerRole: "super_ad
                 value={formPrimaryContact}
                 onChange={(e) => setFormPrimaryContact(e.target.value)}
               />
+            </div>
+            <div>
+              <label htmlFor="storePhone" className={editingStore && !editingStore.phone ? undefined : "required"}>
+                Phone number
+              </label>
+              <input
+                id="storePhone"
+                type="tel"
+                required={!editingStore || !!editingStore.phone}
+                placeholder="+91 98765 43210"
+                value={formPhone}
+                onChange={(e) => setFormPhone(e.target.value)}
+              />
+              <small>The store&apos;s contact number, shown on invoices and customer messages. Mobile or landline.</small>
             </div>
             <div>
               <label htmlFor="storeWhatsapp" className="required">

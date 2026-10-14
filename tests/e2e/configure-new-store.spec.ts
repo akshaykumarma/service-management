@@ -24,6 +24,7 @@ test.describe("Configure a new store end-to-end (007-admin-console, US2)", () =>
     await page.getByLabel("Store code").fill(randomStoreCode());
     await page.getByLabel("Address").fill("42 E2E Street");
     await page.getByLabel("Primary contact").fill("E2E Contact");
+    await page.getByLabel("Phone number").fill("080-2345 6789");
     await page.getByLabel("WhatsApp number").fill("+919876500000");
     await page.getByLabel("Tax rate (%)").fill("18");
     await page.getByRole("button", { name: "Create store" }).click();

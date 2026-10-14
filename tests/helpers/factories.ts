@@ -13,6 +13,7 @@ export async function createStore(
         storeCode?: string;
         active?: boolean;
         whatsappNumber?: string;
+        phone?: string | null;
         address?: string;
         primaryContact?: string;
         taxRate?: string;
@@ -34,6 +35,7 @@ export async function createStore(
       // those gates existing at all — this keeps every one of them passing unchanged.
       active: opts.active ?? true,
       whatsappNumber: opts.whatsappNumber ?? "+910000000000",
+      phone: opts.phone ?? null,
       address: opts.address ?? "123 Test Street",
       primaryContact: opts.primaryContact ?? "Test Contact",
       ...(opts.taxRate !== undefined ? { taxRate: opts.taxRate } : {}),

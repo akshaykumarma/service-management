@@ -26,6 +26,7 @@ describe("Store setup flowing into billing (User Story 2)", () => {
           storeCode: "KOR",
           address: "1 Main St",
           primaryContact: "Ravi",
+          phone: "+91 98765 43210",
           whatsappNumber: "+919876543210",
           taxRate: 18,
         },
