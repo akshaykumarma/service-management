@@ -17,6 +17,10 @@ export const ALLOWED_PLACEHOLDERS = [
   "store_name",
   "store_phone",
   "otp_code",
+  // Demo tickets' customer messages.
+  "demo_service",
+  "demo_date",
+  "demo_amount",
 ] as const;
 
 export type PlaceholderToken = (typeof ALLOWED_PLACEHOLDERS)[number];
@@ -40,10 +44,21 @@ export function renderTemplate(body: string, values: Partial<Record<PlaceholderT
   return body.replace(/\{\{(\w+)\}\}/g, (match, token) => values[token as PlaceholderToken] ?? match);
 }
 
-export const DEFAULT_TEMPLATE_BODY: Record<"completion" | "otp", string> = {
+export const DEFAULT_TEMPLATE_BODY: Record<TemplateType, string> = {
+  ticket_created:
+    "Hi {{customer_name}}, thank you for choosing {{store_name}}. We have received your {{machine_model}} for service. " +
+    "Your ticket number is {{ticket_id}} — please keep it for reference. We will message you once it is ready. " +
+    "Questions? Call {{store_phone}}.",
   completion:
-    "Hi {{customer_name}}, your {{machine_model}} (Ticket {{ticket_id}}) is ready for pickup! " +
-    "Total bill: {{bill_total}}. - {{store_name}} ({{store_phone}})",
+    "Hi {{customer_name}}, good news! The service on your {{machine_model}} (Ticket {{ticket_id}}) is complete and " +
+    "it is ready for pickup at {{store_name}}. Total amount to pay: ₹{{bill_total}}. Questions? Call {{store_phone}}.",
+  demo_created:
+    "Hi {{customer_name}}, thank you for choosing {{store_name}}. Your {{demo_service}} demo for your {{machine_model}} " +
+    "is booked for {{demo_date}}. Your ticket number is {{ticket_id}} — please keep it for reference. " +
+    "Questions? Call {{store_phone}}.",
+  demo_completed:
+    "Hi {{customer_name}}, your {{demo_service}} demo for your {{machine_model}} (Ticket {{ticket_id}}) has been " +
+    "completed. Total amount: ₹{{demo_amount}}. Thank you for choosing {{store_name}}! Questions? Call {{store_phone}}.",
   otp: "Your delivery verification code for Ticket {{ticket_id}} is {{otp_code}}. Valid for 10 minutes. Do not share this code.",
 };
 
@@ -52,13 +67,21 @@ export const SAMPLE_PLACEHOLDER_VALUES: Record<PlaceholderToken, string> = {
   customer_name: "Sample Customer",
   ticket_id: "SVC-2026-00000",
   machine_model: "Sample Model X1",
-  bill_total: "0.00",
+  bill_total: "1,180.00",
   store_name: "Sample Store",
   store_phone: "+910000000000",
   otp_code: "000000",
+  demo_service: "Home demo",
+  demo_date: "20/10/2026",
+  demo_amount: "250.00",
 };
 
-export type TemplateType = "completion" | "otp";
+export const TEMPLATE_TYPES = ["ticket_created", "completion", "otp", "demo_created", "demo_completed"] as const;
+export type TemplateType = (typeof TEMPLATE_TYPES)[number];
+
+export function isTemplateType(value: string): value is TemplateType {
+  return (TEMPLATE_TYPES as readonly string[]).includes(value);
+}
 
 async function latestTemplateRow(type: TemplateType) {
   const [row] = await db

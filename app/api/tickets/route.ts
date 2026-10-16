@@ -8,6 +8,7 @@ import { assertAccess, AccessDeniedError } from "@/lib/auth/rbac";
 import { resolveCustomer } from "@/lib/tickets/customer";
 import { nextTicketNumber } from "@/lib/tickets/ticket-number";
 import { lookupHistory } from "@/lib/tickets/history";
+import { triggerTicketCreatedNotification } from "@/lib/notifications/send-ticket-created";
 import { resolveReceivedAt } from "@/lib/tickets/received-date";
 import { isCurrentBusinessMonth } from "@/lib/format/business-time";
 import { MAX_PHOTOS_PER_TICKET, verifyUploadedObject } from "@/lib/tickets/photos";
@@ -120,6 +121,15 @@ export async function POST(request: NextRequest) {
 
     return ticket;
   });
+
+  // The ticket is saved; a problem queueing the customer's WhatsApp acknowledgement must
+  // not turn that into a failed request (a failed send itself is recorded and alerted on
+  // like any other notification).
+  try {
+    await triggerTicketCreatedNotification(created);
+  } catch (err) {
+    console.error("Could not queue the ticket-created WhatsApp message", err);
+  }
 
   const history = await lookupHistory(caller, { machineModel: created.machineModel, serialNumber: created.serialNumber });
 

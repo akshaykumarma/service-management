@@ -12,6 +12,12 @@ const STATUS_LABELS: Record<string, string> = {
   cancelled: "Cancelled",
 };
 const statusLabel = (status: string) => STATUS_LABELS[status] ?? status;
+const NOTIFICATION_LABELS: Record<string, string> = {
+  ticket_created: "Ticket created",
+  completion: "Completion",
+  otp: "OTP",
+  invoice: "Invoice",
+};
 const inr = (value: string | number) =>
   `₹${Number(value).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
@@ -78,7 +84,7 @@ export async function getConsolidatedAuditTrail(ticketId: string): Promise<Audit
       source: "notification",
       actor: null,
       timestamp: row.sentAt,
-      description: `${row.type === "completion" ? "Completion" : "OTP"} WhatsApp notification ${row.status} to ${row.recipientPhone}`,
+      description: `${NOTIFICATION_LABELS[row.type] ?? row.type} WhatsApp notification ${row.status} to ${row.recipientPhone}`,
     });
   }
 

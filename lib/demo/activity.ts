@@ -65,13 +65,18 @@ export async function getDemoActivity(demoTicketId: string): Promise<DemoActivit
     }
   }
 
+  const NOTIFICATION_LABELS: Record<string, string> = {
+    demo_assignment: "WhatsApp to technician",
+    demo_created: "WhatsApp to customer: demo booked",
+    demo_completed: "WhatsApp to customer: demo completed",
+  };
   const sent = await db.select().from(notifications).where(eq(notifications.demoTicketId, demoTicketId));
   for (const n of sent) {
     entries.push({
       source: "notification",
       actor: null,
       timestamp: n.sentAt,
-      description: `WhatsApp to technician (${n.recipientPhone}) ${n.status === "failed" ? "failed" : "sent"}`,
+      description: `${NOTIFICATION_LABELS[n.type] ?? "WhatsApp"} (${n.recipientPhone}) ${n.status === "failed" ? "failed" : "sent"}`,
     });
   }
 

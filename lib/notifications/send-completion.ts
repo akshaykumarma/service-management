@@ -39,7 +39,9 @@ export async function triggerCompletionNotification(ticketId: string): Promise<v
     customer_name: ticket.customerName,
     ticket_id: ticket.ticketNumber,
     machine_model: ticket.machineModel,
-    bill_total: bill.total.toFixed(2),
+    // The full amount the customer pays at pickup (parts + services + tax), Indian
+    // digit grouping: "1,180.00".
+    bill_total: bill.total.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
     store_name: store?.name ?? "",
     // The store's own phone; older stores without one fall back to their WhatsApp number.
     store_phone: store?.phone ?? store?.whatsappNumber ?? "",

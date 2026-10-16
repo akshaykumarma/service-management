@@ -298,7 +298,18 @@ export const ticketLineItems = pgTable("ticket_line_items", {
 
 // "invoice" (post-005 product feedback): the WhatsApp message sent at delivery with a
 // link to the invoice PDF — see lib/notifications/send-invoice.ts.
-export const notificationTypeEnum = pgEnum("notification_type", ["completion", "otp", "invoice", "demo_assignment"]);
+// "ticket_created" (post-v1 product feedback): the customer's acknowledgement with their
+// ticket number, sent when a service ticket is created (lib/notifications/send-ticket-created.ts).
+export const notificationTypeEnum = pgEnum("notification_type", [
+  "completion",
+  "otp",
+  "invoice",
+  "demo_assignment",
+  "ticket_created",
+  // Demo tickets' customer messages: on creation, and the first time the demo is completed.
+  "demo_created",
+  "demo_completed",
+]);
 export const notificationStatusEnum = pgEnum("notification_status", ["sent", "delivered", "failed"]);
 
 export const notifications = pgTable("notifications", {
@@ -351,7 +362,13 @@ export const deliveryOverrides = pgTable(
   }),
 );
 
-export const templateTypeEnum = pgEnum("template_type", ["completion", "otp"]);
+export const templateTypeEnum = pgEnum("template_type", [
+  "completion",
+  "otp",
+  "ticket_created",
+  "demo_created",
+  "demo_completed",
+]);
 export const templateApprovalStatusEnum = pgEnum("template_approval_status", ["approved", "pending"]);
 
 export const messageTemplates = pgTable("message_templates", {

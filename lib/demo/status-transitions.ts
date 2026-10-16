@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { demoTickets, demoTicketStatusHistory } from "@/lib/db/schema";
 import type { StaffRole } from "@/lib/tickets/status-transitions";
+import { triggerDemoCompletedNotification } from "@/lib/notifications/send-demo-customer";
 
 export type DemoStatus = "new" | "assigned" | "in_progress" | "completed" | "cancelled";
 export type DemoTransitionError = "invalid_transition" | "comment_required" | "role_not_permitted" | "technician_required";
@@ -60,7 +61,7 @@ export async function applyDemoStatusTransition(input: {
   actorId: string;
 }) {
   const { ticket, toStatus, comment, actorId } = input;
-  return db.transaction(async (tx) => {
+  const updated = await db.transaction(async (tx) => {
     const [updated] = await tx
       .update(demoTickets)
       .set({ status: toStatus, updatedAt: new Date() })
@@ -75,4 +76,14 @@ export async function applyDemoStatusTransition(input: {
     });
     return updated;
   });
+
+  if (toStatus === "completed") {
+    // The status change is saved; a problem queueing the customer's message mustn't undo it.
+    try {
+      await triggerDemoCompletedNotification(updated);
+    } catch (err) {
+      console.error("Could not queue the demo-completed WhatsApp message", err);
+    }
+  }
+  return updated;
 }

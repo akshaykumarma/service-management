@@ -2,11 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuthenticatedSession } from "@/lib/auth/require-session";
 import { requireSameOrigin } from "@/lib/auth/csrf";
 import { AccessDeniedError, requireSuperAdmin } from "@/lib/auth/rbac";
-import { findUnsupportedPlaceholder, getTemplateEditorState, submitTemplateEdit, type TemplateType } from "@/lib/whatsapp/templates";
-
-function isTemplateType(value: string): value is TemplateType {
-  return value === "completion" || value === "otp";
-}
+import { findUnsupportedPlaceholder, getTemplateEditorState, submitTemplateEdit, isTemplateType } from "@/lib/whatsapp/templates";
 
 export async function PATCH(request: NextRequest, { params }: { params: { type: string } }) {
   const csrfResponse = requireSameOrigin(request);
