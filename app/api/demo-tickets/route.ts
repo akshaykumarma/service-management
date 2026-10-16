@@ -4,6 +4,7 @@ import { requireSameOrigin } from "@/lib/auth/csrf";
 import { assertAccess, AccessDeniedError } from "@/lib/auth/rbac";
 import { createDemoTicket } from "@/lib/demo/create";
 import { lookupDemoHistory } from "@/lib/demo/history";
+import { triggerDemoCreatedNotification } from "@/lib/notifications/send-demo-customer";
 import { demoBoardCards, queryScopedDemoTickets } from "@/lib/demo/query";
 import type { DemoStatus } from "@/lib/demo/status-transitions";
 
@@ -58,6 +59,13 @@ export async function POST(request: NextRequest) {
   const result = await createDemoTicket(payload, caller.id);
   if ("error" in result) {
     return NextResponse.json({ error: result.error }, { status: CREATE_ERROR_STATUS[result.error.code] ?? 400 });
+  }
+
+  // The ticket is saved; a problem queueing the customer's WhatsApp mustn't fail the request.
+  try {
+    await triggerDemoCreatedNotification(result.ticket);
+  } catch (err) {
+    console.error("Could not queue the demo-created WhatsApp message", err);
   }
 
   const history = await lookupDemoHistory(caller, {

@@ -22,6 +22,7 @@ test.describe("Board to report end-to-end (006-dashboard-reporting, US1-US5)", (
     await page.getByLabel("Store code").fill(randomStoreCode());
     await page.getByLabel("Address").fill("1 Report Street");
     await page.getByLabel("Primary contact").fill("Report Contact");
+    await page.getByLabel("Phone number").fill("080-2345 6789");
     await page.getByLabel("WhatsApp number").fill("+919876500001");
     await page.getByLabel("Tax rate (%)").fill("18");
     await page.getByRole("button", { name: "Create store" }).click();

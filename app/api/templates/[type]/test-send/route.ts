@@ -7,15 +7,11 @@ import {
   getPendingOrApprovedTemplateBody,
   renderTemplate,
   SAMPLE_PLACEHOLDER_VALUES,
-  type TemplateType,
+  isTemplateType,
 } from "@/lib/whatsapp/templates";
 import { sendWhatsAppMessage } from "@/lib/whatsapp/client";
 import { db } from "@/lib/db/client";
 import { notifications } from "@/lib/db/schema";
-
-function isTemplateType(value: string): value is TemplateType {
-  return value === "completion" || value === "otp";
-}
 
 /**
  * `usePending: true` renders the not-yet-approved wording directly, bypassing the Meta

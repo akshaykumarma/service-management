@@ -7,33 +7,45 @@ interface TemplateEditorState {
   pending: { body: string; updatedAt: string } | null;
 }
 
-interface TemplatesResponse {
-  completion: TemplateEditorState;
-  otp: TemplateEditorState;
-}
+const TEMPLATE_TYPES = ["ticket_created", "completion", "otp", "demo_created", "demo_completed"] as const;
+type TemplateType = (typeof TEMPLATE_TYPES)[number];
 
-type TemplateType = "completion" | "otp";
+type TemplatesResponse = Record<TemplateType, TemplateEditorState>;
 
 const LABELS: Record<TemplateType, string> = {
+  ticket_created: "Ticket created notification",
   completion: "Completion notification",
   otp: "OTP delivery verification",
+  demo_created: "Demo ticket created notification",
+  demo_completed: "Demo completed notification",
 };
+
+const DESCRIPTIONS: Record<TemplateType, string> = {
+  ticket_created: "Sent to the customer when a service ticket is created, with their ticket number.",
+  completion: "Sent to the customer the first time the service is completed: the machine is ready for pickup.",
+  otp: "Sent to the customer at delivery with the one-time code that confirms the pickup.",
+  demo_created: "Sent to the customer when a demo ticket is created, with the ticket number and demo date.",
+  demo_completed: "Sent to the customer the first time a demo is completed, with the demo service amount.",
+};
+
+const emptyByType = <T,>(value: T) => Object.fromEntries(TEMPLATE_TYPES.map((t) => [t, value])) as Record<TemplateType, T>;
 
 export default function TemplatesPage() {
   const [templates, setTemplates] = useState<TemplatesResponse | null>(null);
-  const [drafts, setDrafts] = useState<Record<TemplateType, string>>({ completion: "", otp: "" });
-  const [saveError, setSaveError] = useState<Record<TemplateType, string | null>>({ completion: null, otp: null });
-  const [testPhone, setTestPhone] = useState<Record<TemplateType, string>>({ completion: "", otp: "" });
-  const [preview, setPreview] = useState<Record<TemplateType, string | null>>({ completion: null, otp: null });
+  const [drafts, setDrafts] = useState<Record<TemplateType, string>>(emptyByType(""));
+  const [saveError, setSaveError] = useState<Record<TemplateType, string | null>>(emptyByType<string | null>(null));
+  const [testPhone, setTestPhone] = useState<Record<TemplateType, string>>(emptyByType(""));
+  const [preview, setPreview] = useState<Record<TemplateType, string | null>>(emptyByType<string | null>(null));
 
   const load = useCallback(async () => {
     const res = await fetch("/api/templates");
     const body: TemplatesResponse = await res.json();
     setTemplates(body);
-    setDrafts({
-      completion: body.completion.pending?.body ?? body.completion.approved.body,
-      otp: body.otp.pending?.body ?? body.otp.approved.body,
-    });
+    setDrafts(
+      Object.fromEntries(
+        TEMPLATE_TYPES.map((type) => [type, body[type].pending?.body ?? body[type].approved.body]),
+      ) as Record<TemplateType, string>,
+    );
   }, []);
 
   useEffect(() => {
@@ -85,11 +97,12 @@ export default function TemplatesPage() {
         sent.
       </p>
 
-      {(["completion", "otp"] as TemplateType[]).map((type) => {
+      {TEMPLATE_TYPES.map((type) => {
         const state = templates[type];
         return (
           <section key={type} aria-labelledby={`${type}-heading`}>
             <h2 id={`${type}-heading`}>{LABELS[type]}</h2>
+            <p className="muted">{DESCRIPTIONS[type]}</p>
 
             <dl>
               <dt>Currently approved (live)</dt>

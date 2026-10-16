@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuthenticatedSession } from "@/lib/auth/require-session";
 import { AccessDeniedError, requireSuperAdmin } from "@/lib/auth/rbac";
-import { getTemplateEditorState } from "@/lib/whatsapp/templates";
+import { getTemplateEditorState, TEMPLATE_TYPES } from "@/lib/whatsapp/templates";
 
 export async function GET(request: NextRequest) {
   const sessionOrResponse = await requireAuthenticatedSession(request);
@@ -16,6 +16,6 @@ export async function GET(request: NextRequest) {
     throw err;
   }
 
-  const [completion, otp] = await Promise.all([getTemplateEditorState("completion"), getTemplateEditorState("otp")]);
-  return NextResponse.json({ completion, otp });
+  const states = await Promise.all(TEMPLATE_TYPES.map((type) => getTemplateEditorState(type)));
+  return NextResponse.json(Object.fromEntries(TEMPLATE_TYPES.map((type, i) => [type, states[i]])));
 }

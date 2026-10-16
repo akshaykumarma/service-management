@@ -9,7 +9,7 @@ export interface SendWhatsAppMessageJobData {
   ticketId: string | null;
   /** 008-demo-board: set (with ticketId null) for a demo ticket's assignment message. */
   demoTicketId?: string | null;
-  type: "completion" | "otp" | "invoice" | "demo_assignment";
+  type: "completion" | "otp" | "invoice" | "demo_assignment" | "ticket_created" | "demo_created" | "demo_completed";
   recipientPhone: string;
   /** The real per-message values (e.g. the actual OTP code) substituted into Meta's
    * pre-approved template for the actual send — never persisted as-is. */

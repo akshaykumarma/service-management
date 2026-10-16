@@ -81,7 +81,9 @@ describe("Invoice PDF + WhatsApp link at delivery (post-005 product feedback)", 
           .where(eq(notifications.ticketId, ticket.id));
         return rows.find((r) => r.type === "invoice");
       },
-      { message: "expected an invoice notifications row" },
+      // The invoice PDF is rendered before the message is queued, which can take a few
+      // seconds on a busy test machine.
+      { message: "expected an invoice notifications row", timeoutMs: 15_000 },
     );
     expect(notif!.status).toBe("sent");
     expect(notif!.recipientPhone).toBe("+919999955555");

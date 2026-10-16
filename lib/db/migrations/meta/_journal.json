@@ -134,6 +134,20 @@
       "when": 1791995136049,
       "tag": "0018_backfill_store_phone",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1792134186461,
+      "tag": "0019_free_shadow_king",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1792134856428,
+      "tag": "0020_worried_mephisto",
+      "breakpoints": true
     }
   ]
 }

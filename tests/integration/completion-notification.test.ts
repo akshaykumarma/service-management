@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { beforeEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { resetDb } from "../helpers/db";
@@ -6,10 +7,39 @@ import { jsonRequest, loginAs } from "../helpers/http";
 import { waitFor } from "../helpers/wait-for";
 import { PATCH as statusPATCH } from "@/app/api/tickets/[id]/status/route";
 import { db } from "@/lib/db/client";
-import { notifications, stores } from "@/lib/db/schema";
+import { notifications, stores, ticketLineItems, tickets } from "@/lib/db/schema";
 
 describe("Automatic completion notification (User Story 1)", () => {
   beforeEach(resetDb);
+
+  it("states the total amount to pay (parts + services + tax) in rupees", async () => {
+    const store = await createStore();
+    const admin = await createUser({ role: "admin", storeIds: [store.id], password: "Correct123!" });
+    const ticket = await createTicket({ storeId: store.id, createdBy: admin.id, status: "in_progress" });
+    await db.update(tickets).set({ taxRate: "18" }).where(eq(tickets.id, ticket.id));
+    for (const [name, total] of [["Bobbin case", "400.00"], ["Full service", "600.00"]]) {
+      await db.insert(ticketLineItems).values({
+        ticketId: ticket.id,
+        itemType: "service",
+        itemId: randomUUID(),
+        nameSnapshot: name,
+        quantity: 1,
+        unitCostSnapshot: total,
+        lineTotal: total,
+      });
+    }
+    const cookie = await loginAs(admin.email, "Correct123!");
+    await statusPATCH(
+      jsonRequest(`/api/tickets/${ticket.id}/status`, { method: "PATCH", cookie, body: { toStatus: "completed", comment: null } }),
+      { params: { id: ticket.id } },
+    );
+    const notif = await waitFor(async () => {
+      const rows = await db.select().from(notifications).where(eq(notifications.ticketId, ticket.id));
+      return rows[0];
+    }, { message: "expected a completion notification" });
+    expect(notif.renderedContent).toContain("ready for pickup");
+    expect(notif.renderedContent).toContain("Total amount to pay: ₹1,180.00");
+  });
 
   it("uses the store's phone number for {{store_phone}} when it has one (else its WhatsApp number)", async () => {
     const store = await createStore({ phone: "080-2345 6789", whatsappNumber: "+911234567890" });
