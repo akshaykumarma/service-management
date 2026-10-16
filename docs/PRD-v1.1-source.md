@@ -163,6 +163,7 @@ Current pain points in the target stores include:
 
 - Kanban board renders each status as a column. Cards are draggable between valid columns.
 - Backward transitions (e.g. Completed → In Progress) are allowed with a mandatory comment.
+- *(v1.2)* Moving a ticket back out of **Delivered** (e.g. to Completed or In Progress, when a machine comes back or a delivery was recorded by mistake) is allowed for Service Managers, Admins and Super Admins, always with a mandatory comment. Technicians cannot. Re-delivering it goes through OTP verification again.
 - Cancelled tickets are hidden from the active board but accessible via "All Tickets" filter.
 
 ### 6.5 Parts & Services Selection

@@ -102,7 +102,7 @@ When work can't continue (waiting on a part, waiting on the customer), a Service
 - **FR-015**: System MUST record every status change as an immutable, ordered entry (from-status, to-status, actor, timestamp, comment if provided) on the ticket.
 - **FR-016**: System MUST exclude Cancelled tickets from the default active-tickets view while keeping them retrievable through an explicit "all tickets" view or filter.
 - **FR-017**: System MUST enforce that only staff assigned to a ticket's store (or Admin/Super Admin per their scope) can change that ticket's status, consistent with `002-auth-rbac`.
-- **FR-018**: System MUST restrict any backward transition out of "Delivered" status to Admin and Super Admin roles, in addition to the mandatory comment already required for backward transitions (FR-013); a Store Service Manager MUST NOT be permitted to perform this specific transition even with a comment.
+- **FR-018**: System MUST restrict any backward transition out of "Delivered" status to Store Service Manager, Admin and Super Admin roles, in addition to the mandatory comment already required for backward transitions (FR-013); a Technician MUST NOT be permitted to perform this specific transition. *(Revised post-v1 at the owner's request: originally Admin/Super Admin only, with Store Service Managers excluded.)*
 - **FR-019**: When two status changes are submitted for the same ticket in close succession, system MUST apply the one that reaches the system second as the ticket's current status (last write wins), and MUST record both as separate entries in the ticket's status history rather than discarding either.
 - **FR-020**: System MUST resolve a ticket's customer by primary phone number at intake: if a customer record for that phone number already exists, this ticket MUST be linked to it and that record's stored name MUST be updated to the value entered on this ticket; otherwise, system MUST create a new customer record with the provided name and phone number.
 
@@ -124,7 +124,7 @@ When work can't continue (waiting on a part, waiting on the customer), a Service
 - **SC-004**: 100% of "On Hold" and "Cancelled" transitions carry a recorded reason; zero occur without one.
 - **SC-005**: 100% of status changes are traceable to a specific staff member and timestamp.
 - **SC-006**: Cancelled tickets never appear in the default active view — 0% leakage — while remaining 100% retrievable via the all-tickets view.
-- **SC-007**: 0% of backward transitions out of "Delivered" status are ever performed by a Store Service Manager; 100% are performed by an Admin or Super Admin with a recorded reason.
+- **SC-007**: 100% of backward transitions out of "Delivered" status are performed by a Store Service Manager, Admin or Super Admin with a recorded reason; 0% by a Technician. *(Revised post-v1, see FR-018.)*
 - **SC-008**: When two status changes are submitted for the same ticket in close succession, 100% of the time both are preserved in the status history and the ticket's current status matches whichever change was received second — zero silently lost transitions.
 
 ## Assumptions

@@ -25,9 +25,10 @@ export interface TransitionCheckInput {
  * transition is permitted, or the specific error code to return otherwise. Only forward
  * moves along the top row skip the comment requirement (except entering On Hold, which
  * always needs one); every backward move needs a comment; Cancelled is Admin/Super-Admin
- * only from a non-terminal status; leaving Delivered backward is additionally
- * Admin/Super-Admin only. Technician (post-007 product feedback) is restricted the same
- * way as Service Manager for both of those — it's the more junior of the two.
+ * only from a non-terminal status. Leaving Delivered backward (e.g. back to Completed or
+ * In Progress to correct a mistaken delivery) is open to Service Managers as well as
+ * Admins (post-v1 product feedback, revising 003's FR-018), still with a mandatory
+ * comment; a Technician may not do it.
  */
 export function checkTransition(input: TransitionCheckInput): TransitionError | null {
   const { role, fromStatus, toStatus, comment } = input;
@@ -61,7 +62,7 @@ export function checkTransition(input: TransitionCheckInput): TransitionError | 
 
   const isBackward = toIdx < fromIdx;
 
-  if (isBackward && fromStatus === "delivered" && (role === "service_manager" || role === "technician")) {
+  if (isBackward && fromStatus === "delivered" && role === "technician") {
     return "role_not_permitted";
   }
 
