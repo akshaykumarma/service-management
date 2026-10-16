@@ -3,6 +3,9 @@ import { resetDb } from "../helpers/db";
 import { createStore, createTicket, createUser } from "../helpers/factories";
 import { jsonRequest, loginAs } from "../helpers/http";
 import { PATCH as statusPATCH } from "@/app/api/tickets/[id]/status/route";
+import { eq } from "drizzle-orm";
+import { db } from "@/lib/db/client";
+import { statusHistory } from "@/lib/db/schema";
 
 async function patchStatus(ticketId: string, cookie: string, toStatus: string, comment?: string) {
   return statusPATCH(
@@ -62,19 +65,36 @@ describe("Status lifecycle transitions (User Story 2)", () => {
     expect(withComment.status).toBe(200);
   });
 
-  it("denies a Store Service Manager a backward transition out of Delivered even with a comment, but allows an Admin", async () => {
+  it("lets a Store Service Manager move a ticket back out of Delivered with a comment (to Completed or In Progress)", async () => {
     const store = await createStore();
     const sm = await createUser({ role: "service_manager", storeIds: [store.id], password: "Correct123!" });
-    const admin = await createUser({ role: "admin", storeIds: [store.id], password: "Correct123!" });
-    const ticket = await createTicket({ storeId: store.id, createdBy: sm.id, status: "delivered" });
-
     const smCookie = await loginAs(sm.email, "Correct123!");
-    const smAttempt = await patchStatus(ticket.id, smCookie, "completed", "oops");
-    expect(smAttempt.status).toBe(403);
-    expect((await smAttempt.json()).error.code).toBe("role_not_permitted");
 
-    const adminCookie = await loginAs(admin.email, "Correct123!");
-    const adminAttempt = await patchStatus(ticket.id, adminCookie, "completed", "correcting a mistaken OTP confirmation");
+    const toCompleted = await createTicket({ storeId: store.id, createdBy: sm.id, status: "delivered" });
+    const noComment = await patchStatus(toCompleted.id, smCookie, "completed");
+    expect(noComment.status).toBe(400);
+    expect((await noComment.json()).error.code).toBe("comment_required");
+    const withComment = await patchStatus(toCompleted.id, smCookie, "completed", "customer brought it back, belt slipping");
+    expect(withComment.status).toBe(200);
+    const history = await db.select().from(statusHistory).where(eq(statusHistory.ticketId, toCompleted.id));
+    expect(history.some((h) => h.fromStatus === "delivered" && h.toStatus === "completed" && h.actorId === sm.id && h.comment === "customer brought it back, belt slipping")).toBe(true);
+
+    const toInProgress = await createTicket({ storeId: store.id, createdBy: sm.id, status: "delivered" });
+    expect((await patchStatus(toInProgress.id, smCookie, "in_progress", "rework needed")).status).toBe(200);
+  });
+
+  it("still denies a Technician a backward transition out of Delivered, and an Admin may do it", async () => {
+    const store = await createStore();
+    const sm = await createUser({ role: "service_manager", storeIds: [store.id] });
+    const tech = await createUser({ role: "technician", storeIds: [store.id], password: "Correct123!" });
+    const admin = await createUser({ role: "admin", storeIds: [store.id], password: "Correct123!" });
+    const ticket = await createTicket({ storeId: store.id, createdBy: sm.id, status: "delivered", assignedTechnicianId: tech.id });
+
+    const techAttempt = await patchStatus(ticket.id, await loginAs(tech.email, "Correct123!"), "completed", "oops");
+    expect(techAttempt.status).toBe(403);
+    expect((await techAttempt.json()).error.code).toBe("role_not_permitted");
+
+    const adminAttempt = await patchStatus(ticket.id, await loginAs(admin.email, "Correct123!"), "completed", "correcting a mistaken OTP confirmation");
     expect(adminAttempt.status).toBe(200);
   });
 
