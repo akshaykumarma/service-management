@@ -60,7 +60,11 @@ export async function POST(request: NextRequest) {
   // 007-admin-console FR-009: a deactivated store must be excluded from new-ticket
   // creation, not just hidden from GET /api/stores' picker — enforced here too as
   // defense-in-depth against a client that bypasses the picker.
-  const storeRows = await db.select({ active: stores.active }).from(stores).where(eq(stores.id, payload.storeId)).limit(1);
+  const storeRows = await db
+    .select({ active: stores.active, name: stores.name })
+    .from(stores)
+    .where(eq(stores.id, payload.storeId))
+    .limit(1);
   if (!storeRows[0]?.active) {
     return NextResponse.json({ error: { code: "store_inactive" } }, { status: 409 });
   }
@@ -140,6 +144,15 @@ export async function POST(request: NextRequest) {
         ticketNumber: created.ticketNumber,
         status: created.status,
         createdAt: created.createdAt,
+        // Everything saved, so the "ticket created" screen can show it in full.
+        storeName: storeRows[0]?.name ?? null,
+        customerName: created.customerName,
+        customerPhone: created.customerPhone,
+        customerAltPhone: created.customerAltPhone,
+        machineModel: created.machineModel,
+        serialNumber: created.serialNumber,
+        issueDescription: created.issueDescription,
+        estimatedPickupDate: created.estimatedPickupDate,
       },
       history,
     },

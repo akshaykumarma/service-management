@@ -46,6 +46,18 @@ describe("WhatsApp to the customer when a service ticket is created", () => {
     const res = await createServiceTicket("+919845011223");
     expect(res.status).toBe(201);
     const { ticket } = await res.json();
+    // The response carries everything saved, for the "ticket created" screen.
+    expect(ticket).toMatchObject({
+      status: "open",
+      storeName: "Shubha Sewing — Balepet",
+      customerName: "Lakshmi N",
+      customerPhone: "+919845011223",
+      customerAltPhone: "+919845000001",
+      machineModel: "Usha Janome Allure",
+      serialNumber: "UJA-77821",
+      issueDescription: "Thread keeps breaking",
+      estimatedPickupDate: "2026-12-05",
+    });
 
     const notif = await waitFor(async () => {
       const rows = await db.select().from(notifications).where(eq(notifications.ticketId, ticket.id));

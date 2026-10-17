@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { eq } from "drizzle-orm";
+import { db } from "@/lib/db/client";
+import { stores } from "@/lib/db/schema";
 import { requireAuthenticatedSession } from "@/lib/auth/require-session";
 import { requireSameOrigin } from "@/lib/auth/csrf";
 import { assertAccess, AccessDeniedError } from "@/lib/auth/rbac";
@@ -75,8 +78,27 @@ export async function POST(request: NextRequest) {
     excludeId: result.ticket.id,
   });
   const { ticket } = result;
+  const [store] = await db.select({ name: stores.name }).from(stores).where(eq(stores.id, ticket.storeId)).limit(1);
   return NextResponse.json(
-    { ticket: { id: ticket.id, ticketNumber: ticket.ticketNumber, status: ticket.status, createdAt: ticket.createdAt }, history },
+    {
+      ticket: {
+        id: ticket.id,
+        ticketNumber: ticket.ticketNumber,
+        status: ticket.status,
+        createdAt: ticket.createdAt,
+        // Everything saved, so the "ticket created" screen can show it in full.
+        storeName: store?.name ?? null,
+        customerName: ticket.customerName,
+        customerPhone: ticket.customerPhone,
+        machineModel: ticket.machineModel,
+        serialNumber: ticket.serialNumber,
+        invoiceNumber: ticket.invoiceNumber,
+        demoServiceName: ticket.demoServiceName,
+        demoServicePrice: ticket.demoServicePrice,
+        demoDate: ticket.demoDate,
+      },
+      history,
+    },
     { status: 201 },
   );
 }

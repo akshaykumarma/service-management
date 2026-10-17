@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import CreatedTicketSummary from "@/components/created-ticket-summary";
 import { todayInBusinessTimeZone } from "@/lib/tickets/received-date";
 import { formatDate } from "@/lib/format/date";
 import { freshNewTicketUrl } from "@/lib/tickets/new-ticket-url";
@@ -72,6 +73,22 @@ function ordinal(n: number): string {
   return `${n}${s[(v - 20) % 10] ?? s[v] ?? s[0]}`;
 }
 
+interface CreatedDemoTicket {
+  id: string;
+  ticketNumber: string;
+  status: string;
+  createdAt: string;
+  storeName: string | null;
+  customerName: string;
+  customerPhone: string;
+  machineModel: string;
+  serialNumber: string;
+  invoiceNumber: string;
+  demoServiceName: string;
+  demoServicePrice: string;
+  demoDate: string;
+}
+
 function HistoryPanel({ history }: { history: DemoHistory }) {
   if (history.entries.length === 0) return null;
   return (
@@ -103,7 +120,10 @@ function HistoryPanel({ history }: { history: DemoHistory }) {
 export default function DemoTicketForm({
   stores,
   machineModelOptions,
+  onCreated,
 }: {
+  /** Lets the page drop its own heading/type switch so the created ticket sits at the top. */
+  onCreated?: () => void;
   stores: Option[];
   machineModelOptions: Option[];
 }) {
@@ -121,7 +141,7 @@ export default function DemoTicketForm({
   const [history, setHistory] = useState<DemoHistory | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [created, setCreated] = useState<{ id: string; ticketNumber: string; history: DemoHistory } | null>(null);
+  const [created, setCreated] = useState<{ ticket: CreatedDemoTicket; history: DemoHistory } | null>(null);
 
   useEffect(() => {
     fetch("/api/catalogue/demo-services")
@@ -177,7 +197,8 @@ export default function DemoTicketForm({
       });
       const body = await res.json();
       if (res.ok) {
-        setCreated({ id: body.ticket.id, ticketNumber: body.ticket.ticketNumber, history: body.history });
+        setCreated({ ticket: body.ticket, history: body.history });
+        onCreated?.();
         return;
       }
       setError(
@@ -191,22 +212,54 @@ export default function DemoTicketForm({
   }
 
   if (created) {
+    const { ticket, history: demoHistory } = created;
     return (
-      <section aria-labelledby="demo-created-heading">
-        <h2 id="demo-created-heading">Demo ticket created: {created.ticketNumber}</h2>
-        {created.history.warning && (
-          <p className="demo-warning" role="status">
-            Note: this is the {ordinal(created.history.activeCount + 1)} demo for this model + serial number + invoice
-            number combination.
-          </p>
-        )}
-        <HistoryPanel history={created.history} />
-        <p className="demo-created-links">
-          <a href={`/demo-tickets/${created.id}`}>View demo ticket</a>
-          <a href="/demo-board">Go to Demo Board</a>
-          <a href={freshNewTicketUrl()}>+ Create another ticket</a>
-        </p>
-      </section>
+      <CreatedTicketSummary
+        heading={`Demo ticket created: ${ticket.ticketNumber}`}
+        ticketNumber={ticket.ticketNumber}
+        statusKey={ticket.status}
+        statusLabel={STATUS_LABELS[ticket.status] ?? ticket.status}
+        kindBadge="Demo"
+        notice={
+          demoHistory.warning && (
+            <p className="demo-warning" role="status">
+              Note: this is the {ordinal(demoHistory.activeCount + 1)} demo for this model + serial number + invoice
+              number combination.
+            </p>
+          )
+        }
+        details={[
+          ["Ticket number", ticket.ticketNumber],
+          ["Store", ticket.storeName],
+          ["Received", formatDate(ticket.createdAt)],
+          ["Customer", ticket.customerName],
+          ["Phone", ticket.customerPhone],
+          ["Model number", ticket.machineModel],
+          ["Serial number", ticket.serialNumber],
+          ["Invoice number", ticket.invoiceNumber],
+          [
+            "Demo service",
+            `${ticket.demoServiceName} · ₹${Number(ticket.demoServicePrice).toLocaleString("en-IN", {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })}`,
+          ],
+          ["Demo date", formatDate(ticket.demoDate)],
+          ["Demoed by", "Not assigned yet"],
+        ]}
+        history={
+          demoHistory.entries.length > 0 ? (
+            <HistoryPanel history={demoHistory} />
+          ) : (
+            <p className="muted">No earlier demos for this serial number or invoice number.</p>
+          )
+        }
+        links={[
+          { href: `/demo-tickets/${ticket.id}`, label: "Open demo ticket", primary: true },
+          { href: freshNewTicketUrl(), label: "+ Create another ticket", primary: true },
+          { href: "/demo-board", label: "Go to Demo Board" },
+        ]}
+      />
     );
   }
 

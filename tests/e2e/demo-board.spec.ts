@@ -72,7 +72,7 @@ test.describe("Demo Board (008-demo-board)", () => {
     await page.getByRole("button", { name: "Create demo ticket anyway" }).click();
     await expect(page.getByRole("heading", { name: /Demo ticket created: [A-Z0-9]+-DEMO-\d{4}-\d{5}/ })).toBeVisible();
 
-    await page.getByRole("link", { name: "View demo ticket" }).click();
+    await page.getByRole("link", { name: "Open demo ticket" }).click();
     await expect(page.getByRole("heading", { name: customer })).toBeVisible();
 
     await page.getByLabel("Technician giving the demo").click();
