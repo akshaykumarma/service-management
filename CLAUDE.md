@@ -19,4 +19,12 @@
   delivery OTP to staff, which defeats OTP verification. It was added at the owner's request
   for testing only. Before any production deployment, ask the owner to confirm, then remove
   the feature entirely (not just the flag).
+- **Remove the WhatsApp message log from Super Admin → Login & activity.** It shows the full
+  text of every WhatsApp message the app sends (kind `"message"` in lib/admin/activity-log.ts,
+  the "WhatsApp messages only" filter and `.activity-message` text on the activity page, and
+  `kind=message` in app/api/admin/activity/route.ts), and the same text on each service and
+  demo ticket's Activity (the `detail` field in lib/audit/consolidated-trail.ts and
+  lib/demo/activity.ts, rendered as `.activity-message` on both ticket pages). It was added at
+  the owner's request for testing only. Before any production deployment, ask the owner to
+  confirm, then remove it.
 

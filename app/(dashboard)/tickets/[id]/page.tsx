@@ -76,6 +76,7 @@ interface AuditTrailEntry {
   actor: string | null;
   timestamp: string;
   description: string;
+  detail?: string;
 }
 
 const DELIVER_ERROR_MESSAGES: Record<string, string> = {
@@ -1182,6 +1183,8 @@ export default function TicketDetailPage() {
               {[...auditTrail].reverse().map((entry, i) => (
                 <li key={i} className={`timeline__item timeline__item--${entry.source}`}>
                   <div className="timeline__text">{entry.description}</div>
+                  {/* TEMPORARY: WhatsApp message text — remove before production (CLAUDE.md). */}
+                  {entry.detail && <div className="activity-message">{entry.detail}</div>}
                   <div className="timeline__meta">
                     {entry.actor ?? "System"} · {formatDateTime(entry.timestamp)}
                   </div>

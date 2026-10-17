@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
   if (userId && !UUID_RE.test(userId)) {
     return NextResponse.json({ error: { code: "invalid_field", field: "userId" } }, { status: 400 });
   }
-  if (kindParam && kindParam !== "login" && kindParam !== "change") {
+  if (kindParam && kindParam !== "login" && kindParam !== "change" && kindParam !== "message") {
     return NextResponse.json({ error: { code: "invalid_field", field: "kind" } }, { status: 400 });
   }
   for (const [field, value] of [["dateFrom", dateFrom], ["dateTo", dateTo]] as const) {

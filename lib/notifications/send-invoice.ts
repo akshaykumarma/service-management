@@ -1,7 +1,7 @@
 import { eq, sql } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { tickets } from "@/lib/db/schema";
-import { getOrCreateInvoiceToken } from "@/lib/billing/invoice";
+import { getOrCreateInvoiceToken, invoiceUrlFor } from "@/lib/billing/invoice";
 import { getBoss } from "@/lib/jobs/boss";
 import { SEND_WHATSAPP_MESSAGE_QUEUE, type SendWhatsAppMessageJobData } from "@/jobs/send-whatsapp-message";
 
@@ -32,9 +32,7 @@ export async function triggerInvoiceNotification(ticketId: string): Promise<void
   const [ticket] = await db.select().from(tickets).where(eq(tickets.id, ticketId)).limit(1);
   if (!ticket) return;
 
-  const token = await getOrCreateInvoiceToken(ticketId);
-  const baseUrl = process.env.APP_BASE_URL ?? "http://localhost:3000";
-  const invoiceUrl = `${baseUrl}/api/invoices/${token}`;
+  const invoiceUrl = invoiceUrlFor(await getOrCreateInvoiceToken(ticketId));
 
   const content = `Hi ${ticket.customerName}, your ${ticket.machineModel} (Ticket ${ticket.ticketNumber}) has been delivered. Download your invoice: ${invoiceUrl}`;
 

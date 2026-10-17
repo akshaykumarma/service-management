@@ -26,6 +26,12 @@ export interface AuditTrailEntry {
   actor: string | null;
   timestamp: Date;
   description: string;
+  /**
+   * TEMPORARY (owner's request): the full text of a WhatsApp message, so Service Managers
+   * can see messages being sent before WhatsApp is live. Remove before production — see
+   * CLAUDE.md.
+   */
+  detail?: string;
 }
 
 /**
@@ -85,6 +91,7 @@ export async function getConsolidatedAuditTrail(ticketId: string): Promise<Audit
       actor: null,
       timestamp: row.sentAt,
       description: `${NOTIFICATION_LABELS[row.type] ?? row.type} WhatsApp notification ${row.status} to ${row.recipientPhone}`,
+      detail: row.renderedContent,
     });
   }
 

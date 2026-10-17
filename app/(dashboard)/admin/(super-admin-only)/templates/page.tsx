@@ -106,7 +106,7 @@ export default function TemplatesPage() {
 
             <dl>
               <dt>Currently approved (live)</dt>
-              <dd>{state.approved.body}</dd>
+              <dd style={{ whiteSpace: "pre-line" }}>{state.approved.body}</dd>
             </dl>
 
             {state.pending ? (
@@ -148,7 +148,7 @@ export default function TemplatesPage() {
             </div>
             {preview[type] && (
               <p aria-live="polite">
-                Rendered: <em>{preview[type]}</em>
+                Rendered: <em style={{ whiteSpace: "pre-line" }}>{preview[type]}</em>
               </p>
             )}
           </section>

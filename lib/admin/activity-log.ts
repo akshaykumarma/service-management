@@ -10,6 +10,7 @@ import {
   statusHistory,
   tickets,
   users,
+  notifications,
 } from "@/lib/db/schema";
 
 /**
@@ -17,7 +18,12 @@ import {
  * people changed (audit_log, service and demo status history), newest first.
  */
 
-export type ActivityKind = "login" | "change";
+/**
+ * "message" is TEMPORARY (owner's request): every WhatsApp message the app sent, with its
+ * full text, so messages can be checked before WhatsApp is live. Remove before production
+ * after confirming with the owner — see CLAUDE.md.
+ */
+export type ActivityKind = "login" | "change" | "message";
 
 export interface ActivityEntry {
   id: string;
@@ -33,6 +39,8 @@ export interface ActivityEntry {
   link: string | null;
   ipAddress: string | null;
   userAgent: string | null;
+  /** Full text of a WhatsApp message (kind "message" only). */
+  detail?: string | null;
 }
 
 export interface ActivityFilters {
@@ -75,6 +83,16 @@ const DEMO_STATUS: Record<string, string> = {
   cancelled: "Cancelled",
 };
 
+const MESSAGE_LABELS: Record<string, string> = {
+  ticket_created: "ticket created",
+  completion: "ready for pickup",
+  otp: "delivery OTP",
+  invoice: "invoice",
+  demo_created: "demo booked",
+  demo_completed: "demo completed",
+  demo_assignment: "demo assignment (technician)",
+};
+
 const LOGIN_DESCRIPTIONS: Record<string, string> = {
   success: "Signed in",
   failed: "Failed sign-in (wrong email/username or password)",
@@ -110,7 +128,7 @@ export async function listActivity(filters: ActivityFilters = {}): Promise<Activ
   const limit = Math.min(Math.max(filters.limit ?? 200, 1), 500);
   const entries: ActivityEntry[] = [];
 
-  if (filters.kind !== "change") {
+  if (!filters.kind || filters.kind === "login") {
     const conditions: SQL[] = [...timeRange(loginEvents.createdAt, filters)];
     if (filters.userId) conditions.push(eq(loginEvents.userId, filters.userId));
     const rows = await db
@@ -148,7 +166,50 @@ export async function listActivity(filters: ActivityFilters = {}): Promise<Activ
     }
   }
 
-  if (filters.kind !== "login") {
+  // TEMPORARY (see ActivityKind): WhatsApp messages are sent by the system, not by a
+  // person, so they're left out when the feed is filtered to one user.
+  if ((!filters.kind || filters.kind === "message") && !filters.userId) {
+    const conditions: SQL[] = [...timeRange(notifications.sentAt, filters)];
+    const rows = await db
+      .select({
+        id: notifications.id,
+        at: notifications.sentAt,
+        type: notifications.type,
+        recipientPhone: notifications.recipientPhone,
+        status: notifications.status,
+        content: notifications.renderedContent,
+        ticketId: notifications.ticketId,
+        demoTicketId: notifications.demoTicketId,
+        ticketNumber: tickets.ticketNumber,
+        demoTicketNumber: demoTickets.ticketNumber,
+      })
+      .from(notifications)
+      .leftJoin(tickets, eq(tickets.id, notifications.ticketId))
+      .leftJoin(demoTickets, eq(demoTickets.id, notifications.demoTicketId))
+      .where(conditions.length ? and(...conditions) : undefined)
+      .orderBy(desc(notifications.sentAt))
+      .limit(limit);
+    for (const row of rows) {
+      const number = row.ticketNumber ?? row.demoTicketNumber;
+      entries.push({
+        id: `message:${row.id}`,
+        kind: "message",
+        at: row.at.toISOString(),
+        userId: null,
+        userName: null,
+        userRole: null,
+        identifier: null,
+        outcome: null,
+        description: `WhatsApp ${MESSAGE_LABELS[row.type] ?? row.type} to ${row.recipientPhone} — ${row.status}${number ? ` (${number})` : " (test send)"}`,
+        detail: row.content,
+        link: row.ticketId ? `/tickets/${row.ticketId}` : row.demoTicketId ? `/demo-tickets/${row.demoTicketId}` : null,
+        ipAddress: null,
+        userAgent: null,
+      });
+    }
+  }
+
+  if (!filters.kind || filters.kind === "change") {
     // Edits recorded in the audit log.
     const auditConditions: SQL[] = [...timeRange(auditLog.ts, filters)];
     if (filters.userId) auditConditions.push(eq(auditLog.actorId, filters.userId));

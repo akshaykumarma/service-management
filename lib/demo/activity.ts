@@ -9,6 +9,8 @@ export interface DemoActivityEntry {
   actor: string | null;
   timestamp: Date;
   description: string;
+  /** TEMPORARY (owner's request): a WhatsApp message's full text — remove before production, see CLAUDE.md. */
+  detail?: string;
 }
 
 const LABELS: Record<string, string> = {
@@ -77,6 +79,7 @@ export async function getDemoActivity(demoTicketId: string): Promise<DemoActivit
       actor: null,
       timestamp: n.sentAt,
       description: `${NOTIFICATION_LABELS[n.type] ?? "WhatsApp"} (${n.recipientPhone}) ${n.status === "failed" ? "failed" : "sent"}`,
+      detail: n.renderedContent,
     });
   }
 
