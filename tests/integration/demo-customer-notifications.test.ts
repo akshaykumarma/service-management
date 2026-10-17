@@ -51,6 +51,19 @@ describe("WhatsApp to the customer for demo tickets", () => {
     );
     expect(res.status).toBe(201);
     const { ticket } = await res.json();
+    // The response carries everything saved, for the "ticket created" screen.
+    expect(ticket).toMatchObject({
+      status: "new",
+      storeName: "Shubha Sewing — Balepet",
+      customerName: "Kavya R",
+      customerPhone: "+919448811223",
+      machineModel: "Juki DDL-8700",
+      serialNumber: "DDL87-1",
+      invoiceNumber: "INV-1",
+      demoServiceName: "Home demo",
+      demoServicePrice: "1250.00",
+      demoDate,
+    });
 
     const [msg] = await waitFor(async () => {
       const rows = await customerMessages(ticket.id);

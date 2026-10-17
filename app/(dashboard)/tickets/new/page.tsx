@@ -6,6 +6,7 @@ import { freshNewTicketUrl } from "@/lib/tickets/new-ticket-url";
 import { todayInBusinessTimeZone } from "@/lib/tickets/received-date";
 import { formatDate } from "@/lib/format/date";
 import DemoTicketForm from "./demo-ticket-form";
+import CreatedTicketSummary from "@/components/created-ticket-summary";
 
 interface Store {
   id: string;
@@ -26,6 +27,15 @@ interface HistoryEntry {
   createdAt: string;
 }
 
+const SERVICE_STATUS_LABELS: Record<string, string> = {
+  open: "Open",
+  in_progress: "In Progress",
+  on_hold: "On Hold",
+  completed: "Completed",
+  delivered: "Delivered",
+  cancelled: "Cancelled",
+};
+
 // Sentinel <select> value for "the model isn't in the list — let me type it".
 const OTHER_MODEL = "__other__";
 
@@ -38,6 +48,16 @@ const CREATE_ERROR_MESSAGES: Record<string, string> = {
 interface CreatedTicket {
   id: string;
   ticketNumber: string;
+  status: string;
+  createdAt: string;
+  storeName: string | null;
+  customerName: string;
+  customerPhone: string;
+  customerAltPhone: string | null;
+  machineModel: string;
+  serialNumber: string | null;
+  issueDescription: string;
+  estimatedPickupDate: string | null;
 }
 
 /**
@@ -60,6 +80,7 @@ function FreshNewTicketForm() {
 function NewTicketForm() {
   // 008-demo-board: New Ticket creates either kind; Service keeps today's form exactly.
   const [ticketType, setTicketType] = useState<"service" | "demo">("service");
+  const [demoCreated, setDemoCreated] = useState(false);
   const [stores, setStores] = useState<Store[]>([]);
   const [machineModelOptions, setMachineModelOptions] = useState<MachineModelOption[]>([]);
   const [created, setCreated] = useState<CreatedTicket | null>(null);
@@ -136,31 +157,51 @@ function NewTicketForm() {
   if (created && history) {
     return (
       <main>
-        <h1>Ticket created: {created.ticketNumber}</h1>
-        {history.found ? (
-          <section aria-labelledby="history-heading">
-            <h2 id="history-heading">Prior service history for this machine</h2>
-            <p>Earlier tickets with the same model number and serial number:</p>
-            <ul>
-              {history.entries.map((entry) => (
-                <li key={entry.id}>
-                  <a href={`/tickets/${entry.id}`}>{entry.ticketNumber}</a> — {formatDate(entry.createdAt)} —{" "}
-                  {entry.status.replace("_", " ")} — {entry.issueDescription}
-                </li>
-              ))}
-            </ul>
-          </section>
-        ) : (
-          <p>No prior service history for this model number and serial number.</p>
-        )}
-        <p>
-          <a href={`/tickets/${created.id}`}>View full ticket</a>
-        </p>
-        <p>
-          <a className="button-link" href={freshNewTicketUrl()}>
-            + Create another ticket
-          </a>
-        </p>
+        <CreatedTicketSummary
+          heading={`Ticket created: ${created.ticketNumber}`}
+          ticketNumber={created.ticketNumber}
+          statusKey={created.status}
+          statusLabel={SERVICE_STATUS_LABELS[created.status] ?? created.status}
+          kindBadge="Service"
+          details={[
+            ["Ticket number", created.ticketNumber],
+            ["Store", created.storeName],
+            ["Received", formatDate(created.createdAt)],
+            ["Customer", created.customerName],
+            ["Phone", created.customerPhone],
+            ["Alternate phone", created.customerAltPhone],
+            ["Machine model", created.machineModel],
+            ["Serial number", created.serialNumber],
+            ["Problem reported", created.issueDescription],
+            ["Expected ready by", created.estimatedPickupDate ? formatDate(created.estimatedPickupDate) : null],
+          ]}
+          history={
+            history.found ? (
+              <>
+                <p className="muted">Earlier tickets for this machine (same model number and serial number):</p>
+                <ul className="history-list">
+                  {history.entries.map((entry) => (
+                    <li key={entry.id}>
+                      <a href={`/tickets/${entry.id}`}>{entry.ticketNumber}</a>
+                      <span className={`status-pill status-${entry.status}`}>
+                        {SERVICE_STATUS_LABELS[entry.status] ?? entry.status}
+                      </span>
+                      <span className="history-list__date">{formatDate(entry.createdAt)}</span>
+                      <span className="history-list__issue">{entry.issueDescription}</span>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            ) : (
+              <p className="muted">No prior service history for this model number and serial number.</p>
+            )
+          }
+          links={[
+            { href: `/tickets/${created.id}`, label: "Open ticket", primary: true },
+            { href: freshNewTicketUrl(), label: "+ Create another ticket", primary: true },
+            { href: "/board", label: "Go to Service Board" },
+          ]}
+        />
       </main>
     );
   }
@@ -194,9 +235,17 @@ function NewTicketForm() {
   if (ticketType === "demo") {
     return (
       <main>
-        <h1>New ticket</h1>
-        {typeSwitch}
-        <DemoTicketForm stores={stores} machineModelOptions={machineModelOptions} />
+        {!demoCreated && (
+          <>
+            <h1>New ticket</h1>
+            {typeSwitch}
+          </>
+        )}
+        <DemoTicketForm
+          stores={stores}
+          machineModelOptions={machineModelOptions}
+          onCreated={() => setDemoCreated(true)}
+        />
       </main>
     );
   }

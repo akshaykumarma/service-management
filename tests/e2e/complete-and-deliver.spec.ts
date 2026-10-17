@@ -25,7 +25,7 @@ test.describe("Complete and deliver (005-customer-notifications, US1+US3)", () =
     await page.getByLabel("Serial number").fill(`SN-Deliver-${Date.now()}`);
     await page.getByLabel("Issue description").fill("Delivery e2e test");
     await page.getByRole("button", { name: "Create ticket" }).click();
-    await page.getByRole("link", { name: "View full ticket" }).click();
+    await page.getByRole("link", { name: "Open ticket" }).click();
 
     const statusValue = page.locator('dt:has-text("Status") + dd');
 

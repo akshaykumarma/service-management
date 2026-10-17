@@ -2671,3 +2671,25 @@ button.board-refresh__now {
   white-space: pre-line;
   max-width: 560px;
 }
+
+/* "Ticket created" screen (service and demo): details and history side by side. */
+.created-ticket__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: 16px;
+  align-items: start;
+}
+.created-ticket__grid .card h2 {
+  margin-top: 0;
+}
+.created-ticket__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  margin-top: 16px;
+}
+@media (max-width: 860px) {
+  .created-ticket__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

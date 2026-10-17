@@ -48,7 +48,7 @@ test.describe("Board to report end-to-end (006-dashboard-reporting, US1-US5)", (
     await page.getByLabel("Serial number").fill(`SN-Report-${Date.now()}`);
     await page.getByLabel("Issue description").fill("Board-to-report e2e test");
     await page.getByRole("button", { name: "Create ticket" }).click();
-    await page.getByRole("link", { name: "View full ticket" }).click();
+    await page.getByRole("link", { name: "Open ticket" }).click();
     const ticketUrl = page.url();
 
     // Board: the new ticket must appear in the Open column, scoped to the just-created store.

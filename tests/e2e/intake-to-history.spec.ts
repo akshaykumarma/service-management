@@ -27,10 +27,13 @@ test.describe("Intake to history", () => {
     // fixed "SVC" — only the -{year}-{5-digit sequence} shape is checked here.
     await expect(page.getByRole("heading", { name: /ticket created: [a-z0-9]+-\d{4}-\d{5}/i })).toBeVisible();
     await expect(page.getByText(/no prior service history/i)).toBeVisible();
+    // The complete ticket details are shown at the top, next to the history.
+    await expect(page.getByRole("heading", { name: "Ticket details" })).toBeVisible();
+    await expect(page.getByText("Playwright end-to-end intake test")).toBeVisible();
 
     // Clicking the sidebar's "New ticket" right after creating one opens an empty form again
     // (it used to keep showing the "Ticket created" screen).
-    const ticketHref = await page.getByRole("link", { name: "View full ticket" }).getAttribute("href");
+    const ticketHref = await page.getByRole("link", { name: "Open ticket" }).getAttribute("href");
     await page.getByRole("button", { name: "New ticket" }).first().click();
     await expect(page.getByRole("heading", { name: /ticket created/i })).toHaveCount(0);
     await expect(page.getByLabel("Customer name")).toHaveValue("");

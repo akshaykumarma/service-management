@@ -10,7 +10,7 @@ async function createTicketAndGetId(page: import("@playwright/test").Page, label
   await page.getByLabel("Serial number").fill(`SN-${label}-${Date.now()}`);
   await page.getByLabel("Issue description").fill(`${label} e2e test`);
   await page.getByRole("button", { name: "Create ticket" }).click();
-  const href = await page.getByRole("link", { name: "View full ticket" }).getAttribute("href");
+  const href = await page.getByRole("link", { name: "Open ticket" }).getAttribute("href");
   return href!.split("/").pop()!;
 }
 
