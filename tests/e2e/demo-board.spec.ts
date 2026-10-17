@@ -75,7 +75,7 @@ test.describe("Demo Board (008-demo-board)", () => {
     await page.getByRole("link", { name: "View demo ticket" }).click();
     await expect(page.getByRole("heading", { name: customer })).toBeVisible();
 
-    await page.getByLabel("Assigned technician").click();
+    await page.getByLabel("Technician giving the demo").click();
     await page.getByRole("button", { name: `E2E Tech ${stamp}` }).click();
     await page.getByRole("button", { name: "Assign & notify" }).click();
     await expect(page.getByText("The technician has been sent a WhatsApp message")).toBeVisible();

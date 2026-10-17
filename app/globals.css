@@ -2652,3 +2652,22 @@ button.board-refresh__now {
   font-weight: 600;
   white-space: nowrap;
 }
+
+.ticket-header__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+/* TEMPORARY: WhatsApp message text in Login & activity — remove before production. */
+.activity-message {
+  margin-top: 6px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #e7f8ee;
+  color: var(--color-text);
+  font-size: 0.82rem;
+  white-space: pre-line;
+  max-width: 560px;
+}

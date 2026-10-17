@@ -3,7 +3,15 @@ import path from "path";
 import PDFDocument from "pdfkit";
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "@/lib/db/client";
-import { statusHistory, stores, tickets, ticketLineItems, users } from "@/lib/db/schema";
+import {
+  demoTicketStatusHistory,
+  demoTickets,
+  statusHistory,
+  stores,
+  tickets,
+  ticketLineItems,
+  users,
+} from "@/lib/db/schema";
 import { calculateBill } from "@/lib/billing/bill-calculation";
 import { formatDate } from "@/lib/format/date";
 
@@ -58,14 +66,14 @@ function formatMoney(value: number, symbol: string): string {
 
 interface InvoiceData {
   ticketNumber: string;
-  receivedAt: Date;
-  deliveredAt: Date;
+  /** Header lines under INVOICE, after "Invoice no." (e.g. Received / Delivered dates). */
+  meta: [string, string][];
   customerName: string;
   customerPhone: string;
-  machineModel: string;
-  serialNumber: string | null;
-  issueDescription: string;
-  technicianName: string | null;
+  /** The three cells of the machine card. */
+  machineCells: [string, string][];
+  /** The italic line under the machine card (the reported issue, or demo details). */
+  note: string;
   store: { name: string; address: string | null; phone: string | null; whatsappNumber: string | null };
   lineItems: { name: string; type: string; quantity: number; unitCost: number; lineTotal: number }[];
   taxRate: number;
@@ -101,14 +109,18 @@ export async function renderInvoicePdf(ticketId: string): Promise<Buffer | null>
 
   const data: InvoiceData = {
     ticketNumber: ticket.ticketNumber,
-    receivedAt: ticket.createdAt,
-    deliveredAt: deliveredRow?.createdAt ?? ticket.updatedAt,
+    meta: [
+      ["Received", formatDate(ticket.createdAt)],
+      ["Delivered", formatDate(deliveredRow?.createdAt ?? ticket.updatedAt)],
+    ],
     customerName: ticket.customerName,
     customerPhone: ticket.customerPhone,
-    machineModel: ticket.machineModel,
-    serialNumber: ticket.serialNumber,
-    issueDescription: ticket.issueDescription,
-    technicianName: technicianRows[0]?.name ?? null,
+    machineCells: [
+      ["Machine", ticket.machineModel],
+      ["Serial no.", ticket.serialNumber ?? "—"],
+      ["Technician", technicianRows[0]?.name ?? "—"],
+    ],
+    note: `Issue: ${ticket.issueDescription}`,
     store: {
       name: store?.name ?? BRAND_NAME,
       address: store?.address ?? null,
@@ -124,6 +136,56 @@ export async function renderInvoicePdf(ticketId: string): Promise<Buffer | null>
     })),
     taxRate: Number(ticket.taxRate),
     bill,
+  };
+
+  return collectPdf((doc) => drawInvoice(doc, data));
+}
+
+/**
+ * A completed demo ticket's invoice (post-008 product feedback): the demo service as the
+ * one line, at the price snapshotted on the ticket, no tax. Sent to the customer when the
+ * demo is completed. Returns null if the demo ticket doesn't exist.
+ */
+export async function renderDemoInvoicePdf(demoTicketId: string): Promise<Buffer | null> {
+  const [ticket] = await db.select().from(demoTickets).where(eq(demoTickets.id, demoTicketId)).limit(1);
+  if (!ticket) return null;
+
+  const [store] = await db.select().from(stores).where(eq(stores.id, ticket.storeId)).limit(1);
+  const technicianRows = ticket.assignedTechnicianId
+    ? await db.select({ name: users.name }).from(users).where(eq(users.id, ticket.assignedTechnicianId)).limit(1)
+    : [];
+  const [completedRow] = await db
+    .select({ createdAt: demoTicketStatusHistory.createdAt })
+    .from(demoTicketStatusHistory)
+    .where(and(eq(demoTicketStatusHistory.demoTicketId, demoTicketId), eq(demoTicketStatusHistory.toStatus, "completed")))
+    .orderBy(desc(demoTicketStatusHistory.createdAt))
+    .limit(1);
+  const price = Number(ticket.demoServicePrice);
+
+  const data: InvoiceData = {
+    ticketNumber: ticket.ticketNumber,
+    meta: [
+      ["Received", formatDate(ticket.createdAt)],
+      ["Demo date", formatDate(ticket.demoDate)],
+      ["Completed", formatDate(completedRow?.createdAt ?? ticket.updatedAt)],
+    ],
+    customerName: ticket.customerName,
+    customerPhone: ticket.customerPhone,
+    machineCells: [
+      ["Model", ticket.machineModel],
+      ["Serial no.", ticket.serialNumber],
+      ["Demoed by", technicianRows[0]?.name ?? "—"],
+    ],
+    note: `Purchase invoice no.: ${ticket.invoiceNumber}`,
+    store: {
+      name: store?.name ?? BRAND_NAME,
+      address: store?.address ?? null,
+      phone: store?.phone ?? null,
+      whatsappNumber: store?.whatsappNumber ?? null,
+    },
+    lineItems: [{ name: ticket.demoServiceName, type: "Demo", quantity: 1, unitCost: price, lineTotal: price }],
+    taxRate: 0,
+    bill: { subtotal: price, taxAmount: 0, total: price },
   };
 
   return collectPdf((doc) => drawInvoice(doc, data));
@@ -180,17 +242,19 @@ function drawInvoice(doc: PDFKit.PDFDocument, data: InvoiceData): void {
   doc.fillColor(COLOR.primary).font("Body-Bold").fontSize(26)
     .text("INVOICE", MARGIN, 36, { width: contentWidth, align: "right", characterSpacing: 2 });
   let y = 72;
-  for (const [label, value] of [
-    ["Invoice no.", data.ticketNumber],
-    ["Received", formatDate(data.receivedAt)],
-    ["Delivered", formatDate(data.deliveredAt)],
-  ]) {
-    doc.fillColor(COLOR.muted).font("Body").fontSize(9.5).text(label, MARGIN, y, { width: contentWidth - 100, align: "right" });
+  const metaRows = [["Invoice no.", data.ticketNumber], ...data.meta];
+  // Labels sit just left of the widest value (a demo ticket number is longer than a
+  // service one), so they never overlap it.
+  doc.font("Body-Bold").fontSize(9.5);
+  const valueWidth = Math.max(90, ...metaRows.map(([, value]) => doc.widthOfString(value)));
+  for (const [label, value] of metaRows) {
+    doc.fillColor(COLOR.muted).font("Body").fontSize(9.5)
+      .text(label, MARGIN, y, { width: contentWidth - valueWidth - 12, align: "right" });
     doc.fillColor(COLOR.text).font("Body-Bold").text(value, MARGIN, y, { width: contentWidth, align: "right" });
     y += 14;
   }
 
-  y = 128;
+  y = Math.max(128, y + 4);
   doc.moveTo(MARGIN, y).lineTo(pageWidth - MARGIN, y).lineWidth(1).strokeColor(COLOR.border).stroke();
 
   // Billed to / From.
@@ -217,13 +281,9 @@ function drawInvoice(doc: PDFKit.PDFDocument, data: InvoiceData): void {
   y = Math.max(billedToBottom, fromBottom) + 14;
 
   // Machine card.
-  const cells: [string, string][] = [
-    ["Machine", data.machineModel],
-    ["Serial no.", data.serialNumber ?? "—"],
-    ["Technician", data.technicianName ?? "—"],
-  ];
-  const cellWidth = contentWidth / 3;
-  const issueText = `Issue: ${data.issueDescription}`;
+  const cells = data.machineCells;
+  const cellWidth = contentWidth / cells.length;
+  const issueText = data.note;
   doc.font("Body-Bold").fontSize(10);
   const cellValueHeight = Math.max(...cells.map(([, v]) => doc.heightOfString(v, { width: cellWidth - 20 })));
   doc.font("Body-Italic").fontSize(9);

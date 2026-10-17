@@ -14,3 +14,18 @@ export function formatDateTime(value: string | Date): string {
   const min = String(d.getMinutes()).padStart(2, "0");
   return `${formatDate(d)}, ${hh}:${min}`;
 }
+
+const BUSINESS_DATE = new Intl.DateTimeFormat("en-GB", {
+  timeZone: "Asia/Kolkata",
+  day: "2-digit",
+  month: "2-digit",
+  year: "numeric",
+});
+
+/**
+ * dd/mm/yyyy in the stores' own time zone (India) — for server-side text such as WhatsApp
+ * messages, where the server's clock zone (often UTC) must not shift the date.
+ */
+export function formatBusinessDate(value: string | Date): string {
+  return BUSINESS_DATE.format(typeof value === "string" ? new Date(value) : value);
+}

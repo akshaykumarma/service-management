@@ -8,7 +8,7 @@ import { POST as loginPOST } from "@/app/api/auth/login/route";
 import { POST as logoutPOST } from "@/app/api/auth/logout/route";
 import { GET as activityGET } from "@/app/api/admin/activity/route";
 import { db } from "@/lib/db/client";
-import { loginEvents } from "@/lib/db/schema";
+import { loginEvents, notifications } from "@/lib/db/schema";
 import { loginAttempts } from "@/lib/auth/lockout";
 
 function loginRequest(email: string, password: string) {
@@ -114,4 +114,36 @@ describe("Super Admin login & activity", () => {
     expect((await activityGET(jsonRequest(`/api/admin/activity?kind=bogus`, { cookie }))).status).toBe(400);
     expect((await activityGET(jsonRequest(`/api/admin/activity?dateTo=yesterday`, { cookie }))).status).toBe(400);
   });
+
+  // TEMPORARY feature (remove with it before production — see CLAUDE.md).
+  it("lists every WhatsApp message with its full text when asked for messages", async () => {
+    const store = await createStore();
+    const sa = await createUser({ role: "super_admin", password: "Correct123!" });
+    const ticket = await createTicket({ storeId: store.id, createdBy: sa.id });
+    await db.insert(notifications).values({
+      ticketId: ticket.id,
+      type: "completion",
+      recipientPhone: "+919800000001",
+      renderedContent: "Hi Asha, your machine is ready for pickup.\nTotal amount to pay: ₹500.00",
+      status: "sent",
+      messageId: "m-1",
+    });
+    const cookie = await loginAs(sa.email, "Correct123!");
+
+    const body = await (await activityGET(jsonRequest("/api/admin/activity?kind=message", { cookie }))).json();
+    expect(body.entries).toHaveLength(1);
+    expect(body.entries[0]).toMatchObject({
+      kind: "message",
+      link: `/tickets/${ticket.id}`,
+      detail: "Hi Asha, your machine is ready for pickup.\nTotal amount to pay: ₹500.00",
+    });
+    expect(body.entries[0].description).toContain("ready for pickup to +919800000001");
+    expect(body.entries[0].description).toContain(ticket.ticketNumber);
+
+    const everything = await (await activityGET(jsonRequest("/api/admin/activity", { cookie }))).json();
+    expect(everything.entries.some((e: { kind: string }) => e.kind === "message")).toBe(true);
+    const logins = await (await activityGET(jsonRequest("/api/admin/activity?kind=login", { cookie }))).json();
+    expect(logins.entries.some((e: { kind: string }) => e.kind === "message")).toBe(false);
+  });
 });
+

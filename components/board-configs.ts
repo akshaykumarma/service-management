@@ -38,6 +38,8 @@ export const SERVICE_BOARD: BoardConfig = {
   ],
   cancelledTile: { status: "cancelled", label: "Cancelled", dot: "#b91c1c", bg: "#fce9e9" },
   transitionErrorMessages: COMMON_TRANSITION_ERRORS,
+  ticketsHeading: "Service tickets",
+  technicianLabel: "Technician",
 };
 
 /** 008-demo-board: the same board over demo tickets and their five statuses. */
@@ -69,6 +71,8 @@ export const DEMO_BOARD: BoardConfig = {
   cancelledTile: { status: "cancelled", label: "Cancelled", dot: "#b91c1c", bg: "#fce9e9" },
   transitionErrorMessages: {
     ...COMMON_TRANSITION_ERRORS,
-    technician_required: "Assign a technician on the demo ticket's page to move it to Assigned.",
+    technician_required: "Choose who is giving the demo (Demoed by) on the demo ticket's page to move it to Assigned.",
   },
+  ticketsHeading: "Demo tickets",
+  technicianLabel: "Demoed by",
 };

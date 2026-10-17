@@ -292,7 +292,7 @@ export default function ReportsPage() {
           )}
           <SearchableSelect
             id="tableTechnicianId"
-            label="Filter by technician"
+            label={reportType === "demo" ? "Filter by Demoed by" : "Filter by technician"}
             placeholder="All technicians"
             options={technicianOptions.map((t) => ({ id: t.id, label: t.name }))}
             value={tableTechnicianId}
@@ -342,7 +342,7 @@ export default function ReportsPage() {
                   <th scope="col">Demo date</th>
                   <th scope="col">Status</th>
                   <th scope="col">Received</th>
-                  <th scope="col">Technician</th>
+                  <th scope="col">Demoed by</th>
                   <th scope="col">Price</th>
                 </tr>
               </thead>

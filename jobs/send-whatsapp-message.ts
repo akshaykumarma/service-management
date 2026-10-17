@@ -72,7 +72,9 @@ export async function registerSendWhatsAppMessageWorker(boss: PgBoss): Promise<v
     SEND_WHATSAPP_MESSAGE_QUEUE,
     // A fast poll (the minimum pg-boss allows) keeps test latency low; harmless in
     // production at this feature's scale (a handful of sends per store per day).
-    { pollingIntervalSeconds: 0.5 },
+    // Several messages at once: creating and completing a ticket now each send one, so a
+    // busy moment (or a burst of retries) shouldn't queue them behind each other.
+    { pollingIntervalSeconds: 0.5, localConcurrency: 4 },
     async ([job]: Job<SendWhatsAppMessageJobData>[]) => {
       await processSendWhatsAppMessageJob(job.data);
     },

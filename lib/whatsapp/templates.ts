@@ -17,11 +17,26 @@ export const ALLOWED_PLACEHOLDERS = [
   "store_name",
   "store_phone",
   "otp_code",
+  // Everything captured when a ticket is created (post-v1 product feedback: the creation
+  // message repeats all of it back to the customer).
+  "customer_phone",
+  "alt_phone",
+  "serial_number",
+  "issue_description",
+  "received_date",
+  "estimated_pickup_date",
   // Demo tickets' customer messages.
+  "invoice_number",
   "demo_service",
   "demo_date",
   "demo_amount",
+  "technician_name",
+  "technician_phone",
+  "invoice_url",
 ] as const;
+
+/** Shown for an optional detail the customer didn't give (e.g. no alternate phone). */
+export const NOT_GIVEN = "—";
 
 export type PlaceholderToken = (typeof ALLOWED_PLACEHOLDERS)[number];
 
@@ -45,20 +60,51 @@ export function renderTemplate(body: string, values: Partial<Record<PlaceholderT
 }
 
 export const DEFAULT_TEMPLATE_BODY: Record<TemplateType, string> = {
-  ticket_created:
-    "Hi {{customer_name}}, thank you for choosing {{store_name}}. We have received your {{machine_model}} for service. " +
-    "Your ticket number is {{ticket_id}} — please keep it for reference. We will message you once it is ready. " +
-    "Questions? Call {{store_phone}}.",
+  ticket_created: [
+    "Hi {{customer_name}}, thank you for choosing {{store_name}}. We have received your machine for service.",
+    "",
+    "*Ticket number:* {{ticket_id}}",
+    "*Received on:* {{received_date}}",
+    "*Machine model:* {{machine_model}}",
+    "*Serial number:* {{serial_number}}",
+    "*Problem reported:* {{issue_description}}",
+    "*Phone:* {{customer_phone}}",
+    "*Alternate phone:* {{alt_phone}}",
+    "*Expected ready by:* {{estimated_pickup_date}}",
+    "",
+    "Please keep your ticket number for reference. We will message you once it is ready for pickup. Questions? Call {{store_phone}}.",
+  ].join("\n"),
   completion:
     "Hi {{customer_name}}, good news! The service on your {{machine_model}} (Ticket {{ticket_id}}) is complete and " +
     "it is ready for pickup at {{store_name}}. Total amount to pay: ₹{{bill_total}}. Questions? Call {{store_phone}}.",
-  demo_created:
-    "Hi {{customer_name}}, thank you for choosing {{store_name}}. Your {{demo_service}} demo for your {{machine_model}} " +
-    "is booked for {{demo_date}}. Your ticket number is {{ticket_id}} — please keep it for reference. " +
-    "Questions? Call {{store_phone}}.",
-  demo_completed:
-    "Hi {{customer_name}}, your {{demo_service}} demo for your {{machine_model}} (Ticket {{ticket_id}}) has been " +
-    "completed. Total amount: ₹{{demo_amount}}. Thank you for choosing {{store_name}}! Questions? Call {{store_phone}}.",
+  demo_created: [
+    "Hi {{customer_name}}, thank you for choosing {{store_name}}. Your demo has been booked.",
+    "",
+    "*Ticket number:* {{ticket_id}}",
+    "*Model number:* {{machine_model}}",
+    "*Serial number:* {{serial_number}}",
+    "*Invoice number:* {{invoice_number}}",
+    "*Demo service:* {{demo_service}} (₹{{demo_amount}})",
+    "*Received on:* {{received_date}}",
+    "*Demo date:* {{demo_date}}",
+    "*Phone:* {{customer_phone}}",
+    "",
+    "Please keep your ticket number for reference. Questions? Call {{store_phone}}.",
+  ].join("\n"),
+  demo_completed: [
+    "Hi {{customer_name}}, your demo has been completed.",
+    "",
+    "*Ticket number:* {{ticket_id}}",
+    "*Model number:* {{machine_model}}",
+    "*Serial number:* {{serial_number}}",
+    "*Demo service:* {{demo_service}}",
+    "*Demoed by:* {{technician_name}}",
+    "*Technician phone:* {{technician_phone}}",
+    "*Total amount:* ₹{{demo_amount}}",
+    "*Invoice:* {{invoice_url}}",
+    "",
+    "Thank you for choosing {{store_name}}! Questions? Call {{store_phone}}.",
+  ].join("\n"),
   otp: "Your delivery verification code for Ticket {{ticket_id}} is {{otp_code}}. Valid for 10 minutes. Do not share this code.",
 };
 
@@ -71,6 +117,16 @@ export const SAMPLE_PLACEHOLDER_VALUES: Record<PlaceholderToken, string> = {
   store_name: "Sample Store",
   store_phone: "+910000000000",
   otp_code: "000000",
+  customer_phone: "+919000000000",
+  alt_phone: "—",
+  serial_number: "SN-000000",
+  issue_description: "Sample problem description",
+  received_date: "17/10/2026",
+  estimated_pickup_date: "20/10/2026",
+  invoice_number: "INV-0000",
+  technician_name: "Sample Technician",
+  technician_phone: "+919000000001",
+  invoice_url: "https://example.com/api/invoices/sample",
   demo_service: "Home demo",
   demo_date: "20/10/2026",
   demo_amount: "250.00",

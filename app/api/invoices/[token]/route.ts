@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getTicketIdForInvoiceToken } from "@/lib/billing/invoice";
-import { renderInvoicePdf } from "@/lib/billing/invoice-pdf";
+import { getDemoTicketIdForInvoiceToken, getTicketIdForInvoiceToken } from "@/lib/billing/invoice";
+import { renderDemoInvoicePdf, renderInvoicePdf } from "@/lib/billing/invoice-pdf";
 
 /**
  * Public, unauthenticated — this is the link sent to the CUSTOMER via WhatsApp at
@@ -11,12 +11,14 @@ import { renderInvoicePdf } from "@/lib/billing/invoice-pdf";
  * PDF viewer when tapped from WhatsApp, unlike this app's staff-facing exports.
  */
 export async function GET(_request: NextRequest, { params }: { params: { token: string } }) {
+  // A service ticket's invoice, or (post-008) a completed demo ticket's.
   const ticketId = await getTicketIdForInvoiceToken(params.token);
-  if (!ticketId) {
+  const demoTicketId = ticketId ? null : await getDemoTicketIdForInvoiceToken(params.token);
+  if (!ticketId && !demoTicketId) {
     return NextResponse.json({ error: { code: "not_found" } }, { status: 404 });
   }
 
-  const pdfBuffer = await renderInvoicePdf(ticketId);
+  const pdfBuffer = ticketId ? await renderInvoicePdf(ticketId) : await renderDemoInvoicePdf(demoTicketId!);
   if (!pdfBuffer) {
     return NextResponse.json({ error: { code: "not_found" } }, { status: 404 });
   }

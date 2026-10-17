@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 
 interface ActivityEntry {
   id: string;
-  kind: "login" | "change";
+  kind: "login" | "change" | "message";
   at: string;
   userId: string | null;
   userName: string | null;
@@ -15,6 +15,7 @@ interface ActivityEntry {
   link: string | null;
   ipAddress: string | null;
   userAgent: string | null;
+  detail?: string | null;
 }
 
 interface SignedInUser {
@@ -124,7 +125,10 @@ export default function LoginActivityPage() {
   return (
     <main className="activity-page">
       <h1>Login &amp; activity</h1>
-      <p>Who signed in, from where, and what they changed. Visible to Super Admins only.</p>
+      <p>
+        Who signed in, from where, and what they changed — plus, for now, every WhatsApp message sent. Visible to Super
+        Admins only.
+      </p>
 
       <section aria-labelledby="signed-in-heading" className="activity-signed-in">
         <h2 id="signed-in-heading">Signed in now ({signedIn.length})</h2>
@@ -164,9 +168,11 @@ export default function LoginActivityPage() {
           <div>
             <label htmlFor="activityKind">Show</label>
             <select id="activityKind" value={kind} onChange={(e) => setKind(e.target.value)}>
-              <option value="">Logins and changes</option>
+              <option value="">Everything</option>
               <option value="login">Logins only</option>
               <option value="change">Changes only</option>
+              {/* TEMPORARY (owner's request): remove before production — see CLAUDE.md. */}
+              <option value="message">WhatsApp messages only</option>
             </select>
           </div>
           <div>
@@ -206,9 +212,18 @@ export default function LoginActivityPage() {
                 {entries.map((e) => (
                   <tr key={e.id} className={e.outcome && e.outcome !== "success" && e.outcome !== "logout" ? "activity-row--warn" : undefined}>
                     <td>{dateTime.format(new Date(e.at))}</td>
-                    <td>{e.userName ?? <em title="No account matches what was typed">{e.identifier}</em>}</td>
+                    <td>
+                      {e.kind === "message" ? (
+                        <span className="muted">System</span>
+                      ) : (
+                        (e.userName ?? <em title="No account matches what was typed">{e.identifier}</em>)
+                      )}
+                    </td>
                     <td>{e.userRole ? (ROLE_LABELS[e.userRole] ?? e.userRole) : "—"}</td>
-                    <td>{e.link ? <a href={e.link}>{e.description}</a> : e.description}</td>
+                    <td>
+                      {e.link ? <a href={e.link}>{e.description}</a> : e.description}
+                      {e.detail && <div className="activity-message">{e.detail}</div>}
+                    </td>
                     <td title={e.userAgent ?? undefined}>
                       {e.kind === "login" ? [e.ipAddress, deviceLabel(e.userAgent)].filter(Boolean).join(" · ") || "—" : "—"}
                     </td>

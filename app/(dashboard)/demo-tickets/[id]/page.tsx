@@ -48,6 +48,7 @@ interface ActivityEntry {
   actor: string | null;
   timestamp: string;
   description: string;
+  detail?: string;
 }
 
 interface Option {
@@ -79,7 +80,7 @@ const STATUS_ERRORS: Record<string, string> = {
   comment_required: "A comment is required for this change.",
   invalid_transition: "That status change isn't allowed from the current status.",
   role_not_permitted: "Your role doesn't permit this status change.",
-  technician_required: "Assign a technician first — that moves the ticket to Assigned.",
+  technician_required: "Choose who is giving the demo (Demoed by) first — that moves the ticket to Assigned.",
 };
 
 const EDIT_ERRORS: Record<string, string> = {
@@ -316,9 +317,16 @@ export default function DemoTicketPage() {
             {ticket.machineModel} · SN {ticket.serialNumber} · Demo on {formatDate(ticket.demoDate)}
           </p>
         </div>
-        <a className="button-link" href="/demo-board">
-          Demo Board
-        </a>
+        <div className="ticket-header__actions">
+          {ticket.status === "completed" && (
+            <a className="button-link" href={`/api/demo-tickets/${ticket.id}/invoice`}>
+              Download invoice
+            </a>
+          )}
+          <a className="button-link" href="/demo-board">
+            Demo Board
+          </a>
+        </div>
       </header>
 
       <div className="ticket-tabs" role="tablist" aria-label="Demo ticket sections">
@@ -498,12 +506,12 @@ export default function DemoTicketPage() {
             </section>
 
             <section className="card" aria-labelledby="demo-technician-heading">
-              <h2 id="demo-technician-heading">Technician</h2>
+              <h2 id="demo-technician-heading">Demoed by</h2>
               {canManage && !locked ? (
                 <form onSubmit={handleAssign} noValidate>
                   <SearchableSelect
                     id="technicianSelection"
-                    label="Assigned technician"
+                    label="Technician giving the demo"
                     placeholder="Unassigned"
                     options={technicians.map((t) => ({ id: t.id, label: t.name }))}
                     value={technicianSelection}
@@ -544,6 +552,8 @@ export default function DemoTicketPage() {
               {[...activity].reverse().map((entry, i) => (
                 <li key={i} className={`timeline__item timeline__item--${entry.source === "status" ? "status_history" : entry.source === "edit" ? "details_edit" : entry.source}`}>
                   <div className="timeline__text">{entry.description}</div>
+                  {/* TEMPORARY: WhatsApp message text — remove before production (CLAUDE.md). */}
+                  {entry.detail && <div className="activity-message">{entry.detail}</div>}
                   <div className="timeline__meta">
                     {entry.actor ?? "System"} · {formatDateTime(entry.timestamp)}
                   </div>

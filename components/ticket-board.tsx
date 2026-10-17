@@ -80,6 +80,10 @@ export interface BoardConfig {
   statusTiles: BoardStatusTile[];
   cancelledTile: BoardStatusTile;
   transitionErrorMessages: Record<string, string>;
+  /** List view heading, e.g. "Service tickets" / "Demo tickets". */
+  ticketsHeading: string;
+  /** What the assigned technician is called on this board, e.g. "Technician" / "Demoed by". */
+  technicianLabel: string;
 }
 
 function ageLabel(daysOpen: number): string {
@@ -634,7 +638,7 @@ export default function TicketBoard({ config }: { config: BoardConfig }) {
 
               <SearchableSelect
                 id="technicianFilter"
-                label="Technician"
+                label={config.technicianLabel}
                 placeholder="All technicians"
                 options={technicianOptions.map((t) => ({ id: t.id, label: t.name }))}
                 value={technicianFilter}
@@ -782,7 +786,7 @@ export default function TicketBoard({ config }: { config: BoardConfig }) {
             <div className="list-filterbar__field">
               <SearchableSelect
                 id="listTechnicianFilter"
-                label="Technician"
+                label={config.technicianLabel}
                 placeholder="All technicians"
                 options={technicianOptions.map((t) => ({ id: t.id, label: t.name }))}
                 value={technicianFilter}
@@ -827,7 +831,9 @@ export default function TicketBoard({ config }: { config: BoardConfig }) {
           {loaded && tickets.length > 0 && (
             <section aria-labelledby="ticket-list-heading" className="list-table-section">
               <div className="section-header">
-                <h2 id="ticket-list-heading">Service tickets ({sortedTickets.length})</h2>
+                <h2 id="ticket-list-heading">
+                  {config.ticketsHeading} ({sortedTickets.length})
+                </h2>
               </div>
 
               {sortedTickets.length === 0 ? (
@@ -842,7 +848,7 @@ export default function TicketBoard({ config }: { config: BoardConfig }) {
                           <th>Customer</th>
                           <th>Model</th>
                           {showStoreColumn && <th>Store</th>}
-                          <th>Technician</th>
+                          <th>{config.technicianLabel}</th>
                           <th>Status</th>
                           <th>
                             <button

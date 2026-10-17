@@ -3,7 +3,7 @@ import { desc, eq } from "drizzle-orm";
 import { resetDb } from "../helpers/db";
 import { createStore, createTicket, createUser } from "../helpers/factories";
 import { jsonRequest, loginAs } from "../helpers/http";
-import { resetMockWhatsApp } from "../helpers/whatsapp-mock-client";
+import { getReceivedMessages, resetMockWhatsApp } from "../helpers/whatsapp-mock-client";
 import { waitFor } from "../helpers/wait-for";
 import { POST as deliverPOST } from "@/app/api/tickets/[id]/deliver/route";
 import { POST as verifyPOST } from "@/app/api/tickets/[id]/deliver/verify/route";
@@ -32,12 +32,17 @@ async function getIssuedCode(ticketId: string, excludeIds: Set<string> = new Set
   );
 }
 
-async function bruteForceCode(codeHash: string): Promise<string> {
-  for (let i = 0; i < 1_000_000; i++) {
-    const candidate = String(i).padStart(6, "0");
-    if (verifyOtpCode(candidate, codeHash)) return candidate;
-  }
-  throw new Error("no matching code found");
+// The code the customer received, read from the mock WhatsApp server's log. (Guessing it
+// by trying all million codes took anywhere from instant to many seconds per delivery,
+// which made this two-delivery test intermittently time out.)
+async function receivedCode(codeHash: string): Promise<string> {
+  return waitFor(
+    async () =>
+      (await getReceivedMessages()).find(
+        (m) => m.templateType === "otp" && m.params.otp_code && verifyOtpCode(m.params.otp_code, codeHash),
+      )?.params.otp_code,
+    { message: "expected the OTP message to reach the (mock) customer" },
+  );
 }
 
 async function deliverViaOtp(ticketId: string, cookie: string, excludeIds: Set<string> = new Set()) {
@@ -45,7 +50,7 @@ async function deliverViaOtp(ticketId: string, cookie: string, excludeIds: Set<s
     params: { id: ticketId },
   });
   const row = await getIssuedCode(ticketId, excludeIds);
-  const code = await bruteForceCode(row.codeHash);
+  const code = await receivedCode(row.codeHash);
   return verifyPOST(jsonRequest(`/api/tickets/${ticketId}/deliver/verify`, { method: "POST", cookie, body: { code } }), {
     params: { id: ticketId },
   });
@@ -83,7 +88,7 @@ describe("Invoice PDF + WhatsApp link at delivery (post-005 product feedback)", 
       },
       // The invoice PDF is rendered before the message is queued, which can take a few
       // seconds on a busy test machine.
-      { message: "expected an invoice notifications row", timeoutMs: 15_000 },
+      { message: "expected an invoice notifications row", timeoutMs: 10_000 },
     );
     expect(notif!.status).toBe("sent");
     expect(notif!.recipientPhone).toBe("+919999955555");

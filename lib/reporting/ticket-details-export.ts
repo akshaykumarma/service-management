@@ -114,7 +114,7 @@ export function demoTicketsTable(rows: DemoTicketDetailRow[]): ReportTable {
       { header: "Demo date", width: 12, pdfWidth: 62 },
       { header: "Status", width: 12, pdfWidth: 54 },
       { header: "Received", width: 12, pdfWidth: 62 },
-      { header: "Technician", width: 18, pdfWidth: 54, dashWhenEmpty: true },
+      { header: "Demoed by", width: 18, pdfWidth: 54, dashWhenEmpty: true },
       { header: "Price", width: 12, pdfWidth: 52, money: true },
     ],
     rows: rows.map((t) => [

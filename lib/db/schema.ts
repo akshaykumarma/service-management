@@ -544,3 +544,23 @@ export const loginEvents = pgTable(
     userIdx: index("login_events_user_idx").on(table.userId),
   }),
 );
+
+/**
+ * A completed demo ticket's public invoice link token (post-008 product feedback) — the
+ * demo counterpart of ticket_invoices: minted once, reused, served by /api/invoices/:token.
+ */
+export const demoTicketInvoices = pgTable(
+  "demo_ticket_invoices",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    demoTicketId: uuid("demo_ticket_id")
+      .notNull()
+      .references(() => demoTickets.id, { onDelete: "cascade" }),
+    token: text("token").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    demoTicketUnique: uniqueIndex("demo_ticket_invoices_demo_ticket_id_unique_idx").on(table.demoTicketId),
+    tokenUnique: uniqueIndex("demo_ticket_invoices_token_unique_idx").on(table.token),
+  }),
+);
