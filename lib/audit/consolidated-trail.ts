@@ -1,4 +1,5 @@
 import { and, eq, inArray } from "drizzle-orm";
+import { listUnrecordedMessages } from "@/lib/notifications/unrecorded-messages";
 import { db } from "@/lib/db/client";
 import { auditLog, deliveryOverrides, notifications, otpVerifications, statusHistory, ticketLineItems, users } from "@/lib/db/schema";
 import { DETAIL_FIELD_LABELS, type EditableDetailField } from "@/lib/tickets/edit-details";
@@ -92,6 +93,16 @@ export async function getConsolidatedAuditTrail(ticketId: string): Promise<Audit
       timestamp: row.sentAt,
       description: `${NOTIFICATION_LABELS[row.type] ?? row.type} WhatsApp notification ${row.status} to ${row.recipientPhone}`,
       detail: row.renderedContent,
+    });
+  }
+  // TEMPORARY: messages still in the queue, or that couldn't be recorded (see CLAUDE.md).
+  for (const msg of await listUnrecordedMessages({ ticketId })) {
+    entries.push({
+      source: "notification",
+      actor: null,
+      timestamp: msg.at,
+      description: `${NOTIFICATION_LABELS[msg.type] ?? msg.type} WhatsApp notification ${msg.state} to ${msg.recipientPhone}`,
+      detail: msg.content,
     });
   }
 

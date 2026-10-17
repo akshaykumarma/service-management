@@ -1,6 +1,7 @@
 import { and, desc, eq, gt, gte, inArray, lt, sql, type SQL } from "drizzle-orm";
 import type { PgColumn } from "drizzle-orm/pg-core";
 import { db } from "@/lib/db/client";
+import { listUnrecordedMessages } from "@/lib/notifications/unrecorded-messages";
 import {
   auditLog,
   demoTicketStatusHistory,
@@ -203,6 +204,27 @@ export async function listActivity(filters: ActivityFilters = {}): Promise<Activ
         description: `WhatsApp ${MESSAGE_LABELS[row.type] ?? row.type} to ${row.recipientPhone} — ${row.status}${number ? ` (${number})` : " (test send)"}`,
         detail: row.content,
         link: row.ticketId ? `/tickets/${row.ticketId}` : row.demoTicketId ? `/demo-tickets/${row.demoTicketId}` : null,
+        ipAddress: null,
+        userAgent: null,
+      });
+    }
+    // Messages still in the queue, or that couldn't be recorded.
+    const from = filters.dateFrom ? istDayStart(filters.dateFrom) : null;
+    const to = filters.dateTo ? addDays(istDayStart(filters.dateTo), 1) : null;
+    for (const msg of await listUnrecordedMessages({ limit })) {
+      if ((from && msg.at < from) || (to && msg.at >= to)) continue;
+      entries.push({
+        id: `queued:${msg.id}`,
+        kind: "message",
+        at: msg.at.toISOString(),
+        userId: null,
+        userName: null,
+        userRole: null,
+        identifier: null,
+        outcome: null,
+        description: `WhatsApp ${MESSAGE_LABELS[msg.type] ?? msg.type} to ${msg.recipientPhone} — ${msg.state}`,
+        detail: msg.content,
+        link: msg.ticketId ? `/tickets/${msg.ticketId}` : msg.demoTicketId ? `/demo-tickets/${msg.demoTicketId}` : null,
         ipAddress: null,
         userAgent: null,
       });

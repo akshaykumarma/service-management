@@ -24,7 +24,9 @@
   the "WhatsApp messages only" filter and `.activity-message` text on the activity page, and
   `kind=message` in app/api/admin/activity/route.ts), and the same text on each service and
   demo ticket's Activity (the `detail` field in lib/audit/consolidated-trail.ts and
-  lib/demo/activity.ts, rendered as `.activity-message` on both ticket pages). It was added at
+  lib/demo/activity.ts, rendered as `.activity-message` on both ticket pages), including
+  not-yet-recorded queued messages (lib/notifications/unrecorded-messages.ts and its callers;
+  tests/integration/unrecorded-messages.test.ts). It was added at
   the owner's request for testing only. Before any production deployment, ask the owner to
   confirm, then remove it.
 

@@ -1,4 +1,5 @@
 import { and, eq } from "drizzle-orm";
+import { listUnrecordedMessages } from "@/lib/notifications/unrecorded-messages";
 import { db } from "@/lib/db/client";
 import { auditLog, demoTicketStatusHistory, notifications, users } from "@/lib/db/schema";
 import { DEMO_FIELD_LABELS } from "@/lib/demo/edit-details";
@@ -80,6 +81,16 @@ export async function getDemoActivity(demoTicketId: string): Promise<DemoActivit
       timestamp: n.sentAt,
       description: `${NOTIFICATION_LABELS[n.type] ?? "WhatsApp"} (${n.recipientPhone}) ${n.status === "failed" ? "failed" : "sent"}`,
       detail: n.renderedContent,
+    });
+  }
+  // TEMPORARY: messages still in the queue, or that couldn't be recorded (see CLAUDE.md).
+  for (const msg of await listUnrecordedMessages({ demoTicketId })) {
+    entries.push({
+      source: "notification",
+      actor: null,
+      timestamp: msg.at,
+      description: `${NOTIFICATION_LABELS[msg.type] ?? "WhatsApp"} (${msg.recipientPhone}) ${msg.state}`,
+      detail: msg.content,
     });
   }
 
