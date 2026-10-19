@@ -10,7 +10,7 @@ export interface DemoActivityEntry {
   actor: string | null;
   timestamp: Date;
   description: string;
-  /** TEMPORARY (owner's request): a WhatsApp message's full text — remove before production, see CLAUDE.md. */
+  /** A WhatsApp message's full text, so staff can see exactly what was sent. */
   detail?: string;
 }
 
@@ -83,7 +83,7 @@ export async function getDemoActivity(demoTicketId: string): Promise<DemoActivit
       detail: n.renderedContent,
     });
   }
-  // TEMPORARY: messages still in the queue, or that couldn't be recorded (see CLAUDE.md).
+  // Messages still in the queue, or that couldn't be recorded.
   for (const msg of await listUnrecordedMessages({ demoTicketId })) {
     entries.push({
       source: "notification",

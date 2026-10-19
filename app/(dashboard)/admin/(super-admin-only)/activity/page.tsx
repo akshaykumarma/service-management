@@ -171,7 +171,6 @@ export default function LoginActivityPage() {
               <option value="">Everything</option>
               <option value="login">Logins only</option>
               <option value="change">Changes only</option>
-              {/* TEMPORARY (owner's request): remove before production — see CLAUDE.md. */}
               <option value="message">WhatsApp messages only</option>
             </select>
           </div>

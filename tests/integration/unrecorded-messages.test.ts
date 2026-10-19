@@ -8,7 +8,6 @@ import { GET as demoActivityGET } from "@/app/api/demo-tickets/[id]/activity/rou
 import { GET as adminActivityGET } from "@/app/api/admin/activity/route";
 import { db } from "@/lib/db/client";
 
-// TEMPORARY feature (remove with the WhatsApp message log before production — CLAUDE.md).
 // A queued message the worker never managed to record (here: a job pg-boss marked failed)
 // must still show, with its text, wherever messages are listed.
 async function insertFailedJob(data: Record<string, unknown>) {

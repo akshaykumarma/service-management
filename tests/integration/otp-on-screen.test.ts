@@ -4,10 +4,11 @@ import { resetDb } from "../helpers/db";
 import { createStore, createTicket, createUser } from "../helpers/factories";
 import { jsonRequest, loginAs } from "../helpers/http";
 import { resetMockWhatsApp } from "../helpers/whatsapp-mock-client";
+import { waitFor } from "../helpers/wait-for";
 import { POST as deliverPOST } from "@/app/api/tickets/[id]/deliver/route";
 import { POST as verifyPOST } from "@/app/api/tickets/[id]/deliver/verify/route";
 import { db } from "@/lib/db/client";
-import { tickets } from "@/lib/db/schema";
+import { notifications, tickets } from "@/lib/db/schema";
 
 // TEMPORARY testing aid (SHOW_OTP_ON_SCREEN) — delete this file with the feature before production.
 describe("On-screen OTP test aid", () => {
@@ -39,6 +40,14 @@ describe("On-screen OTP test aid", () => {
     const { testOtp } = await res.json();
     expect(testOtp).toMatch(/^\d{6}$/);
 
+    // The OTP message in the ticket's Activity shows the real code too (test mode only).
+    const notif = await waitFor(async () => {
+      const rows = await db.select().from(notifications).where(eq(notifications.ticketId, ticket.id));
+      return rows.find((r) => r.type === "otp");
+    }, { message: "expected the OTP notification" });
+    expect(notif.renderedContent).toContain(testOtp);
+    expect(notif.renderedContent).not.toContain("REDACTED");
+
     const verify = await verifyPOST(
       jsonRequest(`/api/tickets/${ticket.id}/deliver/verify`, { method: "POST", cookie, body: { code: testOtp } }),
       { params: { id: ticket.id } },
@@ -56,5 +65,12 @@ describe("On-screen OTP test aid", () => {
     });
     expect(res.status).toBe(202);
     expect(await res.text()).toBe("");
+
+    // Outside test mode the stored message never contains the code.
+    const notif = await waitFor(async () => {
+      const rows = await db.select().from(notifications).where(eq(notifications.ticketId, ticket.id));
+      return rows.find((r) => r.type === "otp");
+    }, { message: "expected the OTP notification" });
+    expect(notif.renderedContent).toContain("REDACTED");
   });
 });

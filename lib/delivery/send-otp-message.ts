@@ -1,4 +1,5 @@
 import { renderTemplate, getApprovedTemplateBody } from "@/lib/whatsapp/templates";
+import { isOtpOnScreenEnabled } from "@/lib/delivery/otp-display";
 import { getBoss } from "@/lib/jobs/boss";
 import { SEND_WHATSAPP_MESSAGE_QUEUE, type SendWhatsAppMessageJobData } from "@/jobs/send-whatsapp-message";
 
@@ -17,8 +18,13 @@ export async function enqueueOtpSend(
     type: "otp",
     recipientPhone: ticket.customerPhone,
     templateParams: { ticket_id: ticket.ticketNumber, otp_code: code },
-    // Redacted: never persist the real code (plan.md's Constraints — OTP codes never logged).
-    storedContent: renderTemplate(approvedBody, { ticket_id: ticket.ticketNumber, otp_code: "REDACTED" }),
+    // Redacted: never persist the real code (plan.md's Constraints — OTP codes never logged)
+    // — except in the TEMPORARY on-screen OTP test mode, where the owner asked to see the
+    // code in the ticket's Activity too. Removed with that test aid before production.
+    storedContent: renderTemplate(approvedBody, {
+      ticket_id: ticket.ticketNumber,
+      otp_code: isOtpOnScreenEnabled() ? code : "REDACTED",
+    }),
   };
   await boss.send(SEND_WHATSAPP_MESSAGE_QUEUE, jobData);
 }

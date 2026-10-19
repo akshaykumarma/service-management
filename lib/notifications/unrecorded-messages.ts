@@ -3,13 +3,12 @@ import { db } from "@/lib/db/client";
 import { SEND_WHATSAPP_MESSAGE_QUEUE } from "@/jobs/send-whatsapp-message";
 
 /**
- * TEMPORARY (owner's request — remove before production with the rest of the WhatsApp
- * message log, see CLAUDE.md): WhatsApp messages that were queued but have no
+ * WhatsApp messages that were queued but have no
  * `notifications` record yet, read straight from the pg-boss queue. A message only gets
  * its record once the background worker has tried to send it, so without this a message
  * would be invisible while waiting, while being sent, or if the worker couldn't record it
  * at all (e.g. the database is missing a migration). Shows the same redacted text that
- * would be stored (`storedContent` — an OTP's code is never in it).
+ * would be stored (`storedContent` — an OTP's code is only in it in the temporary on-screen OTP test mode).
  */
 export interface UnrecordedMessage {
   id: string;

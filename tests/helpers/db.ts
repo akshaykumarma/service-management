@@ -12,7 +12,7 @@ const DEADLOCK = "40P01";
 export async function resetDb(): Promise<void> {
   await db.execute(
     // Every message job except one mid-send (finished ones too: failed jobs are listed as
-    // "could not be sent" in the temporary WhatsApp message log).
+    // "could not be sent" in the WhatsApp message log).
     sql`DELETE FROM pgboss.job WHERE name = 'send-whatsapp-message' AND state <> 'active'`,
   );
   for (let attempt = 1; ; attempt++) {

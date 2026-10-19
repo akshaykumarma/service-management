@@ -295,7 +295,7 @@ Demo tickets track product demonstrations (e.g. after a machine sale), separatel
 - When a demo ticket is created, the customer receives a WhatsApp message with the ticket number and every detail entered: model number, serial number, invoice number, demo service and price, received date, demo date and phone.
 - The first time a demo is moved to Completed, the customer receives a "demo completed" message with who gave the demo (**Demoed by** name and phone), the demo service's **total amount** (e.g. ₹1,250.00) and a link to the demo's **invoice PDF** (the demo service as the single line, no tax). Staff can download the same invoice from a completed demo ticket's page. Re-completing a demo does not send it again.
 - On the Demo Board and demo tickets, the assigned technician is labelled **Demoed by**, and the List view is titled **Demo tickets**.
-- *(Temporary, for testing — remove before production)*: every WhatsApp message's full text is shown in the ticket's Activity and in Super Admin → Login & activity.
+- Every WhatsApp message (sent, failed, or still queued) is shown with its full text in the ticket's Activity and in Super Admin → Login & activity, so staff can see what the customer was sent. OTP codes are hidden there (shown only in the temporary on-screen OTP test mode, removed before production).
 #### 6.11.6 Demo Tickets in Reports
 - Reports offers **Service tickets** or **Demo tickets**. The demo report covers every demo status, with the same store scoping as the service report (Service Managers see their own store; Technicians have no Reports access).
 - Filters: store, date range, status, customer name, phone, model, ticket number, serial number, invoice number, technician.
