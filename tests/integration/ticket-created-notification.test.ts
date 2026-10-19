@@ -91,7 +91,7 @@ describe("WhatsApp to the customer when a service ticket is created", () => {
     await new Promise((resolve) => setTimeout(resolve, 700));
     expect(await db.select().from(notifications).where(eq(notifications.ticketId, ticket.id))).toHaveLength(1);
 
-    // TEMPORARY: the ticket's own Activity shows the message and its full text.
+    // The ticket's own Activity shows the message and its full text.
     const trail = await (
       await auditTrailGET(jsonRequest(`/api/tickets/${ticket.id}/audit-trail`, { cookie: lastCookie }), {
         params: { id: ticket.id },

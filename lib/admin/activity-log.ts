@@ -20,9 +20,8 @@ import {
  */
 
 /**
- * "message" is TEMPORARY (owner's request): every WhatsApp message the app sent, with its
- * full text, so messages can be checked before WhatsApp is live. Remove before production
- * after confirming with the owner — see CLAUDE.md.
+ * "message": every WhatsApp message the app sent (or queued), with its full text — kept
+ * permanently at the owner's request so staff can see what customers were sent.
  */
 export type ActivityKind = "login" | "change" | "message";
 
@@ -167,8 +166,8 @@ export async function listActivity(filters: ActivityFilters = {}): Promise<Activ
     }
   }
 
-  // TEMPORARY (see ActivityKind): WhatsApp messages are sent by the system, not by a
-  // person, so they're left out when the feed is filtered to one user.
+  // WhatsApp messages are sent by the system, not by a person, so they're left out when
+  // the feed is filtered to one user.
   if ((!filters.kind || filters.kind === "message") && !filters.userId) {
     const conditions: SQL[] = [...timeRange(notifications.sentAt, filters)];
     const rows = await db

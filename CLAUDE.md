@@ -15,18 +15,14 @@
 ## Before deploying to production (owner must confirm)
 
 - **Remove the on-screen OTP test aid.** `SHOW_OTP_ON_SCREEN` (lib/delivery/otp-display.ts,
-  the `testOtp` banner on the ticket page, docker-compose.yml, .env.example) shows the
-  delivery OTP to staff, which defeats OTP verification. It was added at the owner's request
+  the `testOtp` banner on the ticket page, the unredacted code in the stored OTP message in
+  lib/delivery/send-otp-message.ts, docker-compose.yml, .env.example) shows the delivery OTP
+  to staff, which defeats OTP verification. It was added at the owner's request
   for testing only. Before any production deployment, ask the owner to confirm, then remove
   the feature entirely (not just the flag).
-- **Remove the WhatsApp message log from Super Admin → Login & activity.** It shows the full
-  text of every WhatsApp message the app sends (kind `"message"` in lib/admin/activity-log.ts,
-  the "WhatsApp messages only" filter and `.activity-message` text on the activity page, and
-  `kind=message` in app/api/admin/activity/route.ts), and the same text on each service and
-  demo ticket's Activity (the `detail` field in lib/audit/consolidated-trail.ts and
-  lib/demo/activity.ts, rendered as `.activity-message` on both ticket pages), including
-  not-yet-recorded queued messages (lib/notifications/unrecorded-messages.ts and its callers;
-  tests/integration/unrecorded-messages.test.ts). It was added at
-  the owner's request for testing only. Before any production deployment, ask the owner to
-  confirm, then remove it.
 
+## Owner decisions to keep
+
+- **The WhatsApp message log is permanent** (owner, 2026-10-19): every WhatsApp message's
+  full text stays in each service and demo ticket's Activity and in Super Admin → Login &
+  activity. Only the OTP code in it is temporary (part of the on-screen OTP test aid above).

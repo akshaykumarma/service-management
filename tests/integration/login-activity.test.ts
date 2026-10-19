@@ -115,7 +115,6 @@ describe("Super Admin login & activity", () => {
     expect((await activityGET(jsonRequest(`/api/admin/activity?dateTo=yesterday`, { cookie }))).status).toBe(400);
   });
 
-  // TEMPORARY feature (remove with it before production — see CLAUDE.md).
   it("lists every WhatsApp message with its full text when asked for messages", async () => {
     const store = await createStore();
     const sa = await createUser({ role: "super_admin", password: "Correct123!" });

@@ -27,11 +27,7 @@ export interface AuditTrailEntry {
   actor: string | null;
   timestamp: Date;
   description: string;
-  /**
-   * TEMPORARY (owner's request): the full text of a WhatsApp message, so Service Managers
-   * can see messages being sent before WhatsApp is live. Remove before production — see
-   * CLAUDE.md.
-   */
+  /** The full text of a WhatsApp message, so staff can see exactly what the customer was sent. */
   detail?: string;
 }
 
@@ -95,7 +91,7 @@ export async function getConsolidatedAuditTrail(ticketId: string): Promise<Audit
       detail: row.renderedContent,
     });
   }
-  // TEMPORARY: messages still in the queue, or that couldn't be recorded (see CLAUDE.md).
+  // Messages still in the queue, or that couldn't be recorded.
   for (const msg of await listUnrecordedMessages({ ticketId })) {
     entries.push({
       source: "notification",

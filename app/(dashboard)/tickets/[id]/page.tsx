@@ -1183,7 +1183,7 @@ export default function TicketDetailPage() {
               {[...auditTrail].reverse().map((entry, i) => (
                 <li key={i} className={`timeline__item timeline__item--${entry.source}`}>
                   <div className="timeline__text">{entry.description}</div>
-                  {/* TEMPORARY: WhatsApp message text — remove before production (CLAUDE.md). */}
+                  {/* The WhatsApp message's full text (OTP codes only in on-screen OTP test mode). */}
                   {entry.detail && <div className="activity-message">{entry.detail}</div>}
                   <div className="timeline__meta">
                     {entry.actor ?? "System"} · {formatDateTime(entry.timestamp)}

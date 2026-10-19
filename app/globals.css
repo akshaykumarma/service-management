@@ -2660,7 +2660,7 @@ button.board-refresh__now {
   justify-content: flex-end;
 }
 
-/* TEMPORARY: WhatsApp message text in Login & activity — remove before production. */
+/* WhatsApp message text in ticket Activity and Super Admin > Login & activity. */
 .activity-message {
   margin-top: 6px;
   padding: 8px 10px;

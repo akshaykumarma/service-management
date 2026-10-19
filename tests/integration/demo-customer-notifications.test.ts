@@ -145,7 +145,7 @@ describe("WhatsApp to the customer for demo tickets", () => {
     const completedEntry = activity.entries.find((e: { description: string }) =>
       e.description.startsWith("WhatsApp to customer: demo completed"),
     );
-    // TEMPORARY: with the message's full text.
+    // With the message's full text.
     expect(completedEntry.detail).toBe(msg.renderedContent);
   });
 
