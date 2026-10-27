@@ -2510,22 +2510,6 @@ p[role].demo-warning {
   border-color: #0891b2;
 }
 
-/* TEMPORARY: on-screen OTP for testing (lib/delivery/otp-display.ts) — remove before production. */
-p.test-otp[role] {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  background: #fff7ed;
-  color: #9a3412;
-  border: 1px dashed #fb923c;
-  font-size: 0.85rem;
-}
-
-p.test-otp strong {
-  font-family: var(--font-mono);
-  font-size: 1.15rem;
-  letter-spacing: 0.08em;
-}
 
 /* Super Admin — Login & activity */
 .activity-signed-in ul {

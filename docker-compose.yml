@@ -23,13 +23,12 @@ services:
       # demo-ticket short links) — e.g. your ngrok or real domain.
       APP_BASE_URL: ${APP_BASE_URL:-http://localhost:3000}
       OTP_HASH_SECRET: ${OTP_HASH_SECRET}
+      WHATSAPP_PROVIDER: ${WHATSAPP_PROVIDER:-mock}
       WHATSAPP_API_URL: ${WHATSAPP_API_URL}
       WHATSAPP_ACCESS_TOKEN: ${WHATSAPP_ACCESS_TOKEN}
       WHATSAPP_PHONE_NUMBER_ID: ${WHATSAPP_PHONE_NUMBER_ID}
       WHATSAPP_WEBHOOK_SECRET: ${WHATSAPP_WEBHOOK_SECRET}
-      # TEMPORARY testing aid: shows the delivery OTP on the ticket page. Must be turned
-      # off and the feature removed (owner to confirm) before production — see CLAUDE.md.
-      SHOW_OTP_ON_SCREEN: ${SHOW_OTP_ON_SCREEN:-true}
+      WHATSAPP_VERIFY_TOKEN: ${WHATSAPP_VERIFY_TOKEN:-}
     depends_on:
       db:
         condition: service_healthy

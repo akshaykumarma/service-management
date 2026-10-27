@@ -552,7 +552,7 @@ export default function DemoTicketPage() {
               {[...activity].reverse().map((entry, i) => (
                 <li key={i} className={`timeline__item timeline__item--${entry.source === "status" ? "status_history" : entry.source === "edit" ? "details_edit" : entry.source}`}>
                   <div className="timeline__text">{entry.description}</div>
-                  {/* The WhatsApp message's full text (OTP codes only in on-screen OTP test mode). */}
+                  {/* The WhatsApp message's full text (OTP codes are always redacted). */}
                   {entry.detail && <div className="activity-message">{entry.detail}</div>}
                   <div className="timeline__meta">
                     {entry.actor ?? "System"} · {formatDateTime(entry.timestamp)}

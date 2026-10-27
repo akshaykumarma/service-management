@@ -1,0 +1,5 @@
+# Automatic HTTPS (Let's Encrypt) for the app's domain, proxied to the app container.
+{$APP_DOMAIN} {
+	encode gzip
+	reverse_proxy app:3000
+}
