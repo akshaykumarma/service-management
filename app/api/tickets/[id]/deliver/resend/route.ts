@@ -7,7 +7,6 @@ import { requireSameOrigin } from "@/lib/auth/csrf";
 import { assertTicketAccess, AccessDeniedError } from "@/lib/auth/rbac";
 import { resendOtp } from "@/lib/delivery/otp";
 import { enqueueOtpSend } from "@/lib/delivery/send-otp-message";
-import { otpIssuedResponse } from "@/lib/delivery/otp-display";
 
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
   const csrfResponse = requireSameOrigin(request);
@@ -49,7 +48,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       );
     case "sent": {
       await enqueueOtpSend(ticket, result.code);
-      return otpIssuedResponse(result.code);
+      return new NextResponse(null, { status: 202 });
     }
   }
 }

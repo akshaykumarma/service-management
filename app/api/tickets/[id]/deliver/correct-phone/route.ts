@@ -6,7 +6,6 @@ import { requireAuthenticatedSession } from "@/lib/auth/require-session";
 import { requireSameOrigin } from "@/lib/auth/csrf";
 import { assertTicketAccess, AccessDeniedError, requireAdminOrAbove } from "@/lib/auth/rbac";
 import { correctPhoneAndRetry, hasFailedOtpSend } from "@/lib/delivery/override";
-import { otpIssuedResponse } from "@/lib/delivery/otp-display";
 
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
   const csrfResponse = requireSameOrigin(request);
@@ -49,7 +48,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
   }
 
   const { correctedPhone } = await request.json();
-  const { code } = await correctPhoneAndRetry(ticket, correctedPhone);
+  await correctPhoneAndRetry(ticket, correctedPhone);
 
-  return otpIssuedResponse(code);
+  return new NextResponse(null, { status: 202 });
 }

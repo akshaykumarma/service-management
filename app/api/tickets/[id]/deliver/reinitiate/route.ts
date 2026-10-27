@@ -7,7 +7,6 @@ import { requireSameOrigin } from "@/lib/auth/csrf";
 import { assertTicketAccess, AccessDeniedError, requireAdminOrAbove } from "@/lib/auth/rbac";
 import { hasActiveOtpAttempt, issueOtp } from "@/lib/delivery/otp";
 import { enqueueOtpSend } from "@/lib/delivery/send-otp-message";
-import { otpIssuedResponse } from "@/lib/delivery/otp-display";
 
 /**
  * FR-013/FR-023: a Store Service Manager gets 403 here even though they can call the
@@ -62,5 +61,5 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
   const { code } = await issueOtp(ticket.id);
   await enqueueOtpSend(ticket, code);
 
-  return otpIssuedResponse(code);
+  return new NextResponse(null, { status: 202 });
 }

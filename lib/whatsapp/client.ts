@@ -1,15 +1,16 @@
+import { buildMetaTemplateMessage, type MessageType } from "@/lib/whatsapp/meta";
+
 /**
  * Meta WhatsApp Business Cloud API client (plan.md — plain HTTPS calls, no SDK needed).
  * Points at WHATSAPP_API_URL, which is the mock server in dev/test
  * (tests/helpers/mock-whatsapp-server.ts) and Meta's real Graph API endpoint in
- * production. The mock speaks a simplified request/response shape rather than Meta's
- * actual verbose Graph API payload, since every call in this codebase goes through this
- * one function — swapping the real shape in later (if the mock ever needs to diverge from
- * this) touches only this file.
+ * production. The mock speaks a simplified request shape; with WHATSAPP_PROVIDER=meta the
+ * same call is sent as a Meta template message instead (lib/whatsapp/meta.ts). Both answer
+ * with Meta's `{ messages: [{ id }] }`.
  */
 export interface SendMessageInput {
   to: string;
-  templateType: "completion" | "otp" | "invoice" | "demo_assignment" | "ticket_created" | "demo_created" | "demo_completed";
+  templateType: MessageType;
   params: Record<string, string>;
 }
 
@@ -24,19 +25,37 @@ export class WhatsAppSendError extends Error {
   }
 }
 
+/** "meta" talks to Meta's real WhatsApp Cloud API; anything else, the dev/test mock. */
+export function isMetaProvider(): boolean {
+  return process.env.WHATSAPP_PROVIDER === "meta";
+}
+
+const SEND_TIMEOUT_MS = 15_000;
+
 export async function sendWhatsAppMessage(input: SendMessageInput): Promise<SendMessageResult> {
   const baseUrl = process.env.WHATSAPP_API_URL;
   if (!baseUrl) {
     throw new WhatsAppSendError("WHATSAPP_API_URL is not configured");
   }
 
-  const res = await fetch(`${baseUrl}/messages`, {
+  let url = `${baseUrl}/messages`;
+  let payload: unknown = input;
+  if (isMetaProvider()) {
+    const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+    if (!phoneNumberId) throw new WhatsAppSendError("WHATSAPP_PHONE_NUMBER_ID is not configured");
+    url = `${baseUrl.replace(/\/$/, "")}/${phoneNumberId}/messages`;
+    payload = buildMetaTemplateMessage(input);
+  }
+
+  // A send that never answers must not hold a worker slot (and its message record) forever.
+  const res = await fetch(url, {
     method: "POST",
     headers: {
       "content-type": "application/json",
       authorization: `Bearer ${process.env.WHATSAPP_ACCESS_TOKEN ?? ""}`,
     },
-    body: JSON.stringify(input),
+    body: JSON.stringify(payload),
+    signal: AbortSignal.timeout(SEND_TIMEOUT_MS),
   });
 
   if (!res.ok) {

@@ -12,17 +12,8 @@
 - Design previews: when the owner asks to "show it before implementing", share the
   preview and wait for approval before building it.
 
-## Before deploying to production (owner must confirm)
-
-- **Remove the on-screen OTP test aid.** `SHOW_OTP_ON_SCREEN` (lib/delivery/otp-display.ts,
-  the `testOtp` banner on the ticket page, the unredacted code in the stored OTP message in
-  lib/delivery/send-otp-message.ts, docker-compose.yml, .env.example) shows the delivery OTP
-  to staff, which defeats OTP verification. It was added at the owner's request
-  for testing only. Before any production deployment, ask the owner to confirm, then remove
-  the feature entirely (not just the flag).
-
 ## Owner decisions to keep
 
 - **The WhatsApp message log is permanent** (owner, 2026-10-19): every WhatsApp message's
   full text stays in each service and demo ticket's Activity and in Super Admin → Login &
-  activity. Only the OTP code in it is temporary (part of the on-screen OTP test aid above).
+  activity. OTP codes are always shown redacted there.

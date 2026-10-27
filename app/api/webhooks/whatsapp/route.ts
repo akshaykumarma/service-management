@@ -18,6 +18,25 @@ function isValidSignature(rawBody: string, signatureHeader: string | null): bool
 }
 
 /**
+ * Meta's one-time check when the callback URL is saved in the app's WhatsApp settings: it
+ * sends hub.mode=subscribe, the verify token typed there, and a challenge to echo back.
+ * Only echoed when the token matches WHATSAPP_VERIFY_TOKEN.
+ */
+export async function GET(request: NextRequest) {
+  const params = request.nextUrl.searchParams;
+  const expected = process.env.WHATSAPP_VERIFY_TOKEN;
+  if (
+    expected &&
+    params.get("hub.mode") === "subscribe" &&
+    params.get("hub.verify_token") === expected &&
+    params.get("hub.challenge")
+  ) {
+    return new NextResponse(params.get("hub.challenge"), { status: 200, headers: { "content-type": "text/plain" } });
+  }
+  return new NextResponse("Forbidden", { status: 403 });
+}
+
+/**
  * Always responds 200 — a non-200 triggers Meta's own retry storm (contracts/notifications-api.md).
  * Signature failures are silently ignored rather than surfaced, a fail-closed trust boundary:
  * an unsigned/forged payload must not be able to mutate notification state.

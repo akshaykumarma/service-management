@@ -1,0 +1,101 @@
+# Production (e.g. an Oracle Cloud VM). See docs/DEPLOY-ORACLE.md.
+#
+#   docker compose -f docker-compose.prod.yml up -d --build      # start / update
+#   docker compose -f docker-compose.prod.yml run --rm migrate   # apply database updates
+#
+# Only Caddy is reachable from the internet (ports 80/443, automatic HTTPS for APP_DOMAIN).
+# The app and database are on the private Docker network; the database is additionally
+# bound to the server's own 127.0.0.1 for backups.
+#
+# No MinIO here: the app's screens never upload files (intake photos exist only as an
+# unused API), and MinIO no longer publishes free container images, so a new server may
+# not be able to pull it. To enable photo storage later, point MINIO_ENDPOINT/
+# MINIO_ACCESS_KEY/MINIO_SECRET_KEY/MINIO_BUCKET at any S3-compatible store (e.g. Oracle
+# Object Storage's S3 compatibility API).
+# Every secret comes from .env next to this file (copy .env.production.example).
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN:?Set APP_DOMAIN in .env}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - app
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    expose:
+      - "3000"
+    environment: &app-env
+      NODE_ENV: production
+      DATABASE_URL: postgres://service_management:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@db:5432/service_management
+      AUTH_SECRET: ${AUTH_SECRET:?Set AUTH_SECRET in .env}
+      OTP_HASH_SECRET: ${OTP_HASH_SECRET:?Set OTP_HASH_SECRET in .env}
+      SESSION_IDLE_TIMEOUT_HOURS: ${SESSION_IDLE_TIMEOUT_HOURS:-8}
+      APP_BASE_URL: https://${APP_DOMAIN}
+      NEXTAUTH_URL: https://${APP_DOMAIN}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-}
+      MINIO_BUCKET: ${MINIO_BUCKET:-intake-photos}
+      WHATSAPP_PROVIDER: ${WHATSAPP_PROVIDER:-meta}
+      WHATSAPP_API_URL: ${WHATSAPP_API_URL:-https://graph.facebook.com/v21.0}
+      WHATSAPP_PHONE_NUMBER_ID: ${WHATSAPP_PHONE_NUMBER_ID:-}
+      WHATSAPP_ACCESS_TOKEN: ${WHATSAPP_ACCESS_TOKEN:-}
+      WHATSAPP_WEBHOOK_SECRET: ${WHATSAPP_WEBHOOK_SECRET:-}
+      WHATSAPP_VERIFY_TOKEN: ${WHATSAPP_VERIFY_TOKEN:-}
+      WHATSAPP_TEMPLATE_LANGUAGE: ${WHATSAPP_TEMPLATE_LANGUAGE:-en}
+      WHATSAPP_DEFAULT_COUNTRY_CODE: ${WHATSAPP_DEFAULT_COUNTRY_CODE:-91}
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # One-off: database updates (and admin scripts). Never starts with `up`.
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: tools
+    profiles: ["tools"]
+    environment: *app-env
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: service_management
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: service_management
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U service_management"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  db-data:
+  caddy-data:
+  caddy-config:
