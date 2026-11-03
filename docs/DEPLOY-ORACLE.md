@@ -88,15 +88,20 @@ access tokens → Fine-grained → read access to this repository).
 
 ```bash
 cp .env.production.example .env
+# Fill the three secrets with random values (hex: safe inside the database address,
+# unlike base64, whose "/" and "+" would break it)
+for k in POSTGRES_PASSWORD AUTH_SECRET OTP_HASH_SECRET; do
+  sed -i "s|^$k=.*|$k=$(openssl rand -hex 32)|" .env
+done
 nano .env
 ```
 
-Fill in (generate each secret with `openssl rand -base64 32` — a different one for each):
+Then fill in the rest:
 
 | Setting | Value |
 |---|---|
 | `APP_DOMAIN` | `service.yourdomain.com` (no `https://`, no `/`) |
-| `POSTGRES_PASSWORD`, `AUTH_SECRET`, `OTP_HASH_SECRET` | random secrets |
+| `POSTGRES_PASSWORD`, `AUTH_SECRET`, `OTP_HASH_SECRET` | already filled in by the command above; if you set one by hand, use `openssl rand -hex 32` (letters and digits only) |
 | `SMTP_*` | for password-reset emails, e.g. Gmail: `smtp.gmail.com`, port `587`, your address, and a Google **App Password** (Google Account → Security → 2-Step Verification → App passwords) |
 | `WHATSAPP_*` | leave for now — Part 6 |
 
