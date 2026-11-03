@@ -70,8 +70,10 @@ Log in again (`ssh -i … ubuntu@<PUBLIC_IP>`) so the Docker permission applies,
 
 ```bash
 # Ubuntu images on Oracle block everything but SSH at the server's own firewall too
-sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 80 -j ACCEPT
-sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 443 -j ACCEPT
+# (insert the web ports just above the "REJECT all" rule — its position varies)
+POS=$(sudo iptables -L INPUT --line-numbers -n | awk '$2=="REJECT"{print $1; exit}')
+sudo iptables -I INPUT $POS -m state --state NEW -p tcp --dport 80 -j ACCEPT
+sudo iptables -I INPUT $POS -m state --state NEW -p tcp --dport 443 -j ACCEPT
 sudo netfilter-persistent save
 
 # The app
@@ -235,6 +237,7 @@ docker compose -f docker-compose.prod.yml start app
 | Problem | Check |
 |---|---|
 | Site doesn't open / no padlock | `ping service.yourdomain.com` shows the server IP? Ports 80 and 443 open in **both** the Oracle security list and `iptables` (Part 1.3, Part 3)? `docker compose -f docker-compose.prod.yml logs caddy` |
+| "Refused to connect" | Is the app running (`docker compose -f docker-compose.prod.yml ps`)? In `sudo iptables -L INPUT -n --line-numbers`, the `dpt:80` and `dpt:443` ACCEPT lines must come **before** the `REJECT` line; if not, delete them (`sudo iptables -D INPUT <line>`) and redo the Part 3 firewall commands. |
 | "502 Bad Gateway" | The app is still starting or crashed: `… logs app --tail 100` |
 | WhatsApp shows *failed* in Activity | `… logs app | grep -i whatsapp` shows Meta's reason. Common: template not yet **Active**, its name or number of `{{…}}` differs from docs/WHATSAPP-TEMPLATES.md, wrong language (`WHATSAPP_TEMPLATE_LANGUAGE`), expired token, or the customer's number isn't on WhatsApp. |
 | Webhook "Verify and save" fails | `WHATSAPP_VERIFY_TOKEN` in `.env` must match exactly, and the app restarted after editing `.env` (`… up -d`). |
